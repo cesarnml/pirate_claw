@@ -6,7 +6,7 @@ The phase 01 MVP is intentionally narrow:
 
 - read configured RSS feeds
 - normalize release titles into media metadata
-- match TV and movie items against JSON rules
+- match TV items against JSON rules and movie items against JSON intake policies
 - deduplicate previously handled items with SQLite
 - submit approved candidates to Transmission
 - record outcomes for review and retry
@@ -15,7 +15,7 @@ Phase 01 ends at successful queueing in Transmission. It does not include a web 
 
 ## Status
 
-This repository is currently documentation-first. There is no implementation yet.
+Ticket 01 is implemented: the repository now has a minimal Bun + TypeScript CLI skeleton with JSON config loading and validation for `media-sync run`.
 
 The project is being planned as a small-slice, review-friendly build:
 
@@ -40,6 +40,11 @@ Useful supporting docs:
 - `docs/00-overview/roadmap.md`
 - `docs/02-delivery/issue-tracking.md`
 - `docs/04-decisions/adr-001-use-bun.md`
+
+## Local Development
+
+- `bun test`
+- `./bin/media-sync run --config ./test/fixtures/valid-config.json`
 
 ## Proposed CLI Surface
 
