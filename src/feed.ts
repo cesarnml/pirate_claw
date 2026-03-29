@@ -52,7 +52,11 @@ export function parseFeedXml(feed: FeedConfig, xml: string): RawFeedItem[] {
   return items.map((item, index) => parseItem(feed, item, index));
 }
 
-function parseItem(feed: FeedConfig, item: Element, index: number): RawFeedItem {
+function parseItem(
+  feed: FeedConfig,
+  item: Element,
+  index: number,
+): RawFeedItem {
   const rawTitle = requireText(feed, item, 'title', index);
   const link = requireText(feed, item, 'link', index);
   const guid = optionalText(item, 'guid');

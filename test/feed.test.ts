@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import type { FeedConfig } from '../src/config';
 import { FeedError, fetchFeed } from '../src/feed';
 
-const servers: Bun.Server[] = [];
+const servers: Array<ReturnType<typeof Bun.serve>> = [];
 
 describe('fetchFeed', () => {
   afterEach(async () => {
@@ -12,7 +12,7 @@ describe('fetchFeed', () => {
 
       if (server) {
         await new Promise<void>((resolve, reject) => {
-          server.close((error) => {
+          server.close((error: Error | null) => {
             if (error) {
               reject(error);
               return;
@@ -85,7 +85,10 @@ describe('fetchFeed', () => {
   });
 
   it('fails when the feed returns malformed XML', async () => {
-    const server = await startFeedServer(200, '<rss><channel><item><title>Broken');
+    const server = await startFeedServer(
+      200,
+      '<rss><channel><item><title>Broken',
+    );
     const feed = createFeedConfig('TV Feed', `${server.url}/broken`, 'tv');
 
     await expect(fetchFeed(feed)).rejects.toThrow(
@@ -95,7 +98,11 @@ describe('fetchFeed', () => {
 
   it('fails when an RSS item is missing required fields', async () => {
     const server = await startFeedServer(200, missingTitleFixture);
-    const feed = createFeedConfig('Movie Feed', `${server.url}/missing`, 'movie');
+    const feed = createFeedConfig(
+      'Movie Feed',
+      `${server.url}/missing`,
+      'movie',
+    );
 
     await expect(fetchFeed(feed)).rejects.toThrow(
       new FeedError('Feed "Movie Feed" item 1 is missing required <title>.'),
@@ -115,7 +122,10 @@ function createFeedConfig(
   };
 }
 
-async function startFeedServer(status: number, body: string): Promise<{ url: string }> {
+async function startFeedServer(
+  status: number,
+  body: string,
+): Promise<{ url: string }> {
   const server = Bun.serve({
     port: 0,
     hostname: '127.0.0.1',
