@@ -6,21 +6,12 @@ import { FeedError, fetchFeed } from '../src/feed';
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
 
 describe('fetchFeed', () => {
-  afterEach(async () => {
+  afterEach(() => {
     while (servers.length > 0) {
       const server = servers.pop();
 
       if (server) {
-        await new Promise<void>((resolve, reject) => {
-          server.close((error: Error | null) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-
-            resolve();
-          });
-        });
+        server.stop(true);
       }
     }
   });
