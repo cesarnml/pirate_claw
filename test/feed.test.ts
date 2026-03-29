@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import type { Server } from 'node:http';
-import { createServer } from 'node:http';
 
 import type { FeedConfig } from '../src/config';
 import { FeedError, fetchFeed } from '../src/feed';
 
-const servers: Server[] = [];
+const servers: Bun.Server[] = [];
 
 describe('fetchFeed', () => {
   afterEach(async () => {
@@ -118,26 +116,21 @@ function createFeedConfig(
 }
 
 async function startFeedServer(status: number, body: string): Promise<{ url: string }> {
-  const server = createServer((_request, response) => {
-    response.statusCode = status;
-    response.setHeader('content-type', 'application/rss+xml; charset=utf-8');
-    response.end(body);
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.listen(0, '127.0.0.1', () => resolve());
-    server.once('error', reject);
+  const server = Bun.serve({
+    port: 0,
+    hostname: '127.0.0.1',
+    fetch() {
+      return new Response(body, {
+        status,
+        headers: {
+          'content-type': 'application/rss+xml; charset=utf-8',
+        },
+      });
+    },
   });
 
   servers.push(server);
-
-  const address = server.address();
-
-  if (!address || typeof address === 'string') {
-    throw new Error('Failed to start local feed server.');
-  }
-
-  return { url: `http://127.0.0.1:${address.port}` };
+  return { url: server.url.origin };
 }
 
 const tvFeedFixture = `<?xml version="1.0" encoding="UTF-8"?>

@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { dirname } from 'node:path';
 
 const tempDirs: string[] = [];
 const cwd = process.cwd();
 const bunExecutable = process.execPath;
 const cliExecutable = './bin/media-sync';
-const binPath = dirname(bunExecutable);
+const binPath = bunExecutable.slice(0, bunExecutable.lastIndexOf('/'));
 const env = {
   ...process.env,
   PATH: `${binPath}:${process.env.PATH ?? ''}`,
