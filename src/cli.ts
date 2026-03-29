@@ -15,10 +15,20 @@ export async function runCli(argv: string[]): Promise<number> {
     return 0;
   } catch (error) {
     const message =
-      error instanceof ConfigError ? error.message : 'Unexpected error.';
+      error instanceof ConfigError
+        ? error.message
+        : formatUnexpectedError(error);
     console.error(message);
     return 1;
   }
+}
+
+function formatUnexpectedError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack ?? error.message;
+  }
+
+  return String(error);
 }
 
 function parseConfigPath(argv: string[]): string | undefined {
