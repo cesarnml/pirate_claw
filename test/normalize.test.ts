@@ -50,6 +50,21 @@ describe('normalizeFeedItem', () => {
       },
     },
     {
+      name: 'ignores TV episode tokens when normalizing movie titles',
+      mediaType: 'movie' as const,
+      rawTitle: 'Studio 54 S01E02 2024 1080p WEB x265',
+      expected: {
+        mediaType: 'movie',
+        rawTitle: 'Studio 54 S01E02 2024 1080p WEB x265',
+        normalizedTitle: 'Studio 54 S01E02',
+        season: undefined,
+        episode: undefined,
+        year: 2024,
+        resolution: '1080p',
+        codec: 'x265',
+      },
+    },
+    {
       name: 'keeps partial metadata when season and episode are absent',
       mediaType: 'movie' as const,
       rawTitle: 'Catalog Title 2023 BluRay',

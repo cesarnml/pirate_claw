@@ -15,19 +15,20 @@ export function normalizeFeedItem(input: {
   mediaType: FeedConfig['mediaType'];
   rawTitle: string;
 }): NormalizedFeedItem {
-  const seasonEpisode = extractSeasonEpisode(input.rawTitle);
+  const seasonEpisode =
+    input.mediaType === 'tv' ? extractSeasonEpisode(input.rawTitle) : undefined;
   const year = extractYear(input.rawTitle);
   const resolution = extractResolution(input.rawTitle);
   const codec = extractCodec(input.rawTitle);
+  const normalizedTitle =
+    input.mediaType === 'tv'
+      ? extractNormalizedTitle(input.rawTitle, seasonEpisode?.index)
+      : extractNormalizedTitle(input.rawTitle, year?.index);
 
   return {
     mediaType: input.mediaType,
     rawTitle: input.rawTitle,
-    normalizedTitle: extractNormalizedTitle(
-      input.rawTitle,
-      seasonEpisode?.index,
-      year?.index,
-    ),
+    normalizedTitle,
     season: seasonEpisode?.season,
     episode: seasonEpisode?.episode,
     year: year?.value,
@@ -89,29 +90,10 @@ function extractCodec(value: string): 'x264' | 'x265' | undefined {
   return x265CodecTokens.has(match[1].toLowerCase()) ? 'x265' : 'x264';
 }
 
-function extractNormalizedTitle(
-  value: string,
-  seasonEpisodeIndex?: number,
-  yearIndex?: number,
-): string {
-  const cutoff = firstDefinedIndex(seasonEpisodeIndex, yearIndex);
+function extractNormalizedTitle(value: string, cutoff?: number): string {
   const titleSegment = cutoff === undefined ? value : value.slice(0, cutoff);
 
   return normalizeTitleWhitespace(titleSegment);
-}
-
-function firstDefinedIndex(
-  ...indexes: Array<number | undefined>
-): number | undefined {
-  const defined = indexes.filter(
-    (value): value is number => value !== undefined,
-  );
-
-  if (defined.length === 0) {
-    return undefined;
-  }
-
-  return Math.min(...defined);
 }
 
 function normalizeTitleWhitespace(value: string): string {
