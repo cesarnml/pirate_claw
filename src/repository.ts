@@ -4,6 +4,13 @@ import type { RawFeedItem } from './feed';
 import type { NormalizedFeedItem } from './normalize';
 
 export type CandidateStatus = 'queued' | 'failed' | 'skipped_duplicate';
+export type RunStatus = 'running' | 'completed' | 'failed';
+
+export type FeedItemOutcomeStatus =
+  | 'queued'
+  | 'failed'
+  | 'skipped_duplicate'
+  | 'skipped_no_match';
 
 export type CandidateMatchRecord = {
   ruleName: string;
@@ -16,12 +23,24 @@ export type CandidateMatchRecord = {
 export type RunRecord = {
   id: number;
   startedAt: string;
+  status: RunStatus;
   completedAt?: string;
 };
 
 export type FeedItemRecord = RawFeedItem & {
   id: number;
   runId: number;
+};
+
+export type FeedItemOutcomeRecord = {
+  id: number;
+  runId: number;
+  feedItemId?: number;
+  status: FeedItemOutcomeStatus;
+  identityKey?: string;
+  ruleName?: string;
+  message?: string;
+  createdAt: string;
 };
 
 export type CandidateStateRecord = {
@@ -58,15 +77,31 @@ export type RecordCandidateOutcomeInput = {
   updatedAt?: string;
 };
 
+export type RecordFeedItemOutcomeInput = {
+  runId: number;
+  feedItemId?: number;
+  status: FeedItemOutcomeStatus;
+  identityKey?: string;
+  ruleName?: string;
+  message?: string;
+  createdAt?: string;
+};
+
 export type Repository = {
   startRun(startedAt?: string): RunRecord;
+  getRun(runId: number): RunRecord | undefined;
   completeRun(runId: number, completedAt?: string): RunRecord;
+  failRun(runId: number, failedAt?: string): RunRecord;
   recordFeedItem(runId: number, item: RawFeedItem): FeedItemRecord;
   getCandidateState(identityKey: string): CandidateStateRecord | undefined;
   isCandidateQueued(identityKey: string): boolean;
   recordCandidateOutcome(
     input: RecordCandidateOutcomeInput,
   ): CandidateStateRecord;
+  recordFeedItemOutcome(
+    input: RecordFeedItemOutcomeInput,
+  ): FeedItemOutcomeRecord;
+  listFeedItemOutcomes(runId: number): FeedItemOutcomeRecord[];
 };
 
 export const DEFAULT_DATABASE_PATH = 'media-sync.db';
@@ -82,6 +117,7 @@ export function ensureSchema(database: Database): void {
     CREATE TABLE IF NOT EXISTS runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       started_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
       completed_at TEXT
     );
 
@@ -119,21 +155,55 @@ export function ensureSchema(database: Database): void {
       last_feed_item_id INTEGER REFERENCES feed_items(id),
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS feed_item_outcomes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id INTEGER NOT NULL REFERENCES runs(id),
+      feed_item_id INTEGER REFERENCES feed_items(id),
+      status TEXT NOT NULL,
+      identity_key TEXT,
+      rule_name TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    );
   `);
+
+  const hasRunStatusColumn =
+    (database
+      .query(`SELECT 1 FROM pragma_table_info('runs') WHERE name = 'status'`)
+      .get() as { 1: number } | null | undefined) !== null;
+
+  if (!hasRunStatusColumn) {
+    database.exec(
+      `ALTER TABLE runs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'`,
+    );
+  }
 }
 
 export function createRepository(database: Database): Repository {
-  const insertRun = database.query('INSERT INTO runs (started_at) VALUES (?1)');
+  const insertRun = database.query(
+    `INSERT INTO runs (started_at, status) VALUES (?1, 'running')`,
+  );
   const selectRun = database.query(
     `SELECT
       id,
       started_at AS startedAt,
+      status,
       completed_at AS completedAt
     FROM runs
     WHERE id = ?1`,
   );
   const completeRunStatement = database.query(
-    'UPDATE runs SET completed_at = ?2 WHERE id = ?1',
+    `UPDATE runs
+    SET completed_at = ?2,
+        status = 'completed'
+    WHERE id = ?1`,
+  );
+  const failRunStatement = database.query(
+    `UPDATE runs
+    SET completed_at = ?2,
+        status = 'failed'
+    WHERE id = ?1`,
   );
   const insertFeedItem = database.query(
     `INSERT INTO feed_items (
@@ -234,6 +304,44 @@ export function createRepository(database: Database): Repository {
       last_feed_item_id = excluded.last_feed_item_id,
       updated_at = excluded.updated_at`,
   );
+  const insertFeedItemOutcome = database.query(
+    `INSERT INTO feed_item_outcomes (
+      run_id,
+      feed_item_id,
+      status,
+      identity_key,
+      rule_name,
+      message,
+      created_at
+    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+  );
+  const selectFeedItemOutcome = database.query(
+    `SELECT
+      id,
+      run_id AS runId,
+      feed_item_id AS feedItemId,
+      status,
+      identity_key AS identityKey,
+      rule_name AS ruleName,
+      message,
+      created_at AS createdAt
+    FROM feed_item_outcomes
+    WHERE id = ?1`,
+  );
+  const listFeedItemOutcomesStatement = database.query(
+    `SELECT
+      id,
+      run_id AS runId,
+      feed_item_id AS feedItemId,
+      status,
+      identity_key AS identityKey,
+      rule_name AS ruleName,
+      message,
+      created_at AS createdAt
+    FROM feed_item_outcomes
+    WHERE run_id = ?1
+    ORDER BY id ASC`,
+  );
 
   return {
     startRun(startedAt = new Date().toISOString()): RunRecord {
@@ -245,11 +353,23 @@ export function createRepository(database: Database): Repository {
       return mapRunRow(requireRow(row, 'run'));
     },
 
+    getRun(runId: number): RunRecord | undefined {
+      const row = selectRun.get(runId) as RunRow | null | undefined;
+      return row ? mapRunRow(row) : undefined;
+    },
+
     completeRun(
       runId: number,
       completedAt = new Date().toISOString(),
     ): RunRecord {
       completeRunStatement.run(runId, completedAt);
+      return mapRunRow(
+        requireRow(selectRun.get(runId) as RunRow | null | undefined, 'run'),
+      );
+    },
+
+    failRun(runId: number, failedAt = new Date().toISOString()): RunRecord {
+      failRunStatement.run(runId, failedAt);
       return mapRunRow(
         requireRow(selectRun.get(runId) as RunRow | null | undefined, 'run'),
       );
@@ -324,6 +444,38 @@ export function createRepository(database: Database): Repository {
         ),
       );
     },
+
+    recordFeedItemOutcome(
+      input: RecordFeedItemOutcomeInput,
+    ): FeedItemOutcomeRecord {
+      const createdAt = input.createdAt ?? new Date().toISOString();
+
+      insertFeedItemOutcome.run(
+        input.runId,
+        input.feedItemId ?? null,
+        input.status,
+        input.identityKey ?? null,
+        input.ruleName ?? null,
+        input.message ?? null,
+        createdAt,
+      );
+
+      return mapFeedItemOutcomeRow(
+        requireRow(
+          selectFeedItemOutcome.get(lastInsertedRowId(database)) as
+            | FeedItemOutcomeRow
+            | null
+            | undefined,
+          'feed item outcome',
+        ),
+      );
+    },
+
+    listFeedItemOutcomes(runId: number): FeedItemOutcomeRecord[] {
+      return (
+        listFeedItemOutcomesStatement.all(runId) as FeedItemOutcomeRow[]
+      ).map(mapFeedItemOutcomeRow);
+    },
   };
 }
 
@@ -350,11 +502,13 @@ function requireRow<T>(row: T | null | undefined, label: string): T {
 function mapRunRow(row: {
   id: number;
   startedAt: string;
+  status: RunStatus;
   completedAt: string | null;
 }): RunRecord {
   return {
     id: Number(row.id),
     startedAt: row.startedAt,
+    status: row.status,
     completedAt: row.completedAt ?? undefined,
   };
 }
@@ -398,9 +552,23 @@ function mapCandidateStateRow(row: CandidateStateRow): CandidateStateRecord {
   };
 }
 
+function mapFeedItemOutcomeRow(row: FeedItemOutcomeRow): FeedItemOutcomeRecord {
+  return {
+    id: Number(row.id),
+    runId: Number(row.runId),
+    feedItemId: row.feedItemId ?? undefined,
+    status: row.status,
+    identityKey: row.identityKey ?? undefined,
+    ruleName: row.ruleName ?? undefined,
+    message: row.message ?? undefined,
+    createdAt: row.createdAt,
+  };
+}
+
 type RunRow = {
   id: number;
   startedAt: string;
+  status: RunStatus;
   completedAt: string | null;
 };
 
@@ -437,4 +605,15 @@ type CandidateStateRow = {
   lastSeenRunId: number;
   lastFeedItemId: number | null;
   updatedAt: string;
+};
+
+type FeedItemOutcomeRow = {
+  id: number;
+  runId: number;
+  feedItemId: number | null;
+  status: FeedItemOutcomeStatus;
+  identityKey: string | null;
+  ruleName: string | null;
+  message: string | null;
+  createdAt: string;
 };

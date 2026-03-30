@@ -145,6 +145,27 @@ describe('SQLite repository', () => {
     });
     expect(repository.isCandidateQueued(retryMatch.identityKey)).toBe(true);
   });
+
+  it('distinguishes failed runs from completed runs', async () => {
+    const repository = createTestRepository(await createDatabasePath());
+    const startedRun = repository.startRun('2026-03-30T04:00:00.000Z');
+
+    expect(startedRun).toMatchObject({
+      status: 'running',
+      completedAt: undefined,
+    });
+
+    const failedRun = repository.failRun(
+      startedRun.id,
+      '2026-03-30T04:05:00.000Z',
+    );
+
+    expect(failedRun).toMatchObject({
+      id: startedRun.id,
+      status: 'failed',
+      completedAt: '2026-03-30T04:05:00.000Z',
+    });
+  });
 });
 
 function createTestRepository(path: string) {
