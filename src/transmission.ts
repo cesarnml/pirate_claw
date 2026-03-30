@@ -190,6 +190,14 @@ function parseSubmissionResult(parsed: unknown): SubmissionResult {
   const duplicateTorrent = parsed.arguments['torrent-duplicate'];
   const torrent = addedTorrent ?? duplicateTorrent;
 
+  if (!torrent || typeof torrent !== 'object') {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC success response was missing torrent details.',
+    };
+  }
+
   return {
     ok: true,
     status: 'queued',

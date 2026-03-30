@@ -202,6 +202,39 @@ describe('Transmission adapter', () => {
     );
   });
 
+  it('returns a structured failure when a success response omits torrent details', async () => {
+    const server = startTransmissionServer((request) => {
+      const sessionId = request.headers.get('x-transmission-session-id');
+
+      if (!sessionId) {
+        return new Response(null, {
+          status: 409,
+          headers: {
+            'x-transmission-session-id': 'session-123',
+          },
+        });
+      }
+
+      return Response.json({
+        result: 'success',
+        arguments: {},
+      });
+    });
+    const downloader = createTransmissionDownloader(
+      createTransmissionConfig(server.url.origin),
+    );
+
+    const result = await downloader.submit({
+      downloadUrl: 'https://download.example.test/movie/example.torrent',
+    });
+
+    expectFailure(
+      result,
+      'invalid_response',
+      'Transmission RPC success response was missing torrent details.',
+    );
+  });
+
   it('returns a structured failure when fetch throws before any response is returned', async () => {
     globalThis.fetch = Object.assign(
       async () => {
