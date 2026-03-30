@@ -116,7 +116,7 @@ export async function runPipeline(input: {
 
     return finalizeRun(input.repository, run);
   } catch (error) {
-    input.repository.completeRun(run.id);
+    input.repository.failRun(run.id);
     throw error;
   }
 }

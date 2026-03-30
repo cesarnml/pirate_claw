@@ -4,6 +4,7 @@ import type { RawFeedItem } from './feed';
 import type { NormalizedFeedItem } from './normalize';
 
 export type CandidateStatus = 'queued' | 'failed' | 'skipped_duplicate';
+export type RunStatus = 'running' | 'completed' | 'failed';
 
 export type FeedItemOutcomeStatus =
   | 'queued'
@@ -22,6 +23,7 @@ export type CandidateMatchRecord = {
 export type RunRecord = {
   id: number;
   startedAt: string;
+  status: RunStatus;
   completedAt?: string;
 };
 
@@ -87,7 +89,9 @@ export type RecordFeedItemOutcomeInput = {
 
 export type Repository = {
   startRun(startedAt?: string): RunRecord;
+  getRun(runId: number): RunRecord | undefined;
   completeRun(runId: number, completedAt?: string): RunRecord;
+  failRun(runId: number, failedAt?: string): RunRecord;
   recordFeedItem(runId: number, item: RawFeedItem): FeedItemRecord;
   getCandidateState(identityKey: string): CandidateStateRecord | undefined;
   isCandidateQueued(identityKey: string): boolean;
@@ -113,6 +117,7 @@ export function ensureSchema(database: Database): void {
     CREATE TABLE IF NOT EXISTS runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       started_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
       completed_at TEXT
     );
 
@@ -162,20 +167,43 @@ export function ensureSchema(database: Database): void {
       created_at TEXT NOT NULL
     );
   `);
+
+  const hasRunStatusColumn =
+    (database
+      .query(`SELECT 1 FROM pragma_table_info('runs') WHERE name = 'status'`)
+      .get() as { 1: number } | null | undefined) !== null;
+
+  if (!hasRunStatusColumn) {
+    database.exec(
+      `ALTER TABLE runs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'`,
+    );
+  }
 }
 
 export function createRepository(database: Database): Repository {
-  const insertRun = database.query('INSERT INTO runs (started_at) VALUES (?1)');
+  const insertRun = database.query(
+    `INSERT INTO runs (started_at, status) VALUES (?1, 'running')`,
+  );
   const selectRun = database.query(
     `SELECT
       id,
       started_at AS startedAt,
+      status,
       completed_at AS completedAt
     FROM runs
     WHERE id = ?1`,
   );
   const completeRunStatement = database.query(
-    'UPDATE runs SET completed_at = ?2 WHERE id = ?1',
+    `UPDATE runs
+    SET completed_at = ?2,
+        status = 'completed'
+    WHERE id = ?1`,
+  );
+  const failRunStatement = database.query(
+    `UPDATE runs
+    SET completed_at = ?2,
+        status = 'failed'
+    WHERE id = ?1`,
   );
   const insertFeedItem = database.query(
     `INSERT INTO feed_items (
@@ -325,11 +353,23 @@ export function createRepository(database: Database): Repository {
       return mapRunRow(requireRow(row, 'run'));
     },
 
+    getRun(runId: number): RunRecord | undefined {
+      const row = selectRun.get(runId) as RunRow | null | undefined;
+      return row ? mapRunRow(row) : undefined;
+    },
+
     completeRun(
       runId: number,
       completedAt = new Date().toISOString(),
     ): RunRecord {
       completeRunStatement.run(runId, completedAt);
+      return mapRunRow(
+        requireRow(selectRun.get(runId) as RunRow | null | undefined, 'run'),
+      );
+    },
+
+    failRun(runId: number, failedAt = new Date().toISOString()): RunRecord {
+      failRunStatement.run(runId, failedAt);
       return mapRunRow(
         requireRow(selectRun.get(runId) as RunRow | null | undefined, 'run'),
       );
@@ -462,11 +502,13 @@ function requireRow<T>(row: T | null | undefined, label: string): T {
 function mapRunRow(row: {
   id: number;
   startedAt: string;
+  status: RunStatus;
   completedAt: string | null;
 }): RunRecord {
   return {
     id: Number(row.id),
     startedAt: row.startedAt,
+    status: row.status,
     completedAt: row.completedAt ?? undefined,
   };
 }
@@ -526,6 +568,7 @@ function mapFeedItemOutcomeRow(row: FeedItemOutcomeRow): FeedItemOutcomeRecord {
 type RunRow = {
   id: number;
   startedAt: string;
+  status: RunStatus;
   completedAt: string | null;
 };
 
