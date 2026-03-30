@@ -4,6 +4,7 @@ import type { FeedConfig } from '../src/config';
 import { FeedError, fetchFeed } from '../src/feed';
 
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
+const originalFetch = globalThis.fetch;
 
 describe('fetchFeed', () => {
   afterEach(() => {
@@ -14,6 +15,8 @@ describe('fetchFeed', () => {
         server.stop(true);
       }
     }
+
+    globalThis.fetch = originalFetch;
   });
 
   it('parses multiple TV-style RSS items and prefers guid over link', async () => {
@@ -71,6 +74,29 @@ describe('fetchFeed', () => {
     await expect(fetchFeed(feed)).rejects.toThrow(
       new FeedError(
         `Failed to fetch feed "TV Feed" from ${server.url}/eztv: HTTP 503.`,
+      ),
+    );
+  });
+
+  it('fails with a readable error when fetch throws before a response is returned', async () => {
+    globalThis.fetch = Object.assign(
+      async () => {
+        throw new Error('connect ECONNREFUSED');
+      },
+      {
+        preconnect: originalFetch.preconnect.bind(originalFetch),
+      },
+    );
+
+    const feed = createFeedConfig(
+      'TV Feed',
+      'https://user:secret@example.test/eztv?token=abc123',
+      'tv',
+    );
+
+    await expect(fetchFeed(feed)).rejects.toThrow(
+      new FeedError(
+        'Failed to fetch feed "TV Feed" from https://example.test/eztv: connect ECONNREFUSED.',
       ),
     );
   });
