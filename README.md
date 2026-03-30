@@ -15,7 +15,7 @@ Phase 01 ends at successful queueing in Transmission. It does not include a web 
 
 ## Status
 
-Tickets 01-03 are implemented: the repository now has a minimal Bun + TypeScript CLI skeleton with JSON config loading and validation for `media-sync run`, an RSS fetch-and-parse entrypoint that converts RSS items into a raw feed-item shape, and a title-normalization module that extracts matching metadata for TV and movie releases.
+Tickets 01-04 are implemented: the repository now has a minimal Bun + TypeScript CLI skeleton with JSON config loading and validation for `media-sync run`, an RSS fetch-and-parse entrypoint that converts RSS items into a raw feed-item shape, a title-normalization module that extracts matching metadata for TV and movie releases, and a TV rule matcher that evaluates normalized items against name-based rules with optional regex overrides plus codec and resolution filters.
 
 The project is being planned as a small-slice, review-friendly build:
 
