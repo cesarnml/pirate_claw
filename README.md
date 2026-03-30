@@ -15,13 +15,14 @@ Phase 01 ends at successful queueing in Transmission. It does not include a web 
 
 ## Status
 
-Tickets 01-05 are implemented:
+Tickets 01-06 are implemented:
 
 - minimal Bun + TypeScript CLI skeleton with JSON config loading and validation for `media-sync run`
 - RSS fetch-and-parse entrypoint that converts RSS items into a raw feed-item shape
 - title-normalization module that extracts matching metadata for TV and movie releases
 - TV rule matcher that evaluates normalized items against name-based rules with optional regex overrides plus codec and resolution filters
 - movie policy matcher that accepts releases by global year and quality policy without per-title rules
+- SQLite-backed run history and candidate-state persistence that preserves dedupe and retryability
 
 The project is being planned as a small-slice, review-friendly build:
 
