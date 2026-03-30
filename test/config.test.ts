@@ -136,6 +136,8 @@ describe('validateConfig', () => {
           password: 'pass',
         },
       }),
-    ).toThrow(/Config file "config tv\[0\] matchPattern" has invalid regex syntax:/);
+    ).toThrow(
+      /Config file "config tv\[0\] matchPattern" has invalid regex syntax:/,
+    );
   });
 });
