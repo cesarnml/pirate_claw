@@ -1,9 +1,14 @@
+import { existsSync } from 'node:fs';
+
 import { ConfigError, loadConfig, resolveConfigPath } from './config';
 import { runPipeline } from './pipeline';
 import {
   createRepository,
   ensureSchema,
+  hasStatusSchema,
   openDatabase,
+  openDatabaseReadOnly,
+  DEFAULT_DATABASE_PATH,
   type CandidateStateRecord,
   type RunSummaryRecord,
 } from './repository';
@@ -36,10 +41,9 @@ export async function runCli(argv: string[]): Promise<number> {
     }
 
     if (command === 'status') {
-      const database = openDatabase();
+      const database = openStatusDatabase();
 
       try {
-        ensureSchema(database);
         const repository = createRepository(database);
         console.log(
           formatStatusReport({
@@ -64,6 +68,21 @@ export async function runCli(argv: string[]): Promise<number> {
     console.error(message);
     return 1;
   }
+}
+
+function openStatusDatabase() {
+  if (!existsSync(DEFAULT_DATABASE_PATH)) {
+    throw new Error(`Database not initialized. Run 'media-sync run' first.`);
+  }
+
+  const database = openDatabaseReadOnly();
+
+  if (!hasStatusSchema(database)) {
+    database.close();
+    throw new Error(`Database not initialized. Run 'media-sync run' first.`);
+  }
+
+  return database;
 }
 
 function formatRunSummary(result: {

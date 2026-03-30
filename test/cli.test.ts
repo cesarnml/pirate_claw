@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite';
 import { afterEach, describe, expect, it } from 'bun:test';
+import { existsSync } from 'node:fs';
 import { mkdtemp as createTempDir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
@@ -355,6 +356,22 @@ describe('media-sync status', () => {
 
     expect(repository.listRecentRunSummaries()).toEqual(runsBefore);
     expect(repository.listCandidateStates()).toEqual(candidatesBefore);
+  });
+
+  it('fails without creating a database when status is run before initialization', async () => {
+    const directory = await mkdtemp();
+    const databasePath = join(directory, 'media-sync.db');
+
+    expect(existsSync(databasePath)).toBe(false);
+
+    const status = await runSimpleCommand(directory, 'status');
+
+    expect(status.exitCode).toBe(1);
+    expect(status.stdout).toBe('');
+    expect(status.stderr).toContain(
+      `Database not initialized. Run 'media-sync run' first.`,
+    );
+    expect(existsSync(databasePath)).toBe(false);
   });
 });
 

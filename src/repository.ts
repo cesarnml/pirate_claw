@@ -116,6 +116,10 @@ export function openDatabase(path = DEFAULT_DATABASE_PATH): Database {
   return new Database(path, { create: true, strict: true });
 }
 
+export function openDatabaseReadOnly(path = DEFAULT_DATABASE_PATH): Database {
+  return new Database(path, { readonly: true, strict: true });
+}
+
 export function ensureSchema(database: Database): void {
   database.run(`
     PRAGMA foreign_keys = ON;
@@ -184,6 +188,28 @@ export function ensureSchema(database: Database): void {
       `ALTER TABLE runs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'`,
     );
   }
+}
+
+export function hasStatusSchema(database: Database): boolean {
+  const requiredTables = ['runs', 'candidate_state', 'feed_item_outcomes'];
+
+  for (const tableName of requiredTables) {
+    const hasTable =
+      (database
+        .query(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1`)
+        .get(tableName) as { 1: number } | null | undefined) !== null;
+
+    if (!hasTable) {
+      return false;
+    }
+  }
+
+  const hasRunStatusColumn =
+    (database
+      .query(`SELECT 1 FROM pragma_table_info('runs') WHERE name = 'status'`)
+      .get() as { 1: number } | null | undefined) !== null;
+
+  return hasRunStatusColumn;
 }
 
 export function createRepository(database: Database): Repository {
