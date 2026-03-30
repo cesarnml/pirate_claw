@@ -106,12 +106,18 @@ function validateTvRule(input: unknown, path: string, index: number): TvRule {
       rule.matchPattern,
       `${path} tv[${index}] matchPattern`,
     ),
-    resolutions: requireStringArray(
+    resolutions: requireNormalizedAllowedStringArray(
       rule,
       'resolutions',
       `${path} tv[${index}]`,
+      supportedResolutions,
     ),
-    codecs: requireStringArray(rule, 'codecs', `${path} tv[${index}]`),
+    codecs: requireNormalizedAllowedStringArray(
+      rule,
+      'codecs',
+      `${path} tv[${index}]`,
+      supportedCodecs,
+    ),
   };
 }
 
@@ -123,8 +129,18 @@ function validateMoviePolicy(
 
   return {
     years: requireNumberArray(rule, 'years', `${path} movies`),
-    resolutions: requireStringArray(rule, 'resolutions', `${path} movies`),
-    codecs: requireStringArray(rule, 'codecs', `${path} movies`),
+    resolutions: requireNormalizedAllowedStringArray(
+      rule,
+      'resolutions',
+      `${path} movies`,
+      supportedResolutions,
+    ),
+    codecs: requireNormalizedAllowedStringArray(
+      rule,
+      'codecs',
+      `${path} movies`,
+      supportedCodecs,
+    ),
   };
 }
 
@@ -229,6 +245,24 @@ function requireStringArray(
   return value;
 }
 
+function requireNormalizedAllowedStringArray(
+  input: Record<string, unknown>,
+  key: string,
+  path: string,
+  allowedValues: ReadonlySet<string>,
+): string[] {
+  const value = requireStringArray(input, key, path);
+  const normalized = value.map((item) => item.toLowerCase());
+
+  if (normalized.some((item) => !allowedValues.has(item))) {
+    throw new ConfigError(
+      `Config file "${path} ${key}" has invalid value; expected one of ${formatAllowedValues(allowedValues)}.`,
+    );
+  }
+
+  return normalized;
+}
+
 function requireMediaType(
   input: Record<string, unknown>,
   path: string,
@@ -262,6 +296,14 @@ function expectRecord(input: unknown, path: string): Record<string, unknown> {
 
   return input;
 }
+
+function formatAllowedValues(values: ReadonlySet<string>): string {
+  return [...values].map((value) => `"${value}"`).join(', ');
+}
+
+const supportedResolutions = new Set(['2160p', '1080p', '720p', '480p']);
+
+const supportedCodecs = new Set(['x264', 'x265']);
 
 function expectString(input: unknown, path: string): string {
   if (typeof input !== 'string' || input.length === 0) {
