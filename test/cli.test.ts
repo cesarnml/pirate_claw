@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtemp as createTempDir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 
 const tempDirs: string[] = [];
 const cwd = process.cwd();
 const bunExecutable = process.execPath;
 const cliExecutable = './bin/media-sync';
-const binPath = bunExecutable.slice(0, bunExecutable.lastIndexOf('/'));
+const binPath = dirname(bunExecutable);
 const env = {
   ...process.env,
-  PATH: `${binPath}:${process.env.PATH ?? ''}`,
+  PATH: `${binPath}${delimiter}${process.env.PATH ?? ''}`,
 };
 
 describe('media-sync run', () => {
