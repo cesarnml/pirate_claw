@@ -117,7 +117,7 @@ export function openDatabase(path = DEFAULT_DATABASE_PATH): Database {
 }
 
 export function ensureSchema(database: Database): void {
-  database.exec(`
+  database.run(`
     PRAGMA foreign_keys = ON;
 
     CREATE TABLE IF NOT EXISTS runs (
@@ -180,7 +180,7 @@ export function ensureSchema(database: Database): void {
       .get() as { 1: number } | null | undefined) !== null;
 
   if (!hasRunStatusColumn) {
-    database.exec(
+    database.run(
       `ALTER TABLE runs ADD COLUMN status TEXT NOT NULL DEFAULT 'running'`,
     );
   }
