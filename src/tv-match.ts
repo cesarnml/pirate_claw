@@ -27,7 +27,8 @@ export function matchTvItem(
 
   return rules
     .map((rule) => {
-      const match = matchRule(item, rule);
+      const pattern = buildRulePattern(rule);
+      const match = matchRule(item, rule, pattern);
 
       if (!match) {
         return undefined;
@@ -38,7 +39,7 @@ export function matchTvItem(
         identityKey,
         score: scoreMatch(rule, item),
         reasons: [
-          `pattern:${rule.pattern}`,
+          `pattern:${pattern.source}`,
           `resolution:${item.resolution}`,
           `codec:${item.codec}`,
         ],
@@ -49,9 +50,11 @@ export function matchTvItem(
     .sort((left, right) => right.score - left.score);
 }
 
-function matchRule(item: NormalizedFeedItem, rule: TvRule): boolean {
-  const pattern = new RegExp(rule.pattern, 'i');
-
+function matchRule(
+  item: NormalizedFeedItem,
+  rule: TvRule,
+  pattern: RegExp,
+): boolean {
   if (!pattern.test(item.normalizedTitle)) {
     return false;
   }
@@ -60,6 +63,28 @@ function matchRule(item: NormalizedFeedItem, rule: TvRule): boolean {
     rule.resolutions.includes(item.resolution ?? '') &&
     rule.codecs.includes(item.codec ?? '')
   );
+}
+
+function buildRulePattern(rule: TvRule): RegExp {
+  return new RegExp(rule.matchPattern ?? deriveMatchPattern(rule.name), 'i');
+}
+
+function deriveMatchPattern(name: string): string {
+  const normalizedName = name
+    .trim()
+    .replace(/[._-]+/g, ' ')
+    .replace(/[()[\]{}]+/g, ' ')
+    .replace(/\s+/g, ' ');
+  const tokens = normalizedName
+    .split(' ')
+    .map((token) => escapeForRegex(token))
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return '^$';
+  }
+
+  return `(?:^| )${tokens.join(' +')}(?:$| )`;
 }
 
 function buildIdentityKey(item: NormalizedFeedItem): string {
@@ -86,4 +111,8 @@ function scoreCodec(length: number, index: number): number {
 
 function padNumber(value: number | undefined): string {
   return String(value ?? '').padStart(2, '0');
+}
+
+function escapeForRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

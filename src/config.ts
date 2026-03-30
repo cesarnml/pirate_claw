@@ -7,7 +7,7 @@ export type FeedConfig = {
 
 export type TvRule = {
   name: string;
-  pattern: string;
+  matchPattern?: string;
   resolutions: string[];
   codecs: string[];
 };
@@ -102,7 +102,10 @@ function validateTvRule(input: unknown, path: string, index: number): TvRule {
 
   return {
     name: requireString(rule, 'name', `${path} tv[${index}]`),
-    pattern: requireString(rule, 'pattern', `${path} tv[${index}]`),
+    matchPattern: optionalString(
+      rule.matchPattern,
+      `${path} tv[${index}] matchPattern`,
+    ),
     resolutions: requireStringArray(
       rule,
       'resolutions',
@@ -178,6 +181,14 @@ function requireString(
   path: string,
 ): string {
   return expectString(input[key], `${path} ${key}`);
+}
+
+function optionalString(input: unknown, path: string): string | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  return expectString(input, path);
 }
 
 function requireNumberArray(

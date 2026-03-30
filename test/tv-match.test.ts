@@ -13,7 +13,6 @@ describe('matchTvItem', () => {
     const rules: TvRule[] = [
       {
         name: 'Example Show',
-        pattern: 'example[ ._-]*show',
         resolutions: ['2160p', '1080p'],
         codecs: ['x265', 'x264'],
       },
@@ -25,7 +24,7 @@ describe('matchTvItem', () => {
         identityKey: 'tv:example show|s01e02',
         score: 101,
         reasons: [
-          'pattern:example[ ._-]*show',
+          'pattern:(?:^| )Example +Show(?:$| )',
           'resolution:1080p',
           'codec:x265',
         ],
@@ -42,7 +41,6 @@ describe('matchTvItem', () => {
     const rules: TvRule[] = [
       {
         name: 'Example Show',
-        pattern: 'example show',
         resolutions: ['1080p'],
         codecs: ['x265'],
       },
@@ -59,7 +57,6 @@ describe('matchTvItem', () => {
     const rules: TvRule[] = [
       {
         name: 'Example Show',
-        pattern: '\\bexample show\\b',
         resolutions: ['1080p'],
         codecs: ['x265'],
       },
@@ -97,7 +94,6 @@ describe('matchTvItem', () => {
     const rules: TvRule[] = [
       {
         name: 'Example Show',
-        pattern: '\\bexample show\\b',
         resolutions: ['1080p'],
         codecs: ['x265'],
       },
@@ -113,14 +109,13 @@ describe('matchTvItem', () => {
     });
     const rules: TvRule[] = [
       {
-        name: 'Preferred Rule',
-        pattern: '\\bexample show\\b',
+        name: 'Example Show',
         resolutions: ['1080p', '720p'],
         codecs: ['x265', 'x264'],
       },
       {
-        name: 'Fallback Rule',
-        pattern: 'example[ ._-]*show',
+        name: 'Example Show',
+        matchPattern: 'example[ ._-]*show',
         resolutions: ['2160p', '1080p'],
         codecs: ['x264', 'x265'],
       },
@@ -128,22 +123,51 @@ describe('matchTvItem', () => {
 
     expect(matchTvItem(item, rules)).toEqual([
       {
-        ruleName: 'Preferred Rule',
+        ruleName: 'Example Show',
         identityKey: 'tv:example show|s01e02',
         score: 201,
         reasons: [
-          'pattern:\\bexample show\\b',
+          'pattern:(?:^| )Example +Show(?:$| )',
           'resolution:1080p',
           'codec:x265',
         ],
         item,
       },
       {
-        ruleName: 'Fallback Rule',
+        ruleName: 'Example Show',
         identityKey: 'tv:example show|s01e02',
         score: 100,
         reasons: [
           'pattern:example[ ._-]*show',
+          'resolution:1080p',
+          'codec:x265',
+        ],
+        item,
+      },
+    ]);
+  });
+
+  it('uses matchPattern when the user overrides the derived pattern', () => {
+    const item = normalizeFeedItem({
+      mediaType: 'tv',
+      rawTitle: 'Example Show UK S01E02 1080p WEB x265',
+    });
+    const rules: TvRule[] = [
+      {
+        name: 'Example Show',
+        matchPattern: '(?:^| )Example +Show +UK(?:$| )',
+        resolutions: ['1080p'],
+        codecs: ['x265'],
+      },
+    ];
+
+    expect(matchTvItem(item, rules)).toEqual([
+      {
+        ruleName: 'Example Show',
+        identityKey: 'tv:example show uk|s01e02',
+        score: 100,
+        reasons: [
+          'pattern:(?:^| )Example +Show +UK(?:$| )',
           'resolution:1080p',
           'codec:x265',
         ],
