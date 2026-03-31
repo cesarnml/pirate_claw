@@ -42,7 +42,7 @@ Explicitly deferred:
 
 Working notes:
 
-- `docs/01-product/phase-02-preliminary-notes.md`
+- `docs/01-product/phase-02-real-world-feed-compatibility.md`
 
 ## Phase 03: Post-Queue Lifecycle
 

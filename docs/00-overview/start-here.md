@@ -1,72 +1,104 @@
 # Start Here
 
-This repo is currently documentation-first. There is no implementation yet.
+This document is primarily for new AI threads working in this repo.
 
-If you are a new Codex thread, get your bearings in this order:
+Its job is to answer three questions quickly:
 
-1. Read `docs/01-product/phase-01-mvp.md`.
-2. Read `docs/02-delivery/phase-01/implementation-plan.md`.
-3. Read `docs/03-engineering/tdd-workflow.md`.
+1. what state is the project in now
+2. which docs matter for the task at hand
+3. how work should be planned, implemented, and handed off
 
-## What This Project Is
+## Current Repo State
 
-A local CLI that:
+Pirate Claw is implemented through Phase 02.
 
-- reads configured RSS feeds
-- normalizes titles into media metadata
-- matches items against JSON rules for TV and movies
-- deduplicates with SQLite
-- submits approved candidates to Transmission
-- records outcomes for review and retry
+Current delivered surface:
 
-Phase 01 ends at successful queueing in Transmission.
+- `pirate-claw run`
+- `pirate-claw status`
+- `pirate-claw retry-failed`
+- local config via `pirate-claw.config.json`
+- local runtime persistence via `pirate-claw.db`
 
-## What This Project Is Not Yet
+Current product boundary:
 
-Do not build these in the first implementation slice:
+- local CLI only
+- Transmission is the downloader adapter
+- SQLite is the local persistence boundary
+- real-world feed compatibility for EZTV and Atlas is implemented
+
+Still deferred:
 
 - web UI
-- scheduling
+- scheduling or polling
+- remote feed capture
+- hosted persistence
 - download completion polling
-- renaming
+- download renaming or organization rules
 - Synology archiving
-- source-specific hardcoding
+- ingestion redesign beyond the local SQLite model
 
-## How To Work
+## Read These Docs By Task Type
 
-Follow red-green-refactor.
+If you are understanding the current product:
 
-- one ticket at a time
-- one failing test at a time
-- one review stop after each ticket
+1. Read [`README.md`](../../README.md).
+2. Read [`docs/00-overview/roadmap.md`](./roadmap.md).
+3. Read the relevant product doc under `docs/01-product/`.
 
-Do not implement all of phase 01 in one go.
+If you are planning or revising a phase:
 
-## First Ticket To Implement
+1. Read the relevant product doc under `docs/01-product/`.
+2. Read [`docs/02-delivery/phase-implementation-guidance.md`](../02-delivery/phase-implementation-guidance.md).
+3. Read or update the relevant `docs/02-delivery/<phase>/implementation-plan.md`.
+4. If the phase is still fuzzy, use `grill-me` before finalizing the plan.
 
-Start with `P1.01 CLI Skeleton And Config Loading` from `docs/02-delivery/phase-01/ticket-01-cli-skeleton-and-config-loading.md`.
+If you are implementing an existing ticket:
 
-The first slice should decide only what is necessary to support that ticket:
+1. Read the relevant phase implementation plan.
+2. Read the specific ticket file.
+3. Read any current-user docs affected by the change, usually [`README.md`](../../README.md).
+4. Read any engineering note directly tied to the work, such as schema or delivery docs.
 
-- minimal Bun project setup
-- Bun test runner
-- minimal file layout
-- runnable CLI entrypoint
-- config loading and validation behavior
+If you are doing workflow or delivery-tooling work:
 
-Do not pre-build modules for later tickets unless the first failing test requires them.
+1. Read [`docs/02-delivery/phase-implementation-guidance.md`](../02-delivery/phase-implementation-guidance.md).
+2. Read [`docs/03-engineering/delivery-orchestrator.md`](../03-engineering/delivery-orchestrator.md) if the work touches stacked delivery flow.
 
-## Expectations For The Next Thread
+## Planning Workflow
 
-The next Codex thread should:
+When shaping a new phase or revising an existing one:
 
-1. confirm the docs-driven plan
-2. implement only Ticket 01
-3. explain the first failing test before writing code
-4. include a short rationale for why the chosen implementation was the smallest acceptable path
-5. stop after Ticket 01 for review
+- keep the phase outcome-focused
+- break work into small end-to-end tickets
+- keep explicit deferrals in the phase plan
+- prefer a thin real slice over broad setup work
+- use `grill-me` when the decision tree is still unclear
 
-## Explanation Requirement
+The shared stance for phase planning lives in:
+
+- [`docs/02-delivery/phase-implementation-guidance.md`](../02-delivery/phase-implementation-guidance.md)
+
+## Ticket Implementation Workflow
+
+When implementing a ticket:
+
+- land one small real behavior at a time
+- keep the ticket end to end
+- test what the user can observe
+- avoid unrelated cleanup during the ticket unless required to land safely
+- update rationale and operator-facing docs when behavior changes
+- stop at the ticket boundary unless the user explicitly says to continue
+
+Default technical constraints:
+
+- Bun + TypeScript
+- SQLite for persistence
+- Transmission as the first downloader adapter
+- source-agnostic core where practical
+- behavior-focused tests through public interfaces
+
+## Review And Handoff Workflow
 
 Every ticket handoff should leave a short explanation artifact in the PR, review notes, or ticket update that answers:
 
@@ -75,12 +107,21 @@ Every ticket handoff should leave a short explanation artifact in the PR, review
 - what alternative was considered and rejected
 - what was intentionally deferred
 
+If a change suggests broader cleanup:
+
+- do not automatically widen the current ticket
+- capture the cleanup separately
+- use a refactor follow-up only when the phase slice is already complete or the cleanup is required for safe delivery
+
+## Doc Map
+
+- `docs/01-product/`: product goals and phase scope
+- `docs/02-delivery/`: implementation plans, tickets, and delivery guidance
+- `docs/03-engineering/`: engineering workflow and supporting technical notes
+- `docs/04-decisions/`: ADRs and durable technical decisions
+
 ## If Something Feels Ambiguous
 
-Default to the smallest implementation that preserves these constraints:
+Default to the smallest implementation that preserves the current product boundary.
 
-- Bun + TypeScript
-- SQLite for persistence
-- Transmission as the first downloader adapter
-- source-agnostic core
-- behavior-focused tests through public interfaces
+If scope, tradeoffs, or ticket shape still feel vague, use `grill-me` before writing the plan or before starting the implementation.
