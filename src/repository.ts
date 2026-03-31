@@ -111,7 +111,7 @@ export type Repository = {
   listRetryableCandidates(limit?: number): CandidateStateRecord[];
 };
 
-export const DEFAULT_DATABASE_PATH = 'media-sync.db';
+export const DEFAULT_DATABASE_PATH = 'pirate-claw.db';
 
 export function openDatabase(path = DEFAULT_DATABASE_PATH): Database {
   return new Database(path, { create: true, strict: true });

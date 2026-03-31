@@ -110,7 +110,7 @@ describe('pirate-claw run', () => {
     expect(secondRun.stdout).toContain('skipped_duplicate: 2');
     expect(secondRun.stdout).toContain('skipped_no_match: 1');
 
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
     const firstRunOutcomes = repository.listFeedItemOutcomes(1);
     const secondRunOutcomes = repository.listFeedItemOutcomes(2);
 
@@ -290,7 +290,7 @@ describe('pirate-claw status', () => {
 
   it('prints recent run summaries and current candidate states without mutating the database', async () => {
     const directory = await mkdtemp();
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
 
     const firstRun = repository.startRun('2026-03-30T00:00:00.000Z');
     repository.recordFeedItemOutcome({
@@ -399,7 +399,7 @@ describe('pirate-claw status', () => {
 
   it('fails without creating a database when status is run before initialization', async () => {
     const directory = await mkdtemp();
-    const databasePath = join(directory, 'media-sync.db');
+    const databasePath = join(directory, 'pirate-claw.db');
 
     expect(existsSync(databasePath)).toBe(false);
 
@@ -437,7 +437,7 @@ describe('pirate-claw retry-failed', () => {
     const directory = await mkdtemp();
     const transmissionServer = startFlakyRetryTransmissionServer();
     const configPath = join(directory, 'pirate-claw.config.json');
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
 
     await Bun.write(
       configPath,
@@ -518,7 +518,7 @@ describe('pirate-claw retry-failed', () => {
     const directory = await mkdtemp();
     const transmissionServer = startTransmissionServer();
     const configPath = join(directory, 'pirate-claw.config.json');
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
 
     await Bun.write(
       configPath,
@@ -575,7 +575,7 @@ describe('pirate-claw retry-failed', () => {
 
   it('fails without creating a database when retry-failed is run before initialization', async () => {
     const directory = await mkdtemp();
-    const databasePath = join(directory, 'media-sync.db');
+    const databasePath = join(directory, 'pirate-claw.db');
     const configPath = join(directory, 'pirate-claw.config.json');
 
     await Bun.write(
@@ -615,7 +615,7 @@ describe('pirate-claw retry-failed', () => {
 });
 
 async function mkdtemp(): Promise<string> {
-  const directory = await createTempDir(join(tmpdir(), 'media-sync-test-'));
+  const directory = await createTempDir(join(tmpdir(), 'pirate-claw-test-'));
 
   tempDirs.push(directory);
   return directory;

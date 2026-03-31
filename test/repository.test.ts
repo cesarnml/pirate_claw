@@ -352,10 +352,10 @@ function createTestRepository(path: string) {
 }
 
 async function createDatabasePath(): Promise<string> {
-  const directory = await createTempDir(join(tmpdir(), 'media-sync-db-test-'));
+  const directory = await createTempDir(join(tmpdir(), 'pirate-claw-db-test-'));
 
   tempDirs.push(directory);
-  return join(directory, 'media-sync.db');
+  return join(directory, 'pirate-claw.db');
 }
 
 function requireMovieMatch(rawTitle: string) {

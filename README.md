@@ -84,10 +84,19 @@ Expected behavior in the current Phase 02 build:
 
 Prerequisites before running against live feeds:
 
+- the Transmission app is installed and running locally
 - a reachable Transmission RPC endpoint
 - credentials with permission to add torrents
 - a local `pirate-claw.config.json` copied from [`pirate-claw.config.example.json`](./pirate-claw.config.example.json)
 - at least one TV rule narrowed to a show you actually want to queue from the current EZTV feed window
+
+Transmission local setup checklist:
+
+1. Open the Transmission app before running `pirate-claw`.
+2. In Transmission settings, enable remote access so the local RPC and web interface are available.
+3. Confirm the listening port matches your config. The default example uses `9091`, so the RPC URL is `http://localhost:9091/transmission/rpc`.
+4. If Transmission requires authentication, copy that same username and password into `pirate-claw.config.json`.
+5. If Transmission limits allowed client addresses, keep `127.0.0.1` or `localhost` allowed so Pirate Claw can connect from the same machine.
 
 Use this example as a starting point for local verification:
 
@@ -129,9 +138,10 @@ Suggested manual verification flow:
 
 1. Copy [`pirate-claw.config.example.json`](./pirate-claw.config.example.json) to `./pirate-claw.config.json`, then replace the Transmission credentials.
 2. Change `tv[0].name` to a show title that is currently visible in the EZTV feed.
-3. Run `./bin/pirate-claw run --config ./pirate-claw.config.json`.
-4. Confirm queued items in Transmission use torrent payload URLs instead of details-page links.
-5. Use `./bin/pirate-claw status` to inspect the resulting run and candidate-state records.
+3. Make sure the Transmission app is still running and its local remote-access settings still match your config.
+4. Run `./bin/pirate-claw run --config ./pirate-claw.config.json`.
+5. Confirm queued items in Transmission use torrent payload URLs instead of details-page links.
+6. Use `./bin/pirate-claw status` to inspect the resulting run and candidate-state records.
 
 Still deferred after this ticket:
 
