@@ -17,16 +17,16 @@ Phase 01 ends at successful queueing in Transmission. It does not include a web 
 
 Tickets 01-10 are implemented:
 
-- minimal Bun + TypeScript CLI skeleton with JSON config loading and validation for `media-sync run`
+- minimal Bun + TypeScript CLI skeleton with JSON config loading and validation for `pirate-claw run`
 - RSS fetch-and-parse entrypoint that converts RSS items into a raw feed-item shape and prefers `enclosure.url` over `<link>` for queueable downloads
 - title-normalization module that extracts matching metadata for TV and movie releases
 - TV rule matcher that evaluates normalized items against name-based rules with optional regex overrides plus codec and resolution filters
 - movie policy matcher that accepts releases by global year and quality policy without per-title rules, including movie titles that omit codec metadata
 - SQLite-backed run history and candidate-state persistence that preserves dedupe and retryability
 - Transmission RPC adapter that negotiates session ids, submits torrent URLs, and returns structured queueing failures without wiring the full run pipeline yet
-- end-to-end `media-sync run` orchestration that fetches feeds, matches candidates, persists per-feed-item outcomes, submits winners, and prints a compact run summary
-- read-only `media-sync status` inspection that reports recent runs and current candidate state from SQLite without creating or migrating the database
-- `media-sync retry-failed` orchestration that re-submits only failed candidate-state rows from SQLite using stored torrent URLs and records a new run summary
+- end-to-end `pirate-claw run` orchestration that fetches feeds, matches candidates, persists per-feed-item outcomes, submits winners, and prints a compact run summary
+- read-only `pirate-claw status` inspection that reports recent runs and current candidate state from SQLite without creating or migrating the database
+- `pirate-claw retry-failed` orchestration that re-submits only failed candidate-state rows from SQLite using stored torrent URLs and records a new run summary
 
 The project is being planned as a small-slice, review-friendly build:
 
@@ -61,13 +61,13 @@ Useful supporting docs:
 - `bun run test:coverage` for local coverage checks when changing or refactoring tested behavior
 - `bun run verify`
 - `bun run ci`
-- `./bin/media-sync run --config ./test/fixtures/valid-config.json`
-- `./bin/media-sync status`
-- `./bin/media-sync retry-failed --config ./test/fixtures/valid-config.json`
+- `./bin/pirate-claw run --config ./test/fixtures/valid-config.json`
+- `./bin/pirate-claw status`
+- `./bin/pirate-claw retry-failed --config ./test/fixtures/valid-config.json`
 
 ## Phase 02 Manual Verification
 
-Phase 02 is a real-world compatibility slice, not an automation phase yet. The current operator surface is still `media-sync` and `--config`; the final `pirate-claw` rename lands in `P2.04`.
+Phase 02 is a real-world compatibility slice that now uses the branded operator surface: `pirate-claw` with `pirate-claw.config.json`.
 
 Target feeds for local manual verification:
 
@@ -85,7 +85,7 @@ Prerequisites before running against live feeds:
 
 - a reachable Transmission RPC endpoint
 - credentials with permission to add torrents
-- a local config file derived from [`test/fixtures/phase-02-real-world.config.json`](./test/fixtures/phase-02-real-world.config.json)
+- a local config file derived from [`test/fixtures/pirate-claw.config.json`](./test/fixtures/pirate-claw.config.json)
 - at least one TV rule narrowed to a show you actually want to queue from the current EZTV feed window
 
 Use this example as a starting point for local verification:
@@ -124,20 +124,20 @@ Use this example as a starting point for local verification:
 }
 ```
 
-Suggested manual verification flow before the rename ticket:
+Suggested manual verification flow:
 
 1. Copy the example config to a local file and replace the Transmission credentials.
 2. Change `tv[0].name` to a show title that is currently visible in the EZTV feed.
-3. Run `./bin/media-sync run --config ./phase-02-real-world.config.json` or the path to your edited local copy, not the checked-in fixture.
+3. Run `./bin/pirate-claw run --config ./pirate-claw.config.json` or the path to your edited local copy, not the checked-in fixture.
 4. Confirm queued items in Transmission use torrent payload URLs instead of details-page links.
-5. Use `./bin/media-sync status` to inspect the resulting run and candidate-state records.
+5. Use `./bin/pirate-claw status` to inspect the resulting run and candidate-state records.
 
 Still deferred after this ticket:
 
 - polling or scheduling
 - remote feed capture or hosted persistence
 - importing buffered feed items into local SQLite
-- the final branded `pirate-claw` command and `pirate-claw.config.json` name
+- the branded rename is complete, but polling and ingestion redesign still remain deferred
 
 ## CI
 
@@ -149,9 +149,9 @@ Still deferred after this ticket:
 
 The initial command surface is intentionally small:
 
-- `media-sync run`
-- `media-sync status`
-- `media-sync retry-failed`
+- `pirate-claw run`
+- `pirate-claw status`
+- `pirate-claw retry-failed`
 
 ## Principles
 

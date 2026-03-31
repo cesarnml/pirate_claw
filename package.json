@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "media-sync": "./bin/media-sync"
+    "pirate-claw": "./bin/pirate-claw"
   },
   "scripts": {
     "ci": "bun run verify && bun run test",

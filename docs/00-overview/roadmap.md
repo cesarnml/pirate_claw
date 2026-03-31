@@ -15,7 +15,7 @@ Goal:
 
 Exit condition:
 
-- `media-sync run` can successfully queue a matched item in Transmission
+- `pirate-claw run` can successfully queue a matched item in Transmission
 
 ## Phase 02: Real-World Feed Compatibility
 

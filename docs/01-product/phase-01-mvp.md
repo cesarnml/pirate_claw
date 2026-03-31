@@ -35,9 +35,9 @@ Use Bun deliberately in phase 01. This repo prefers Bun's integrated runtime, te
 
 The initial CLI surface should stay small:
 
-- `media-sync run`
-- `media-sync status`
-- `media-sync retry-failed`
+- `pirate-claw run`
+- `pirate-claw status`
+- `pirate-claw retry-failed`
 
 ## Config Shape
 

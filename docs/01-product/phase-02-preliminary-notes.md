@@ -14,7 +14,7 @@ The current Phase 02 implementation target is:
 - prefer RSS `enclosure.url` over `<link>` for queueable download URLs
 - keep `<link>` as fallback when no enclosure URL exists
 - allow movie items to match when year and resolution are valid even if codec is absent
-- rename the operator surface to `pirate-claw` and `pirate-claw.config.json` as the final Phase 02 ticket
+- use the branded operator surface `pirate-claw` with `pirate-claw.config.json`
 - keep the app manually invoked and locally persisted using the existing SQLite model
 
 ## Explicit Phase 03 Deferrals

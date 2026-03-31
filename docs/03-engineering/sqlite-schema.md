@@ -20,7 +20,7 @@ This schema is local-only. It does not attempt to capture polling history, remot
 
 ## `runs`
 
-One row per `media-sync run` or `media-sync retry-failed` invocation.
+One row per `pirate-claw run` or `pirate-claw retry-failed` invocation.
 
 Important fields:
 
