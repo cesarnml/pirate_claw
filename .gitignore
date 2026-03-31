@@ -1,4 +1,3 @@
 node_modules/
 .vscode/settings.json
-.codex/phase02/state.json
-.codex/phase02/reviews/
+.codex/delivery/

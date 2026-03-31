@@ -2,17 +2,19 @@ import { describe, expect, it } from 'bun:test';
 
 import {
   canAdvanceTicket,
+  createOptions,
   deriveBranchName,
   deriveWorktreePath,
-  parsePhase02Plan,
+  parsePlan,
   resolveReviewFetcher,
   syncStateWithPlan,
-  type Phase02State,
-} from '../src/phase02-orchestrator';
+  type DeliveryState,
+} from './orchestrator';
 
-describe('phase02 orchestrator', () => {
-  it('parses the phase-02 implementation plan into ordered tickets', () => {
-    const tickets = parsePhase02Plan(`
+describe('delivery orchestrator', () => {
+  it('parses an implementation plan into ordered tickets', () => {
+    const tickets = parsePlan(
+      `
 # Phase 02 Implementation Plan
 
 ## Ticket Order
@@ -26,7 +28,9 @@ describe('phase02 orchestrator', () => {
 - \`ticket-02-movie-matcher-allows-missing-codec.md\`
 
 ## Exit Condition
-`);
+`,
+      'docs/02-delivery/phase-02/implementation-plan.md',
+    );
 
     expect(tickets).toEqual([
       {
@@ -46,11 +50,23 @@ describe('phase02 orchestrator', () => {
     ]);
   });
 
-  it('syncs existing state while preserving runtime metadata', () => {
-    const existing: Phase02State = {
-      phase: 'phase-02',
+  it('builds options from a phase alias', () => {
+    expect(createOptions({ phase: 'phase-02' })).toEqual({
       planPath: 'docs/02-delivery/phase-02/implementation-plan.md',
-      statePath: '.codex/phase02/state.json',
+      planKey: 'phase-02',
+      statePath: '.codex/delivery/phase-02/state.json',
+      reviewsDirPath: '.codex/delivery/phase-02/reviews',
+      reviewWaitMinutes: 5,
+    });
+  });
+
+  it('syncs state while preserving runtime metadata and inferred branch chaining', () => {
+    const options = createOptions({ phase: 'phase-02' });
+    const existing: DeliveryState = {
+      planKey: 'phase-02',
+      planPath: options.planPath,
+      statePath: options.statePath,
+      reviewsDirPath: options.reviewsDirPath,
       reviewWaitMinutes: 5,
       tickets: [
         {
@@ -88,6 +104,7 @@ describe('phase02 orchestrator', () => {
         },
       ],
       '/workspace/pirate_claw',
+      options,
     );
 
     expect(synced.tickets[0]?.status).toBe('done');
