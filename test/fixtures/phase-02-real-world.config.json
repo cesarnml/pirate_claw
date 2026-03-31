@@ -1,0 +1,31 @@
+{
+  "feeds": [
+    {
+      "name": "EZTV",
+      "url": "https://myrss.org/eztv",
+      "mediaType": "tv"
+    },
+    {
+      "name": "Atlas Movies",
+      "url": "https://atlas.rssly.org/feed",
+      "mediaType": "movie"
+    }
+  ],
+  "tv": [
+    {
+      "name": "Replace With A Current EZTV Show",
+      "resolutions": ["2160p", "1080p"],
+      "codecs": ["x265", "x264"]
+    }
+  ],
+  "movies": {
+    "years": [2026, 2025, 2024],
+    "resolutions": ["2160p", "1080p"],
+    "codecs": ["x265", "x264"]
+  },
+  "transmission": {
+    "url": "http://localhost:9091/transmission/rpc",
+    "username": "user",
+    "password": "pass"
+  }
+}
