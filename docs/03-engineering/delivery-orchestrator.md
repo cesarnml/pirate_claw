@@ -1,0 +1,131 @@
+# Delivery Orchestrator
+
+This repo now includes a small repo-local delivery orchestrator for stacked ticket work.
+
+## Stance
+
+The orchestrator is repo tooling, not app runtime code.
+
+That means:
+
+- the engine lives under `tools/`
+- the command wrapper lives under `scripts/`
+- tests for the engine live with the tooling code, not with app tests
+
+This keeps the product boundary honest. `src/` remains the Pirate Claw application. The delivery tool is a maintainer workflow helper.
+
+## Plan-Driven, Not Phase-Hardcoded
+
+The engine is generic. It does not fundamentally belong to Phase 02.
+
+What is phase-specific is:
+
+- which implementation plan to read
+- where local state and review artifacts are stored
+- which ticket IDs, titles, and files exist in that plan
+
+So the orchestrator takes either:
+
+- `--phase phase-02`
+- or `--plan docs/02-delivery/phase-02/implementation-plan.md`
+
+The current `phase-02` alias is just a convenience mapping to the committed plan file.
+
+## What It Owns
+
+The orchestrator owns process mechanics:
+
+- reading ticket order from the plan
+- durable local state under `.codex/delivery/<plan-key>/`
+- deterministic branch and worktree naming
+- stacked PR base chaining
+- a 5-minute review wait before fetch
+- saving raw `qodo-code-review` output locally
+- blocking advancement until review has been explicitly recorded
+- refreshing the current PR body from recorded ai-cr follow-up notes immediately before advancing to the next ticket
+
+It does **not** own AI-review judgment.
+
+That boundary is intentional. The `qodo-code-review` skill already defines the repo stance for AI review:
+
+- comments are advisory, not gospel
+- weak or mis-scoped comments should be pushed back on
+- only prudent, concrete fixes should be patched
+
+So the script fetches and stores review output, but humans or agents still use the skill to decide whether a comment matters.
+
+When ai-cr triage leads to prudent branch changes, the orchestrator updates the PR body as the final step of `advance`. That timing is intentional: the PR description should reflect the exact branch state that is being handed off before the next ticket starts.
+
+## Existing Phase 02 Work
+
+Phase 02 was already processed once through a more brittle route before this tool existed.
+
+To avoid pretending that work never happened, `sync` can infer progress from the repo when the local state file is absent:
+
+- if a ticket branch exists and the next ticket branch also exists, the earlier ticket is inferred as `done`
+- if a ticket branch exists and has an open PR but no next branch yet, it is inferred as `in_review`
+- if a ticket branch exists without a PR, it is inferred as `in_progress`
+- otherwise it remains `pending`
+
+That inference is intentionally conservative. It reconstructs enough state to resume a stacked phase without requiring a fresh restart.
+
+## Commands
+
+Use the generic command:
+
+```bash
+bun run deliver --phase phase-02 status
+```
+
+or:
+
+```bash
+bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md status
+```
+
+Available commands:
+
+- `sync`
+- `status`
+- `start [ticket-id]`
+- `open-pr [ticket-id]`
+- `fetch-review [ticket-id]`
+- `record-review <ticket-id> <clean|needs_patch|patched> [note]`
+- `advance [--no-start-next]`
+
+There is also a convenience alias:
+
+```bash
+bun run phase02 status
+```
+
+## Typical Flow
+
+```bash
+bun run deliver --phase phase-02 start
+bun run deliver --phase phase-02 open-pr
+bun run deliver --phase phase-02 fetch-review
+# use the qodo-code-review skill to triage the saved review artifact
+bun run deliver --phase phase-02 record-review P2.02 patched "patched the two actionable correctness issues"
+bun run deliver --phase phase-02 advance
+```
+
+## Review Artifact Location
+
+Fetched review output is written under:
+
+- `.codex/delivery/<plan-key>/reviews/`
+
+State is written under:
+
+- `.codex/delivery/<plan-key>/state.json`
+
+## PR Body Maintenance
+
+PR descriptions are maintained as delivery metadata, not one-shot text.
+
+- `open-pr` creates the initial PR body
+- `record-review` stores the triage result and optional note
+- `advance` refreshes the PR body from that recorded review state, then marks the ticket done and optionally starts the next one
+
+This matters because the repo squash-merges PRs onto `main`, so the PR body needs to mention prudent ai-cr follow-up work before the stack moves on.

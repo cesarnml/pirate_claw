@@ -2,7 +2,9 @@
 
 This note documents the current local SQLite model used by Pirate Claw. It is intentionally behavior-oriented: the goal is to explain what is persisted, how the tables relate, and which invariants matter for review and future tickets.
 
-For the exact DDL and repository queries, see [src/repository.ts](/Users/cesar/.codex/worktrees/ac10/pirate_claw/src/repository.ts).
+For the exact DDL and repository queries, see [`src/repository.ts`](../../src/repository.ts).
+
+For a visual relationship view, see [`sqlite-schema.mmd`](./sqlite-schema.mmd).
 
 ## Scope
 
@@ -20,7 +22,7 @@ This schema is local-only. It does not attempt to capture polling history, remot
 
 ## `runs`
 
-One row per `media-sync run` or `media-sync retry-failed` invocation.
+One row per `pirate-claw run` or `pirate-claw retry-failed` invocation.
 
 Important fields:
 

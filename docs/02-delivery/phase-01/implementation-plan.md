@@ -2,6 +2,8 @@
 
 This breakdown is intentionally small. Each ticket should fit a 1-3 hour review and follow one red-green-refactor loop around a single behavior.
 
+Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.md`](../phase-implementation-guidance.md) when shaping or revising tickets for this phase. If scope still feels fuzzy, use `grill-me` before implementation.
+
 ## Ticket Order
 
 1. `P1.01 CLI Skeleton And Config Loading`

@@ -16,14 +16,14 @@ const openDatabases: Database[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
 const cwd = process.cwd();
 const bunExecutable = process.execPath;
-const cliExecutable = join(cwd, 'bin/media-sync');
+const cliExecutable = join(cwd, 'bin/pirate-claw');
 const binPath = dirname(bunExecutable);
 const env = {
   ...process.env,
   PATH: `${binPath}${delimiter}${process.env.PATH ?? ''}`,
 };
 
-describe('media-sync run', () => {
+describe('pirate-claw run', () => {
   afterEach(async () => {
     while (openDatabases.length > 0) {
       openDatabases.pop()?.close();
@@ -46,7 +46,7 @@ describe('media-sync run', () => {
     const directory = await mkdtemp();
     const feedServer = startFeedServer();
     const transmissionServer = startTransmissionServer();
-    const configPath = join(directory, 'media-sync.config.json');
+    const configPath = join(directory, 'pirate-claw.config.json');
 
     await Bun.write(
       configPath,
@@ -87,7 +87,7 @@ describe('media-sync run', () => {
       ),
     );
 
-    const firstRun = await runCliCommand(directory, './media-sync.config.json');
+    const firstRun = await runSimpleCommand(directory, 'run');
 
     expect(firstRun.exitCode).toBe(0);
     expect(firstRun.stderr).toBe('');
@@ -99,7 +99,7 @@ describe('media-sync run', () => {
 
     const secondRun = await runCliCommand(
       directory,
-      './media-sync.config.json',
+      './pirate-claw.config.json',
     );
 
     expect(secondRun.exitCode).toBe(0);
@@ -110,7 +110,7 @@ describe('media-sync run', () => {
     expect(secondRun.stdout).toContain('skipped_duplicate: 2');
     expect(secondRun.stdout).toContain('skipped_no_match: 1');
 
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
     const firstRunOutcomes = repository.listFeedItemOutcomes(1);
     const secondRunOutcomes = repository.listFeedItemOutcomes(2);
 
@@ -228,9 +228,48 @@ describe('media-sync run', () => {
     expect(stdout).toBe('');
     expect(stderr).toContain('Missing value for --config.');
   });
+
+  it('does not fall back to media-sync.config.json after the rename', async () => {
+    const directory = await mkdtemp();
+    const configPath = join(directory, 'media-sync.config.json');
+
+    await Bun.write(
+      configPath,
+      JSON.stringify({
+        feeds: [],
+        tv: [],
+        movies: {
+          years: [2024],
+          resolutions: ['1080p'],
+          codecs: ['x265'],
+        },
+        transmission: {
+          url: 'http://127.0.0.1:9091/transmission/rpc',
+          username: 'user',
+          password: 'pass',
+        },
+      }),
+    );
+
+    const child = Bun.spawn([cliExecutable, 'run'], {
+      cwd: directory,
+      env,
+      stderr: 'pipe',
+      stdout: 'pipe',
+    });
+
+    const stdout = await new Response(child.stdout).text();
+    const stderr = await new Response(child.stderr).text();
+    const exitCode = await child.exited;
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toBe('');
+    expect(stderr).toContain('pirate-claw.config.json');
+    expect(stderr).not.toContain('create media-sync.config.json');
+  });
 });
 
-describe('media-sync status', () => {
+describe('pirate-claw status', () => {
   afterEach(async () => {
     while (openDatabases.length > 0) {
       openDatabases.pop()?.close();
@@ -251,7 +290,7 @@ describe('media-sync status', () => {
 
   it('prints recent run summaries and current candidate states without mutating the database', async () => {
     const directory = await mkdtemp();
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
 
     const firstRun = repository.startRun('2026-03-30T00:00:00.000Z');
     repository.recordFeedItemOutcome({
@@ -360,7 +399,7 @@ describe('media-sync status', () => {
 
   it('fails without creating a database when status is run before initialization', async () => {
     const directory = await mkdtemp();
-    const databasePath = join(directory, 'media-sync.db');
+    const databasePath = join(directory, 'pirate-claw.db');
 
     expect(existsSync(databasePath)).toBe(false);
 
@@ -369,13 +408,13 @@ describe('media-sync status', () => {
     expect(status.exitCode).toBe(1);
     expect(status.stdout).toBe('');
     expect(status.stderr).toContain(
-      `Database not initialized. Run 'media-sync run' first.`,
+      `Database not initialized. Run 'pirate-claw run' first.`,
     );
     expect(existsSync(databasePath)).toBe(false);
   });
 });
 
-describe('media-sync retry-failed', () => {
+describe('pirate-claw retry-failed', () => {
   afterEach(async () => {
     while (openDatabases.length > 0) {
       openDatabases.pop()?.close();
@@ -397,8 +436,8 @@ describe('media-sync retry-failed', () => {
   it('retries only failed candidates from SQLite and updates successful retries to queued', async () => {
     const directory = await mkdtemp();
     const transmissionServer = startFlakyRetryTransmissionServer();
-    const configPath = join(directory, 'media-sync.config.json');
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const configPath = join(directory, 'pirate-claw.config.json');
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
 
     await Bun.write(
       configPath,
@@ -442,7 +481,7 @@ describe('media-sync retry-failed', () => {
       directory,
       'retry-failed',
       '--config',
-      './media-sync.config.json',
+      './pirate-claw.config.json',
     );
 
     expect(retry.exitCode).toBe(0);
@@ -478,8 +517,8 @@ describe('media-sync retry-failed', () => {
   it('keeps failed candidates failed when the retry attempt still fails', async () => {
     const directory = await mkdtemp();
     const transmissionServer = startTransmissionServer();
-    const configPath = join(directory, 'media-sync.config.json');
-    const repository = createTestRepository(join(directory, 'media-sync.db'));
+    const configPath = join(directory, 'pirate-claw.config.json');
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
 
     await Bun.write(
       configPath,
@@ -512,7 +551,7 @@ describe('media-sync retry-failed', () => {
       directory,
       'retry-failed',
       '--config',
-      './media-sync.config.json',
+      './pirate-claw.config.json',
     );
 
     expect(retry.exitCode).toBe(0);
@@ -536,8 +575,8 @@ describe('media-sync retry-failed', () => {
 
   it('fails without creating a database when retry-failed is run before initialization', async () => {
     const directory = await mkdtemp();
-    const databasePath = join(directory, 'media-sync.db');
-    const configPath = join(directory, 'media-sync.config.json');
+    const databasePath = join(directory, 'pirate-claw.db');
+    const configPath = join(directory, 'pirate-claw.config.json');
 
     await Bun.write(
       configPath,
@@ -563,20 +602,20 @@ describe('media-sync retry-failed', () => {
       directory,
       'retry-failed',
       '--config',
-      './media-sync.config.json',
+      './pirate-claw.config.json',
     );
 
     expect(retry.exitCode).toBe(1);
     expect(retry.stdout).toBe('');
     expect(retry.stderr).toContain(
-      `Database not initialized. Run 'media-sync run' first.`,
+      `Database not initialized. Run 'pirate-claw run' first.`,
     );
     expect(existsSync(databasePath)).toBe(false);
   });
 });
 
 async function mkdtemp(): Promise<string> {
-  const directory = await createTempDir(join(tmpdir(), 'media-sync-test-'));
+  const directory = await createTempDir(join(tmpdir(), 'pirate-claw-test-'));
 
   tempDirs.push(directory);
   return directory;
