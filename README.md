@@ -56,6 +56,7 @@ Useful supporting docs:
 
 - `bun run hooks:install` once per clone to make `git push` run `bun run verify` locally
 - `bun test`
+- `bun run test:coverage` for local coverage checks when changing or refactoring tested behavior
 - `bun run verify`
 - `bun run ci`
 - `./bin/media-sync run --config ./test/fixtures/valid-config.json`
