@@ -6,6 +6,8 @@ Phase 02 is intentionally narrow. The goal is to make Pirate Claw work end-to-en
 
 - `Phase 02 Real-World Feed Compatibility`
 
+Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.md`](../phase-implementation-guidance.md) when shaping or revising tickets for this phase. If scope still feels fuzzy, use `grill-me` before implementation.
+
 ## Ticket Order
 
 1. `P2.01 Enclosure-First Feed Parsing`

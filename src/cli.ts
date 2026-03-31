@@ -94,14 +94,14 @@ export async function runCli(argv: string[]): Promise<number> {
 
 function openInitializedWritableDatabase() {
   if (!existsSync(DEFAULT_DATABASE_PATH)) {
-    throw new Error(`Database not initialized. Run 'media-sync run' first.`);
+    throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
   }
 
   const database = openDatabase();
 
   if (!hasStatusSchema(database)) {
     database.close();
-    throw new Error(`Database not initialized. Run 'media-sync run' first.`);
+    throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
   }
 
   return database;
@@ -109,14 +109,14 @@ function openInitializedWritableDatabase() {
 
 function openStatusDatabase() {
   if (!existsSync(DEFAULT_DATABASE_PATH)) {
-    throw new Error(`Database not initialized. Run 'media-sync run' first.`);
+    throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
   }
 
   const database = openDatabaseReadOnly();
 
   if (!hasStatusSchema(database)) {
     database.close();
-    throw new Error(`Database not initialized. Run 'media-sync run' first.`);
+    throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
   }
 
   return database;

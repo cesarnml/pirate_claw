@@ -32,7 +32,7 @@ export type AppConfig = {
   transmission: TransmissionConfig;
 };
 
-const DEFAULT_CONFIG_PATH = 'media-sync.config.json';
+const DEFAULT_CONFIG_PATH = 'pirate-claw.config.json';
 
 export class ConfigError extends Error {
   constructor(message: string) {

@@ -1,0 +1,60 @@
+erDiagram
+  RUNS {
+    INTEGER id PK
+    TEXT started_at
+    TEXT status
+    TEXT completed_at
+  }
+
+  FEED_ITEMS {
+    INTEGER id PK
+    INTEGER run_id FK
+    TEXT feed_name
+    TEXT guid_or_link
+    TEXT raw_title
+    TEXT published_at
+    TEXT download_url
+  }
+
+  CANDIDATE_STATE {
+    TEXT identity_key PK
+    TEXT media_type
+    TEXT status
+    TEXT queued_at
+    TEXT rule_name
+    INTEGER score
+    TEXT reasons_json
+    TEXT raw_title
+    TEXT normalized_title
+    INTEGER season
+    INTEGER episode
+    INTEGER year
+    TEXT resolution
+    TEXT codec
+    TEXT feed_name
+    TEXT guid_or_link
+    TEXT published_at
+    TEXT download_url
+    INTEGER first_seen_run_id FK
+    INTEGER last_seen_run_id FK
+    INTEGER last_feed_item_id FK
+    TEXT updated_at
+  }
+
+  FEED_ITEM_OUTCOMES {
+    INTEGER id PK
+    INTEGER run_id FK
+    INTEGER feed_item_id FK
+    TEXT status
+    TEXT identity_key
+    TEXT rule_name
+    TEXT message
+    TEXT created_at
+  }
+
+  RUNS ||--o{ FEED_ITEMS : records
+  RUNS ||--o{ FEED_ITEM_OUTCOMES : records
+  RUNS ||--o{ CANDIDATE_STATE : first_seen_in
+  RUNS ||--o{ CANDIDATE_STATE : last_seen_in
+  FEED_ITEMS ||--o| CANDIDATE_STATE : last_seen_item
+  FEED_ITEMS ||--o{ FEED_ITEM_OUTCOMES : produces
