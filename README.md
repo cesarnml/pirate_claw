@@ -128,7 +128,7 @@ Suggested manual verification flow before the rename ticket:
 
 1. Copy the example config to a local file and replace the Transmission credentials.
 2. Change `tv[0].name` to a show title that is currently visible in the EZTV feed.
-3. Run `./bin/media-sync run --config ./test/fixtures/phase-02-real-world.config.json` or the path to your local copy.
+3. Run `./bin/media-sync run --config ./phase-02-real-world.config.json` or the path to your edited local copy, not the checked-in fixture.
 4. Confirm queued items in Transmission use torrent payload URLs instead of details-page links.
 5. Use `./bin/media-sync status` to inspect the resulting run and candidate-state records.
 
