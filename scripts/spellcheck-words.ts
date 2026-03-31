@@ -1,3 +1,5 @@
+export {};
+
 const input = await Bun.stdin.text();
 
 const counts = new Map<string, number>();
