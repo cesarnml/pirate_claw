@@ -289,7 +289,9 @@ function seedQueuedTvCandidate(repository: Repository): void {
 }
 
 async function createDatabasePath(): Promise<string> {
-  const directory = await createTempDir(join(tmpdir(), 'pirate-claw-pipeline-'));
+  const directory = await createTempDir(
+    join(tmpdir(), 'pirate-claw-pipeline-'),
+  );
 
   tempDirs.push(directory);
   return join(directory, 'pirate-claw.db');
