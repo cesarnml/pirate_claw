@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 
 import { ConfigError, loadConfig, resolveConfigPath } from './config';
 import { retryFailedCandidates, runPipeline } from './pipeline';
+import { reconcileTrackedCandidates } from './reconcile';
 import {
   createRepository,
   ensureSchema,
@@ -78,8 +79,28 @@ export async function runCli(argv: string[]): Promise<number> {
       return 0;
     }
 
+    if (command === 'reconcile') {
+      const configPath = parseConfigPath(rest);
+      const resolvedConfigPath = resolveConfigPath(configPath);
+      const config = await loadConfig(resolvedConfigPath);
+      const database = openInitializedWritableDatabase();
+
+      try {
+        const result = await reconcileTrackedCandidates({
+          repository: createRepository(database),
+          downloader: createTransmissionDownloader(config.transmission),
+        });
+
+        console.log(formatReconcileSummary(result));
+      } finally {
+        database.close();
+      }
+
+      return 0;
+    }
+
     console.error(
-      'Unknown command. Available commands: "run", "status", "retry-failed".',
+      'Unknown command. Available commands: "run", "status", "retry-failed", "reconcile".',
     );
     return 1;
   } catch (error) {
@@ -99,9 +120,15 @@ function openInitializedWritableDatabase() {
 
   const database = openDatabase();
 
-  if (!hasStatusSchema(database)) {
+  try {
+    if (!hasStatusSchema(database)) {
+      throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
+    }
+
+    ensureSchema(database);
+  } catch (error) {
     database.close();
-    throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
+    throw error;
   }
 
   return database;
@@ -110,6 +137,18 @@ function openInitializedWritableDatabase() {
 function openStatusDatabase() {
   if (!existsSync(DEFAULT_DATABASE_PATH)) {
     throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
+  }
+
+  const migrationDatabase = openDatabase();
+
+  try {
+    if (!hasStatusSchema(migrationDatabase)) {
+      throw new Error(`Database not initialized. Run 'pirate-claw run' first.`);
+    }
+
+    ensureSchema(migrationDatabase);
+  } finally {
+    migrationDatabase.close();
   }
 
   const database = openDatabaseReadOnly();
@@ -137,6 +176,23 @@ function formatRunSummary(result: {
     `failed: ${result.counts.failed}`,
     `skipped_duplicate: ${result.counts.skipped_duplicate}`,
     `skipped_no_match: ${result.counts.skipped_no_match}`,
+  ].join('\n');
+}
+
+function formatReconcileSummary(result: {
+  reconciled: number;
+  queued: number;
+  downloading: number;
+  failed: number;
+  unresolved: number;
+}): string {
+  return [
+    'Reconciliation completed.',
+    `reconciled: ${result.reconciled}`,
+    `queued: ${result.queued}`,
+    `downloading: ${result.downloading}`,
+    `failed: ${result.failed}`,
+    `unresolved: ${result.unresolved}`,
   ].join('\n');
 }
 

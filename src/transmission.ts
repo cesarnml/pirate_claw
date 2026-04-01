@@ -12,6 +12,27 @@ export type SubmissionSuccess = {
   torrentHash?: string;
 };
 
+export type TorrentLifecycle = 'queued' | 'downloading' | 'failed';
+
+export type LookupTorrentInput = {
+  torrentId?: number;
+  torrentHash?: string;
+};
+
+export type LookupTorrentSuccess =
+  | {
+      ok: true;
+      found: true;
+      lifecycle: TorrentLifecycle;
+      torrentId?: number;
+      torrentName?: string;
+      torrentHash?: string;
+    }
+  | {
+      ok: true;
+      found: false;
+    };
+
 export type SubmissionFailureCode =
   | 'network_error'
   | 'session_error'
@@ -26,17 +47,25 @@ export type SubmissionFailure = {
 };
 
 export type SubmissionResult = SubmissionSuccess | SubmissionFailure;
+export type LookupTorrentResult = LookupTorrentSuccess | SubmissionFailure;
 
 export type Downloader = {
   submit(input: SubmitDownloadInput): Promise<SubmissionResult>;
 };
 
+export type ReconcileDownloader = {
+  lookup(input: LookupTorrentInput): Promise<LookupTorrentResult>;
+};
+
 export function createTransmissionDownloader(
   config: TransmissionConfig,
-): Downloader {
+): Downloader & ReconcileDownloader {
   return {
     submit(input) {
       return submitToTransmission(config, input);
+    },
+    lookup(input) {
+      return lookupTorrentInTransmission(config, input);
     },
   };
 }
@@ -45,7 +74,10 @@ async function submitToTransmission(
   config: TransmissionConfig,
   input: SubmitDownloadInput,
 ): Promise<SubmissionResult> {
-  const firstResponse = await sendRpcRequest(config, input);
+  const firstResponse = await sendRpcRequest(
+    config,
+    buildRequestBody(config, input),
+  );
 
   if (!firstResponse.ok) {
     return firstResponse.error;
@@ -65,7 +97,11 @@ async function submitToTransmission(
       };
     }
 
-    const retryResponse = await sendRpcRequest(config, input, sessionId);
+    const retryResponse = await sendRpcRequest(
+      config,
+      buildRequestBody(config, input),
+      sessionId,
+    );
 
     if (!retryResponse.ok) {
       return retryResponse.error;
@@ -99,7 +135,7 @@ async function submitToTransmission(
 
 async function sendRpcRequest(
   config: TransmissionConfig,
-  input: SubmitDownloadInput,
+  requestBody: RequestBody,
   sessionId?: string,
 ): Promise<
   | {
@@ -115,7 +151,7 @@ async function sendRpcRequest(
     const response = await fetch(config.url, {
       method: 'POST',
       headers: buildHeaders(config, sessionId),
-      body: JSON.stringify(buildRequestBody(config, input)),
+      body: JSON.stringify(requestBody),
     });
 
     return {
@@ -153,18 +189,26 @@ function buildHeaders(
 function buildRequestBody(
   config: TransmissionConfig,
   input: SubmitDownloadInput,
-): {
-  method: 'torrent-add';
-  arguments: {
-    filename: string;
-    'download-dir'?: string;
-  };
-} {
+): TorrentAddRequestBody {
   return {
     method: 'torrent-add',
     arguments: {
       filename: input.downloadUrl,
       ...(config.downloadDir ? { 'download-dir': config.downloadDir } : {}),
+    },
+  };
+}
+
+function buildLookupRequestBody(
+  input: LookupTorrentInput,
+): TorrentGetRequestBody {
+  return {
+    method: 'torrent-get',
+    arguments: {
+      ids: [input.torrentHash ?? input.torrentId].filter(
+        (value): value is number | string => value !== undefined,
+      ),
+      fields: ['id', 'name', 'hashString', 'status', 'percentDone', 'error'],
     },
   };
 }
@@ -208,6 +252,123 @@ function parseSubmissionResult(parsed: unknown): SubmissionResult {
   };
 }
 
+async function lookupTorrentInTransmission(
+  config: TransmissionConfig,
+  input: LookupTorrentInput,
+): Promise<LookupTorrentResult> {
+  if (input.torrentHash === undefined && input.torrentId === undefined) {
+    return {
+      ok: true,
+      found: false,
+    };
+  }
+
+  const firstResponse = await sendRpcRequest(
+    config,
+    buildLookupRequestBody(input),
+  );
+
+  if (!firstResponse.ok) {
+    return firstResponse.error;
+  }
+
+  let response = firstResponse.response;
+
+  if (response.status === 409) {
+    const sessionId = response.headers.get('x-transmission-session-id');
+
+    if (!sessionId) {
+      return {
+        ok: false,
+        code: 'session_error',
+        message:
+          'Transmission session negotiation failed: missing X-Transmission-Session-Id header.',
+      };
+    }
+
+    const retryResponse = await sendRpcRequest(
+      config,
+      buildLookupRequestBody(input),
+      sessionId,
+    );
+
+    if (!retryResponse.ok) {
+      return retryResponse.error;
+    }
+
+    response = retryResponse.response;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      code: 'http_error',
+      message: `Transmission RPC request failed with HTTP ${response.status}.`,
+    };
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = await response.json();
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC response was not valid JSON.',
+    };
+  }
+
+  return parseLookupResult(parsed);
+}
+
+function parseLookupResult(parsed: unknown): LookupTorrentResult {
+  if (!isTransmissionResponse(parsed)) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC response was missing required fields.',
+    };
+  }
+
+  if (parsed.result !== 'success') {
+    return {
+      ok: false,
+      code: 'rpc_error',
+      message: `Transmission rejected torrent lookup: ${parsed.result}.`,
+    };
+  }
+
+  const torrents = parsed.arguments.torrents;
+
+  if (!Array.isArray(torrents)) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC success response was missing torrent list.',
+    };
+  }
+
+  const torrent = torrents[0];
+
+  if (!torrent || typeof torrent !== 'object') {
+    return {
+      ok: true,
+      found: false,
+    };
+  }
+
+  return {
+    ok: true,
+    found: true,
+    lifecycle: mapTorrentLifecycle(torrent),
+    torrentId: typeof torrent.id === 'number' ? torrent.id : undefined,
+    torrentName: typeof torrent.name === 'string' ? torrent.name : undefined,
+    torrentHash:
+      typeof torrent.hashString === 'string' ? torrent.hashString : undefined,
+  };
+}
+
 function isTransmissionResponse(value: unknown): value is TransmissionResponse {
   if (!value || typeof value !== 'object') {
     return false;
@@ -240,6 +401,9 @@ type TransmissionTorrent = {
   id?: number;
   name?: string;
   hashString?: string;
+  status?: number;
+  percentDone?: number;
+  error?: number;
 };
 
 type TransmissionResponse = {
@@ -247,5 +411,40 @@ type TransmissionResponse = {
   arguments: {
     'torrent-added'?: TransmissionTorrent;
     'torrent-duplicate'?: TransmissionTorrent;
+    torrents?: TransmissionTorrent[];
   };
 };
+
+type TorrentAddRequestBody = {
+  method: 'torrent-add';
+  arguments: {
+    filename: string;
+    'download-dir'?: string;
+  };
+};
+
+type TorrentGetRequestBody = {
+  method: 'torrent-get';
+  arguments: {
+    ids: Array<number | string>;
+    fields: string[];
+  };
+};
+
+type RequestBody = TorrentAddRequestBody | TorrentGetRequestBody;
+
+function mapTorrentLifecycle(torrent: TransmissionTorrent): TorrentLifecycle {
+  if (typeof torrent.error === 'number' && torrent.error !== 0) {
+    return 'failed';
+  }
+
+  if (
+    torrent.status === 3 ||
+    torrent.status === 4 ||
+    (typeof torrent.percentDone === 'number' && torrent.percentDone > 0)
+  ) {
+    return 'downloading';
+  }
+
+  return 'queued';
+}

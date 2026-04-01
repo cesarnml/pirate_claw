@@ -417,6 +417,141 @@ describe('pirate-claw status', () => {
   });
 });
 
+describe('pirate-claw reconcile', () => {
+  afterEach(async () => {
+    while (openDatabases.length > 0) {
+      openDatabases.pop()?.close();
+    }
+
+    while (servers.length > 0) {
+      servers.pop()?.stop(true);
+    }
+
+    while (tempDirs.length > 0) {
+      const directory = tempDirs.pop();
+
+      if (directory) {
+        await Bun.$`rm -rf ${directory}`;
+      }
+    }
+  });
+
+  it('reconciles tracked torrents and persists the latest lifecycle locally', async () => {
+    const directory = await mkdtemp();
+    const transmissionServer = startReconcileTransmissionServer();
+    const configPath = join(directory, 'pirate-claw.config.json');
+    const repository = createTestRepository(join(directory, 'pirate-claw.db'));
+
+    await Bun.write(
+      configPath,
+      JSON.stringify({
+        feeds: [],
+        tv: [],
+        movies: {
+          years: [2024],
+          resolutions: ['2160p', '1080p'],
+          codecs: ['x265'],
+        },
+        transmission: {
+          url: `${transmissionServer.url}/transmission/rpc`,
+          username: 'user',
+          password: 'pass',
+        },
+      }),
+    );
+
+    seedQueuedMovieCandidate(repository, {
+      runId: repository.startRun('2026-03-30T00:00:00.000Z').id,
+      rawTitle: 'Example.Movie.2024.1080p.WEB.x265-GROUP',
+      guidOrLink: 'https://example.test/releases/example-movie-web',
+      downloadUrl: 'https://example.test/downloads/example-movie-web.torrent',
+      updatedAt: '2026-03-30T00:10:00.000Z',
+      status: 'queued',
+      transmissionTorrentId: 42,
+      transmissionTorrentName: 'Queued Torrent',
+      transmissionTorrentHash: 'hash-42',
+    });
+
+    seedQueuedMovieCandidate(repository, {
+      runId: repository.startRun('2026-03-30T01:00:00.000Z').id,
+      rawTitle: 'Retry.Me.2024.1080p.WEB.x265-GROUP',
+      guidOrLink: 'https://example.test/releases/retry-me-web',
+      downloadUrl: 'https://example.test/downloads/retry-me-web.torrent',
+      updatedAt: '2026-03-30T01:10:00.000Z',
+      status: 'queued',
+      transmissionTorrentId: 52,
+      transmissionTorrentName: 'Retried Torrent',
+      transmissionTorrentHash: 'hash-52',
+    });
+
+    const reconcile = await runSimpleCommand(
+      directory,
+      'reconcile',
+      '--config',
+      './pirate-claw.config.json',
+    );
+
+    expect(reconcile.exitCode).toBe(0);
+    expect(reconcile.stderr).toBe('');
+    expect(reconcile.stdout).toContain('Reconciliation completed.');
+    expect(reconcile.stdout).toContain('reconciled: 1');
+    expect(reconcile.stdout).toContain('queued: 0');
+    expect(reconcile.stdout).toContain('downloading: 1');
+    expect(reconcile.stdout).toContain('failed: 0');
+    expect(reconcile.stdout).toContain('unresolved: 1');
+    expect(
+      repository.getCandidateState('movie:example movie|2024'),
+    ).toMatchObject({
+      lifecycleState: 'downloading',
+      lifecycleReconciledAt: expect.any(String),
+    });
+    expect(repository.getCandidateState('movie:retry me|2024')).toMatchObject({
+      lifecycleState: 'queued',
+      lifecycleReconciledAt: '2026-03-30T01:10:00.000Z',
+    });
+  });
+
+  it('fails without creating a database when reconcile is run before initialization', async () => {
+    const directory = await mkdtemp();
+    const databasePath = join(directory, 'pirate-claw.db');
+    const configPath = join(directory, 'pirate-claw.config.json');
+
+    await Bun.write(
+      configPath,
+      JSON.stringify({
+        feeds: [],
+        tv: [],
+        movies: {
+          years: [2024],
+          resolutions: ['2160p', '1080p'],
+          codecs: ['x265'],
+        },
+        transmission: {
+          url: 'http://127.0.0.1:9091/transmission/rpc',
+          username: 'user',
+          password: 'pass',
+        },
+      }),
+    );
+
+    expect(existsSync(databasePath)).toBe(false);
+
+    const reconcile = await runSimpleCommand(
+      directory,
+      'reconcile',
+      '--config',
+      './pirate-claw.config.json',
+    );
+
+    expect(reconcile.exitCode).toBe(1);
+    expect(reconcile.stdout).toBe('');
+    expect(reconcile.stderr).toContain(
+      `Database not initialized. Run 'pirate-claw run' first.`,
+    );
+    expect(existsSync(databasePath)).toBe(false);
+  });
+});
+
 describe('pirate-claw retry-failed', () => {
   afterEach(async () => {
     while (openDatabases.length > 0) {
@@ -669,6 +804,9 @@ function seedQueuedMovieCandidate(
     downloadUrl: string;
     updatedAt: string;
     status: 'queued' | 'failed';
+    transmissionTorrentId?: number;
+    transmissionTorrentName?: string;
+    transmissionTorrentHash?: string;
   },
 ) {
   const feedItem = repository.recordFeedItem(input.runId, {
@@ -702,6 +840,9 @@ function seedQueuedMovieCandidate(
       },
     },
     status: input.status,
+    transmissionTorrentId: input.transmissionTorrentId,
+    transmissionTorrentName: input.transmissionTorrentName,
+    transmissionTorrentHash: input.transmissionTorrentHash,
     updatedAt: input.updatedAt,
   });
 }
@@ -846,6 +987,68 @@ function startFlakyRetryTransmissionServer(): {
       return [...state.requestedUrls];
     },
   };
+}
+
+function startReconcileTransmissionServer(): { url: string } {
+  const server = Bun.serve({
+    port: 0,
+    hostname: '127.0.0.1',
+    routes: {
+      '/transmission/rpc': async (request: Request) => {
+        const sessionId = request.headers.get('x-transmission-session-id');
+
+        if (!sessionId) {
+          return new Response(null, {
+            status: 409,
+            headers: {
+              'x-transmission-session-id': 'session-123',
+            },
+          });
+        }
+
+        const body = (await request.json()) as {
+          arguments?: { ids?: Array<number | string> };
+          method?: string;
+        };
+        const ids = body.arguments?.ids ?? [];
+
+        if (body.method !== 'torrent-get') {
+          return Response.json({
+            result: 'unsupported method',
+            arguments: {},
+          });
+        }
+
+        if (ids.includes('hash-42') || ids.includes(42)) {
+          return Response.json({
+            result: 'success',
+            arguments: {
+              torrents: [
+                {
+                  id: 42,
+                  hashString: 'hash-42',
+                  name: 'Queued Torrent',
+                  status: 4,
+                  percentDone: 0.5,
+                  error: 0,
+                },
+              ],
+            },
+          });
+        }
+
+        return Response.json({
+          result: 'success',
+          arguments: {
+            torrents: [],
+          },
+        });
+      },
+    },
+  });
+
+  servers.push(server);
+  return { url: server.url.origin };
 }
 
 const tvFeedFixture = `<?xml version="1.0" encoding="UTF-8"?>

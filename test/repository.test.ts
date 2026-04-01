@@ -354,6 +354,51 @@ describe('SQLite repository', () => {
     ]);
   });
 
+  it('records reconciled lifecycle state for tracked candidates', async () => {
+    const repository = createTestRepository(await createDatabasePath());
+    const run = repository.startRun('2026-03-30T00:00:00.000Z');
+    const feedItem = repository.recordFeedItem(run.id, {
+      feedName: 'Movie Feed',
+      guidOrLink: 'https://example.test/releases/example-movie-web',
+      rawTitle: 'Example.Movie.2024.1080p.WEB.x265-GROUP',
+      publishedAt: '2026-03-30T00:05:00.000Z',
+      downloadUrl: 'https://example.test/downloads/example-movie-web.torrent',
+    });
+    const match = requireMovieMatch(feedItem.rawTitle);
+
+    repository.recordCandidateOutcome({
+      runId: run.id,
+      feedItemId: feedItem.id,
+      feedItem,
+      match,
+      status: 'queued',
+      transmissionTorrentId: 7,
+      transmissionTorrentName: 'Example Movie',
+      transmissionTorrentHash: 'abcdef123456',
+      updatedAt: '2026-03-30T00:10:00.000Z',
+    });
+
+    expect(repository.listTrackedCandidates()).toMatchObject([
+      {
+        identityKey: 'movie:example movie|2024',
+        lifecycleState: 'queued',
+      },
+    ]);
+
+    const updated = repository.recordCandidateLifecycle({
+      identityKey: match.identityKey,
+      lifecycleState: 'downloading',
+      reconciledAt: '2026-03-30T00:20:00.000Z',
+    });
+
+    expect(updated).toMatchObject({
+      identityKey: 'movie:example movie|2024',
+      lifecycleState: 'downloading',
+      lifecycleReconciledAt: '2026-03-30T00:20:00.000Z',
+      updatedAt: '2026-03-30T00:20:00.000Z',
+    });
+  });
+
   it('adds transmission identity columns to pre-phase-03 databases', async () => {
     const path = await createDatabasePath();
     const database = openDatabase(path);
@@ -422,6 +467,8 @@ describe('SQLite repository', () => {
 
     expect(columns.map((column) => column.name)).toEqual(
       expect.arrayContaining([
+        'lifecycle_state',
+        'lifecycle_reconciled_at',
         'transmission_torrent_id',
         'transmission_torrent_name',
         'transmission_torrent_hash',

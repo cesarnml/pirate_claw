@@ -80,6 +80,134 @@ describe('Transmission adapter', () => {
     });
   });
 
+  it('looks up a tracked torrent and maps an active download lifecycle', async () => {
+    const server = startTransmissionServer((request) => {
+      const sessionId = request.headers.get('x-transmission-session-id');
+
+      if (!sessionId) {
+        return new Response(null, {
+          status: 409,
+          headers: {
+            'x-transmission-session-id': 'session-123',
+          },
+        });
+      }
+
+      return Response.json({
+        result: 'success',
+        arguments: {
+          torrents: [
+            {
+              id: 7,
+              hashString: 'abcdef123456',
+              name: 'Example Movie',
+              status: 4,
+              percentDone: 0.42,
+              error: 0,
+            },
+          ],
+        },
+      });
+    });
+    const downloader = createTransmissionDownloader(
+      createTransmissionConfig(server.url.origin),
+    );
+
+    const result = await downloader.lookup({
+      torrentHash: 'abcdef123456',
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      found: true,
+      lifecycle: 'downloading',
+      torrentId: 7,
+      torrentName: 'Example Movie',
+      torrentHash: 'abcdef123456',
+    });
+  });
+
+  it('maps non-zero torrent errors to a failed lifecycle', async () => {
+    const server = startTransmissionServer((request) => {
+      const sessionId = request.headers.get('x-transmission-session-id');
+
+      if (!sessionId) {
+        return new Response(null, {
+          status: 409,
+          headers: {
+            'x-transmission-session-id': 'session-123',
+          },
+        });
+      }
+
+      return Response.json({
+        result: 'success',
+        arguments: {
+          torrents: [
+            {
+              id: 9,
+              hashString: 'retry-hash-123',
+              name: 'Retry Me',
+              status: 0,
+              percentDone: 0,
+              error: 3,
+            },
+          ],
+        },
+      });
+    });
+    const downloader = createTransmissionDownloader(
+      createTransmissionConfig(server.url.origin),
+    );
+
+    const result = await downloader.lookup({
+      torrentId: 9,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      found: true,
+      lifecycle: 'failed',
+      torrentId: 9,
+      torrentName: 'Retry Me',
+      torrentHash: 'retry-hash-123',
+    });
+  });
+
+  it('returns found=false when Transmission no longer returns the torrent', async () => {
+    const server = startTransmissionServer((request) => {
+      const sessionId = request.headers.get('x-transmission-session-id');
+
+      if (!sessionId) {
+        return new Response(null, {
+          status: 409,
+          headers: {
+            'x-transmission-session-id': 'session-123',
+          },
+        });
+      }
+
+      return Response.json({
+        result: 'success',
+        arguments: {
+          torrents: [],
+        },
+      });
+    });
+    const downloader = createTransmissionDownloader(
+      createTransmissionConfig(server.url.origin),
+    );
+
+    const result = await downloader.lookup({
+      torrentHash: 'missing-hash',
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      found: false,
+    });
+  });
+
   it('returns a structured failure when Transmission rejects the RPC call', async () => {
     const server = startTransmissionServer((request) => {
       const sessionId = request.headers.get('x-transmission-session-id');

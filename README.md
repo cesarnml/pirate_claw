@@ -10,6 +10,7 @@ It currently supports:
 - movie matching with global year, resolution, and codec preferences
 - local dedupe and run history in SQLite
 - queueing through Transmission RPC
+- lifecycle reconciliation through Transmission RPC
 - status inspection and retry of failed submissions
 
 ## Commands
@@ -17,6 +18,7 @@ It currently supports:
 - `pirate-claw run`
 - `pirate-claw status`
 - `pirate-claw retry-failed`
+- `pirate-claw reconcile`
 
 ## Quick Start
 
@@ -40,6 +42,12 @@ Retry failed submissions with:
 
 ```bash
 ./bin/pirate-claw retry-failed --config ./pirate-claw.config.json
+```
+
+Refresh tracked torrent lifecycle from Transmission with:
+
+```bash
+./bin/pirate-claw reconcile --config ./pirate-claw.config.json
 ```
 
 ## Configuration

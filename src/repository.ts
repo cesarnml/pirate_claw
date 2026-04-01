@@ -12,6 +12,13 @@ export type FeedItemOutcomeStatus =
   | 'skipped_duplicate'
   | 'skipped_no_match';
 
+export type CandidateLifecycleState =
+  | 'queued'
+  | 'downloading'
+  | 'failed'
+  | 'completed'
+  | 'missing_from_transmission';
+
 export type CandidateMatchRecord = {
   ruleName: string;
   identityKey: string;
@@ -52,6 +59,8 @@ export type CandidateStateRecord = {
   mediaType: NormalizedFeedItem['mediaType'];
   status: CandidateStatus;
   queuedAt?: string;
+  lifecycleState?: CandidateLifecycleState;
+  lifecycleReconciledAt?: string;
   transmissionTorrentId?: number;
   transmissionTorrentName?: string;
   transmissionTorrentHash?: string;
@@ -97,6 +106,12 @@ export type RecordFeedItemOutcomeInput = {
   createdAt?: string;
 };
 
+export type RecordCandidateLifecycleInput = {
+  identityKey: string;
+  lifecycleState: CandidateLifecycleState;
+  reconciledAt?: string;
+};
+
 export type Repository = {
   startRun(startedAt?: string): RunRecord;
   getRun(runId: number): RunRecord | undefined;
@@ -108,6 +123,9 @@ export type Repository = {
   recordCandidateOutcome(
     input: RecordCandidateOutcomeInput,
   ): CandidateStateRecord;
+  recordCandidateLifecycle(
+    input: RecordCandidateLifecycleInput,
+  ): CandidateStateRecord;
   recordFeedItemOutcome(
     input: RecordFeedItemOutcomeInput,
   ): FeedItemOutcomeRecord;
@@ -115,6 +133,7 @@ export type Repository = {
   listRecentRunSummaries(limit?: number): RunSummaryRecord[];
   listCandidateStates(limit?: number): CandidateStateRecord[];
   listRetryableCandidates(limit?: number): CandidateStateRecord[];
+  listTrackedCandidates(limit?: number): CandidateStateRecord[];
 };
 
 export const DEFAULT_DATABASE_PATH = 'pirate-claw.db';
@@ -153,6 +172,8 @@ export function ensureSchema(database: Database): void {
       media_type TEXT NOT NULL,
       status TEXT NOT NULL,
       queued_at TEXT,
+      lifecycle_state TEXT,
+      lifecycle_reconciled_at TEXT,
       transmission_torrent_id INTEGER,
       transmission_torrent_name TEXT,
       transmission_torrent_hash TEXT,
@@ -199,6 +220,8 @@ export function ensureSchema(database: Database): void {
     );
   }
 
+  ensureCandidateStateColumn(database, 'lifecycle_state', 'TEXT');
+  ensureCandidateStateColumn(database, 'lifecycle_reconciled_at', 'TEXT');
   ensureCandidateStateColumn(database, 'transmission_torrent_id', 'INTEGER');
   ensureCandidateStateColumn(database, 'transmission_torrent_name', 'TEXT');
   ensureCandidateStateColumn(database, 'transmission_torrent_hash', 'TEXT');
@@ -279,6 +302,8 @@ export function createRepository(database: Database): Repository {
       media_type AS mediaType,
       status,
       queued_at AS queuedAt,
+      lifecycle_state AS lifecycleState,
+      lifecycle_reconciled_at AS lifecycleReconciledAt,
       transmission_torrent_id AS transmissionTorrentId,
       transmission_torrent_name AS transmissionTorrentName,
       transmission_torrent_hash AS transmissionTorrentHash,
@@ -309,6 +334,8 @@ export function createRepository(database: Database): Repository {
       media_type,
       status,
       queued_at,
+      lifecycle_state,
+      lifecycle_reconciled_at,
       transmission_torrent_id,
       transmission_torrent_name,
       transmission_torrent_hash,
@@ -332,12 +359,21 @@ export function createRepository(database: Database): Repository {
       updated_at
     ) VALUES (
       ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11,
-      ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
+      ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22,
+      ?23, ?24, ?25, ?26, ?27
     )
     ON CONFLICT(identity_key) DO UPDATE SET
       media_type = excluded.media_type,
       status = excluded.status,
       queued_at = COALESCE(candidate_state.queued_at, excluded.queued_at),
+      lifecycle_state = COALESCE(
+        excluded.lifecycle_state,
+        candidate_state.lifecycle_state
+      ),
+      lifecycle_reconciled_at = COALESCE(
+        excluded.lifecycle_reconciled_at,
+        candidate_state.lifecycle_reconciled_at
+      ),
       transmission_torrent_id = COALESCE(
         excluded.transmission_torrent_id,
         candidate_state.transmission_torrent_id
@@ -370,6 +406,13 @@ export function createRepository(database: Database): Repository {
         candidate_state.last_feed_item_id
       ),
       updated_at = excluded.updated_at`,
+  );
+  const updateCandidateLifecycle = database.query(
+    `UPDATE candidate_state
+    SET lifecycle_state = ?2,
+        lifecycle_reconciled_at = ?3,
+        updated_at = ?3
+    WHERE identity_key = ?1`,
   );
   const insertFeedItemOutcome = database.query(
     `INSERT INTO feed_item_outcomes (
@@ -431,6 +474,8 @@ export function createRepository(database: Database): Repository {
       media_type AS mediaType,
       status,
       queued_at AS queuedAt,
+      lifecycle_state AS lifecycleState,
+      lifecycle_reconciled_at AS lifecycleReconciledAt,
       transmission_torrent_id AS transmissionTorrentId,
       transmission_torrent_name AS transmissionTorrentName,
       transmission_torrent_hash AS transmissionTorrentHash,
@@ -462,6 +507,8 @@ export function createRepository(database: Database): Repository {
       media_type AS mediaType,
       status,
       queued_at AS queuedAt,
+      lifecycle_state AS lifecycleState,
+      lifecycle_reconciled_at AS lifecycleReconciledAt,
       transmission_torrent_id AS transmissionTorrentId,
       transmission_torrent_name AS transmissionTorrentName,
       transmission_torrent_hash AS transmissionTorrentHash,
@@ -486,6 +533,44 @@ export function createRepository(database: Database): Repository {
     FROM candidate_state
     WHERE status = 'failed'
       AND download_url <> ''
+    ORDER BY updated_at ASC, identity_key ASC
+    LIMIT ?1`,
+  );
+  const listTrackedCandidatesStatement = database.query(
+    `SELECT
+      identity_key AS identityKey,
+      media_type AS mediaType,
+      status,
+      queued_at AS queuedAt,
+      lifecycle_state AS lifecycleState,
+      lifecycle_reconciled_at AS lifecycleReconciledAt,
+      transmission_torrent_id AS transmissionTorrentId,
+      transmission_torrent_name AS transmissionTorrentName,
+      transmission_torrent_hash AS transmissionTorrentHash,
+      rule_name AS ruleName,
+      score,
+      reasons_json AS reasonsJson,
+      raw_title AS rawTitle,
+      normalized_title AS normalizedTitle,
+      season,
+      episode,
+      year,
+      resolution,
+      codec,
+      feed_name AS feedName,
+      guid_or_link AS guidOrLink,
+      published_at AS publishedAt,
+      download_url AS downloadUrl,
+      first_seen_run_id AS firstSeenRunId,
+      last_seen_run_id AS lastSeenRunId,
+      last_feed_item_id AS lastFeedItemId,
+      updated_at AS updatedAt
+    FROM candidate_state
+    WHERE queued_at IS NOT NULL
+      AND (
+        transmission_torrent_id IS NOT NULL
+        OR transmission_torrent_hash IS NOT NULL
+      )
     ORDER BY updated_at ASC, identity_key ASC
     LIMIT ?1`,
   );
@@ -555,12 +640,17 @@ export function createRepository(database: Database): Repository {
     ): CandidateStateRecord {
       const updatedAt = input.updatedAt ?? new Date().toISOString();
       const queuedAt = input.status === 'queued' ? updatedAt : null;
+      const lifecycleState = input.status === 'queued' ? 'queued' : null;
+      const lifecycleReconciledAt =
+        input.status === 'queued' ? updatedAt : null;
 
       upsertCandidateState.run(
         input.match.identityKey,
         input.match.item.mediaType,
         input.status,
         queuedAt,
+        lifecycleState,
+        lifecycleReconciledAt,
         input.transmissionTorrentId ?? null,
         input.transmissionTorrentName ?? null,
         input.transmissionTorrentHash ?? null,
@@ -587,6 +677,27 @@ export function createRepository(database: Database): Repository {
       return mapCandidateStateRow(
         requireRow(
           selectCandidateState.get(input.match.identityKey) as
+            | CandidateStateRow
+            | null
+            | undefined,
+          'candidate state',
+        ),
+      );
+    },
+
+    recordCandidateLifecycle(
+      input: RecordCandidateLifecycleInput,
+    ): CandidateStateRecord {
+      const reconciledAt = input.reconciledAt ?? new Date().toISOString();
+      updateCandidateLifecycle.run(
+        input.identityKey,
+        input.lifecycleState,
+        reconciledAt,
+      );
+
+      return mapCandidateStateRow(
+        requireRow(
+          selectCandidateState.get(input.identityKey) as
             | CandidateStateRow
             | null
             | undefined,
@@ -642,6 +753,12 @@ export function createRepository(database: Database): Repository {
     listRetryableCandidates(limit = 1000): CandidateStateRecord[] {
       return (
         listRetryableCandidatesStatement.all(limit) as CandidateStateRow[]
+      ).map(mapCandidateStateRow);
+    },
+
+    listTrackedCandidates(limit = 1000): CandidateStateRecord[] {
+      return (
+        listTrackedCandidatesStatement.all(limit) as CandidateStateRow[]
       ).map(mapCandidateStateRow);
     },
   };
@@ -730,6 +847,8 @@ function mapCandidateStateRow(row: CandidateStateRow): CandidateStateRecord {
     mediaType: row.mediaType,
     status: row.status,
     queuedAt: row.queuedAt ?? undefined,
+    lifecycleState: row.lifecycleState ?? undefined,
+    lifecycleReconciledAt: row.lifecycleReconciledAt ?? undefined,
     transmissionTorrentId: row.transmissionTorrentId ?? undefined,
     transmissionTorrentName: row.transmissionTorrentName ?? undefined,
     transmissionTorrentHash: row.transmissionTorrentHash ?? undefined,
@@ -796,6 +915,8 @@ type CandidateStateRow = {
   mediaType: NormalizedFeedItem['mediaType'];
   status: CandidateStatus;
   queuedAt: string | null;
+  lifecycleState: CandidateLifecycleState | null;
+  lifecycleReconciledAt: string | null;
   transmissionTorrentId: number | null;
   transmissionTorrentName: string | null;
   transmissionTorrentHash: string | null;
