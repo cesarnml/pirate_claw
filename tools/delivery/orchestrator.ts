@@ -607,7 +607,7 @@ function listPullRequests(cwd: string): Map<string, PullRequestSummary> {
     'pr',
     'list',
     '--state',
-    'all',
+    'open',
     '--limit',
     '100',
     '--json',
