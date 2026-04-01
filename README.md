@@ -130,10 +130,10 @@ Pirate Claw is intentionally still a local operator tool.
 
 Not in scope yet:
 
-- scheduling or polling
+- always-on scheduling or feed polling
 - remote feed capture
 - hosted persistence
-- download completion polling
+- automatic post-completion file handling
 - download renaming or organization rules
 - Synology archiving
 - broader ingestion redesign
