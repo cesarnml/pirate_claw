@@ -69,6 +69,9 @@ Important fields:
 - `media_type`
 - `status`: `queued`, `failed`, or `skipped_duplicate`
 - `queued_at`
+- `transmission_torrent_id`
+- `transmission_torrent_name`
+- `transmission_torrent_hash`
 - `rule_name`
 - `score`
 - `reasons_json`
@@ -83,6 +86,7 @@ Behavioral role:
 - records the current best-known state for that identity
 - blocks requeueing when a prior candidate was already queued
 - powers `retry-failed` by storing the last retryable failed candidate with its `download_url`
+- preserves the Transmission identity needed for later reconciliation
 
 ## `feed_item_outcomes`
 
@@ -144,6 +148,7 @@ Important nuance:
 
 - `skipped_no_match` is not a `candidate_state` value because unmatched feed items do not create a durable candidate identity
 - `queued_at` is preserved once set, even if later upserts touch the same identity
+- the persisted Transmission identity is sticky once the downloader returns it for a queued candidate
 
 ## Current Invariants
 
@@ -151,12 +156,13 @@ Important nuance:
 - `candidate_state.first_seen_run_id` never changes after the first insert.
 - `candidate_state.last_seen_run_id` moves forward as later runs encounter the same identity.
 - `candidate_state.queued_at` is sticky once a candidate has been queued.
+- `candidate_state.transmission_torrent_id`, `candidate_state.transmission_torrent_name`, and `candidate_state.transmission_torrent_hash` are sticky once recorded from Transmission.
 - `feed_item_outcomes` is append-only from the application point of view; it records each run decision rather than overwriting history.
 - `listRetryableCandidates` only returns `candidate_state` rows with `status = 'failed'` and a non-empty `download_url`.
 
 ## What This Doc Intentionally Does Not Freeze
 
-This note describes the current Phase 01 and early Phase 02 local model. It does not promise that the schema is final for later ingestion work.
+This note describes the current local model through early Phase 03. It does not promise that the schema is final for later ingestion work.
 
 Likely future pressure points:
 

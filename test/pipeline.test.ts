@@ -76,6 +76,9 @@ describe('runPipeline', () => {
         submit: async () => ({
           ok: true as const,
           status: 'queued' as const,
+          torrentId: 7,
+          torrentName: 'Example Show S01E02',
+          torrentHash: 'abcdef123456',
         }),
       },
       fetchFeed: async () => [
@@ -122,6 +125,9 @@ describe('runPipeline', () => {
       status: 'queued',
       rawTitle: 'Example.Show.S01E02.2160p.WEB.x265-GROUP',
       resolution: '2160p',
+      torrentId: 7,
+      torrentName: 'Example Show S01E02',
+      torrentHash: 'abcdef123456',
     });
   });
 

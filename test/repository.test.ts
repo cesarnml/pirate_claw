@@ -48,6 +48,9 @@ describe('SQLite repository', () => {
       feedItem: firstFeedItem,
       match: firstMatch,
       status: 'queued',
+      torrentId: 7,
+      torrentName: 'Example Movie',
+      torrentHash: 'abcdef123456',
       updatedAt: '2026-03-30T00:10:00.000Z',
     });
 
@@ -80,6 +83,9 @@ describe('SQLite repository', () => {
       identityKey: 'movie:example movie|2024',
       status: 'skipped_duplicate',
       queuedAt: '2026-03-30T00:10:00.000Z',
+      torrentId: 7,
+      torrentName: 'Example Movie',
+      torrentHash: 'abcdef123456',
       feedName: 'Movie Feed',
       guidOrLink: 'https://example.test/releases/example-movie-bluray',
       firstSeenRunId: firstRun.id,
@@ -132,6 +138,9 @@ describe('SQLite repository', () => {
       feedItem: secondFeedItem,
       match: retryMatch,
       status: 'queued',
+      torrentId: 9,
+      torrentName: 'Retry Me',
+      torrentHash: 'fedcba654321',
       updatedAt: '2026-03-30T03:10:00.000Z',
     });
 
@@ -139,6 +148,9 @@ describe('SQLite repository', () => {
       identityKey: 'movie:retry me|2024',
       status: 'queued',
       queuedAt: '2026-03-30T03:10:00.000Z',
+      torrentId: 9,
+      torrentName: 'Retry Me',
+      torrentHash: 'fedcba654321',
       firstSeenRunId: firstRun.id,
       lastSeenRunId: secondRun.id,
       lastFeedItemId: secondFeedItem.id,
@@ -340,6 +352,123 @@ describe('SQLite repository', () => {
         updatedAt: '2026-03-30T02:10:00.000Z',
       },
     ]);
+  });
+
+  it('keeps Transmission identity sticky across later candidate updates', async () => {
+    const repository = createTestRepository(await createDatabasePath());
+    const firstRun = repository.startRun('2026-03-30T00:00:00.000Z');
+    const firstFeedItem = repository.recordFeedItem(firstRun.id, {
+      feedName: 'Movie Feed',
+      guidOrLink: 'https://example.test/releases/example-movie-web',
+      rawTitle: 'Example.Movie.2024.1080p.WEB.x265-GROUP',
+      publishedAt: '2026-03-30T00:05:00.000Z',
+      downloadUrl: 'https://example.test/downloads/example-movie-web.torrent',
+    });
+    const match = requireMovieMatch(firstFeedItem.rawTitle);
+
+    repository.recordCandidateOutcome({
+      runId: firstRun.id,
+      feedItemId: firstFeedItem.id,
+      feedItem: firstFeedItem,
+      match,
+      status: 'queued',
+      torrentId: 7,
+      torrentName: 'Example Movie',
+      torrentHash: 'abcdef123456',
+      updatedAt: '2026-03-30T00:10:00.000Z',
+    });
+
+    const secondRun = repository.startRun('2026-03-30T01:00:00.000Z');
+    const secondFeedItem = repository.recordFeedItem(secondRun.id, {
+      feedName: 'Movie Feed',
+      guidOrLink: 'https://example.test/releases/example-movie-rerun',
+      rawTitle: 'Example.Movie.2024.2160p.WEB.x265-NEWGROUP',
+      publishedAt: '2026-03-30T01:05:00.000Z',
+      downloadUrl: 'https://example.test/downloads/example-movie-rerun.torrent',
+    });
+
+    const state = repository.recordCandidateOutcome({
+      runId: secondRun.id,
+      feedItemId: secondFeedItem.id,
+      feedItem: secondFeedItem,
+      match: requireMovieMatch(secondFeedItem.rawTitle),
+      status: 'skipped_duplicate',
+      updatedAt: '2026-03-30T01:10:00.000Z',
+    });
+
+    expect(state).toMatchObject({
+      status: 'skipped_duplicate',
+      torrentId: 7,
+      torrentName: 'Example Movie',
+      torrentHash: 'abcdef123456',
+    });
+  });
+
+  it('adds Transmission identity columns to older candidate_state schemas', async () => {
+    const database = openDatabase(await createDatabasePath());
+
+    openDatabases.push(database);
+
+    database.run(`
+      CREATE TABLE candidate_state (
+        identity_key TEXT PRIMARY KEY,
+        media_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        queued_at TEXT,
+        rule_name TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        reasons_json TEXT NOT NULL,
+        raw_title TEXT NOT NULL,
+        normalized_title TEXT NOT NULL,
+        season INTEGER,
+        episode INTEGER,
+        year INTEGER,
+        resolution TEXT,
+        codec TEXT,
+        feed_name TEXT NOT NULL,
+        guid_or_link TEXT NOT NULL,
+        published_at TEXT NOT NULL,
+        download_url TEXT NOT NULL,
+        first_seen_run_id INTEGER NOT NULL,
+        last_seen_run_id INTEGER NOT NULL,
+        last_feed_item_id INTEGER,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'running',
+        completed_at TEXT
+      );
+
+      CREATE TABLE feed_item_outcomes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id INTEGER NOT NULL,
+        feed_item_id INTEGER,
+        status TEXT NOT NULL,
+        identity_key TEXT,
+        rule_name TEXT,
+        message TEXT,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    ensureSchema(database);
+
+    const columns = database
+      .query(
+        `SELECT name FROM pragma_table_info('candidate_state') ORDER BY cid`,
+      )
+      .all() as Array<{ name: string }>;
+
+    expect(columns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'transmission_torrent_id',
+        'transmission_torrent_name',
+        'transmission_torrent_hash',
+      ]),
+    );
   });
 });
 
