@@ -18,6 +18,7 @@ import {
   formatReviewWindowMessage,
   notifyBestEffort,
   parsePlan,
+  resolvePlanPathForBranch,
   resolveNotifier,
   resolveReviewFetcher,
   syncStateWithPlan,
@@ -281,6 +282,64 @@ describe('delivery orchestrator', () => {
         'codex/p3-02-reconcile-torrent-lifecycle-from-transmission',
       )?.id,
     ).toBe('P3.02');
+  });
+
+  it('resolves a delivery plan from the current branch when the match is unique', () => {
+    expect(
+      resolvePlanPathForBranch(
+        [
+          {
+            planPath: 'docs/02-delivery/phase-02/implementation-plan.md',
+            tickets: [
+              {
+                id: 'P2.02',
+                title: 'Movie Matcher Allows Missing Codec',
+                slug: 'movie-matcher-allows-missing-codec',
+                ticketFile:
+                  'docs/02-delivery/phase-02/ticket-02-movie-matcher-allows-missing-codec.md',
+              },
+            ],
+          },
+          {
+            planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+            tickets: [
+              {
+                id: 'P3.02',
+                title: 'Reconcile Torrent Lifecycle From Transmission',
+                slug: 'reconcile-torrent-lifecycle-from-transmission',
+                ticketFile:
+                  'docs/02-delivery/phase-03/ticket-02-reconcile-torrent-lifecycle-from-transmission.md',
+              },
+            ],
+          },
+        ],
+        'codex/p3-02-reconcile-torrent-lifecycle-from-transmission',
+      ),
+    ).toBe('docs/02-delivery/phase-03/implementation-plan.md');
+  });
+
+  it('fails plan inference cleanly when no plan matches the current branch', () => {
+    expect(() =>
+      resolvePlanPathForBranch(
+        [
+          {
+            planPath: 'docs/02-delivery/phase-02/implementation-plan.md',
+            tickets: [
+              {
+                id: 'P2.02',
+                title: 'Movie Matcher Allows Missing Codec',
+                slug: 'movie-matcher-allows-missing-codec',
+                ticketFile:
+                  'docs/02-delivery/phase-02/ticket-02-movie-matcher-allows-missing-codec.md',
+              },
+            ],
+          },
+        ],
+        'codex/not-a-ticket-branch',
+      ),
+    ).toThrow(
+      'Could not infer a delivery plan for codex/not-a-ticket-branch. Pass --plan <plan-path>.',
+    );
   });
 
   it('only allows advance after clean or patched review outcomes', () => {

@@ -131,10 +131,10 @@ After `open-pr`, the orchestrator should surface the review wait window and the 
 If a parent ticket was squash-merged onto `main`, run:
 
 ```bash
-bun run deliver --plan docs/02-delivery/phase-03/implementation-plan.md restack
+bun run deliver restack
 ```
 
-from the current child ticket worktree before continuing review. `restack` infers the current ticket from the checked-out branch, fetches `origin`, rebases away the old parent ancestry, and updates the open PR base/body so GitHub review follows the new stack shape.
+from the current child ticket worktree before continuing review. `restack` infers the delivery plan and current ticket from the checked-out branch, fetches `origin`, rebases away the old parent ancestry, and updates the open PR base/body so GitHub review follows the new stack shape. If branch inference is ambiguous, pass `--plan` explicitly.
 
 ## Optional Telegram Notifications
 
