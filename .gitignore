@@ -4,3 +4,4 @@ node_modules/
 .codex/analysis/
 pirate-claw.config.json
 pirate-claw.db
+.env
