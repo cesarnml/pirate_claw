@@ -69,6 +69,9 @@ Important fields:
 - `media_type`
 - `status`: `queued`, `failed`, or `skipped_duplicate`
 - `queued_at`
+- `transmission_torrent_id`
+- `transmission_torrent_name`
+- `transmission_torrent_hash`
 - `rule_name`
 - `score`
 - `reasons_json`
@@ -82,6 +85,7 @@ Behavioral role:
 - collapses competing releases onto one durable identity
 - records the current best-known state for that identity
 - blocks requeueing when a prior candidate was already queued
+- preserves the Transmission identity needed for later reconciliation
 - powers `retry-failed` by storing the last retryable failed candidate with its `download_url`
 
 ## `feed_item_outcomes`
@@ -151,6 +155,7 @@ Important nuance:
 - `candidate_state.first_seen_run_id` never changes after the first insert.
 - `candidate_state.last_seen_run_id` moves forward as later runs encounter the same identity.
 - `candidate_state.queued_at` is sticky once a candidate has been queued.
+- persisted Transmission identifiers remain sticky unless a later successful queue provides replacement values.
 - `feed_item_outcomes` is append-only from the application point of view; it records each run decision rather than overwriting history.
 - `listRetryableCandidates` only returns `candidate_state` rows with `status = 'failed'` and a non-empty `download_url`.
 

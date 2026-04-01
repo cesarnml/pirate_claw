@@ -48,6 +48,9 @@ describe('SQLite repository', () => {
       feedItem: firstFeedItem,
       match: firstMatch,
       status: 'queued',
+      transmissionTorrentId: 7,
+      transmissionTorrentName: 'Example Movie',
+      transmissionTorrentHash: 'abcdef123456',
       updatedAt: '2026-03-30T00:10:00.000Z',
     });
 
@@ -80,6 +83,9 @@ describe('SQLite repository', () => {
       identityKey: 'movie:example movie|2024',
       status: 'skipped_duplicate',
       queuedAt: '2026-03-30T00:10:00.000Z',
+      transmissionTorrentId: 7,
+      transmissionTorrentName: 'Example Movie',
+      transmissionTorrentHash: 'abcdef123456',
       feedName: 'Movie Feed',
       guidOrLink: 'https://example.test/releases/example-movie-bluray',
       firstSeenRunId: firstRun.id,
@@ -132,6 +138,9 @@ describe('SQLite repository', () => {
       feedItem: secondFeedItem,
       match: retryMatch,
       status: 'queued',
+      transmissionTorrentId: 9,
+      transmissionTorrentName: 'Retry Me',
+      transmissionTorrentHash: 'retry-hash-123',
       updatedAt: '2026-03-30T03:10:00.000Z',
     });
 
@@ -139,6 +148,9 @@ describe('SQLite repository', () => {
       identityKey: 'movie:retry me|2024',
       status: 'queued',
       queuedAt: '2026-03-30T03:10:00.000Z',
+      transmissionTorrentId: 9,
+      transmissionTorrentName: 'Retry Me',
+      transmissionTorrentHash: 'retry-hash-123',
       firstSeenRunId: firstRun.id,
       lastSeenRunId: secondRun.id,
       lastFeedItemId: secondFeedItem.id,
@@ -340,6 +352,81 @@ describe('SQLite repository', () => {
         updatedAt: '2026-03-30T02:10:00.000Z',
       },
     ]);
+  });
+
+  it('adds transmission identity columns to pre-phase-03 databases', async () => {
+    const path = await createDatabasePath();
+    const database = openDatabase(path);
+
+    openDatabases.push(database);
+    database.run(`
+      CREATE TABLE runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'running',
+        completed_at TEXT
+      );
+
+      CREATE TABLE feed_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id INTEGER NOT NULL REFERENCES runs(id),
+        feed_name TEXT NOT NULL,
+        guid_or_link TEXT NOT NULL,
+        raw_title TEXT NOT NULL,
+        published_at TEXT NOT NULL,
+        download_url TEXT NOT NULL
+      );
+
+      CREATE TABLE candidate_state (
+        identity_key TEXT PRIMARY KEY,
+        media_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        queued_at TEXT,
+        rule_name TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        reasons_json TEXT NOT NULL,
+        raw_title TEXT NOT NULL,
+        normalized_title TEXT NOT NULL,
+        season INTEGER,
+        episode INTEGER,
+        year INTEGER,
+        resolution TEXT,
+        codec TEXT,
+        feed_name TEXT NOT NULL,
+        guid_or_link TEXT NOT NULL,
+        published_at TEXT NOT NULL,
+        download_url TEXT NOT NULL,
+        first_seen_run_id INTEGER NOT NULL REFERENCES runs(id),
+        last_seen_run_id INTEGER NOT NULL REFERENCES runs(id),
+        last_feed_item_id INTEGER REFERENCES feed_items(id),
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE feed_item_outcomes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id INTEGER NOT NULL REFERENCES runs(id),
+        feed_item_id INTEGER REFERENCES feed_items(id),
+        status TEXT NOT NULL,
+        identity_key TEXT,
+        rule_name TEXT,
+        message TEXT,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    ensureSchema(database);
+
+    const columns = database
+      .query(`SELECT name FROM pragma_table_info('candidate_state')`)
+      .all() as Array<{ name: string }>;
+
+    expect(columns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'transmission_torrent_id',
+        'transmission_torrent_name',
+        'transmission_torrent_hash',
+      ]),
+    );
   });
 });
 
