@@ -722,7 +722,10 @@ async function openPullRequest(
 
   ensureBranchPushed(target.worktreePath, target.branch);
 
-  const title = buildPullRequestTitle(target);
+  const title = buildPullRequestTitle(
+    target,
+    readLatestCommitSubject(target.worktreePath),
+  );
   const body = buildPullRequestBody(state, target);
   const existingPullRequest = findOpenPullRequest(
     target.worktreePath,
@@ -968,8 +971,17 @@ export function buildPullRequestBody(
   return lines.join('\n');
 }
 
-export function buildPullRequestTitle(ticket: Pick<TicketState, 'id'>): string {
-  return `type: summary [${ticket.id}]`;
+export function buildPullRequestTitle(
+  ticket: Pick<TicketState, 'id' | 'title'>,
+  commitSubject?: string,
+): string {
+  const fallbackSubject = `feat: ${ticket.title.toLowerCase()}`;
+  const baseSubject = (commitSubject?.trim() || fallbackSubject).replace(
+    /\s+\[[A-Z0-9.]+\]$/,
+    '',
+  );
+
+  return `${baseSubject} [${ticket.id}]`;
 }
 
 export function buildTicketHandoff(
@@ -1107,6 +1119,10 @@ function findOpenPullRequest(
   ]);
   const parsed = JSON.parse(stdout) as Array<PullRequestSummary>;
   return parsed[0];
+}
+
+function readLatestCommitSubject(cwd: string): string {
+  return runProcess(cwd, ['git', 'log', '-1', '--pretty=%s']).trim();
 }
 
 function ensureBranchPushed(cwd: string, branch: string): void {

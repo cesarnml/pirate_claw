@@ -141,7 +141,7 @@ State is written under:
 PR descriptions are maintained as delivery metadata, not one-shot text.
 
 - `open-pr` creates the initial PR body
-- `open-pr` uses the repo delivery PR title format: `type: summary [P?.??]`
+- `open-pr` uses a human-readable Conventional-Commit-style title plus the delivery ticket suffix, for example `feat: add torrent lifecycle reconciliation [P3.02]`
 - rerunning `open-pr` refreshes the existing PR title/body instead of failing on an already-open branch
 - `record-review` stores the triage result and optional note
 - `advance` refreshes the PR body from that recorded review state, then marks the ticket done and optionally starts the next one
