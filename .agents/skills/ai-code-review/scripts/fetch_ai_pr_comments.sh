@@ -423,7 +423,7 @@ jq -n \
             + (
               if ($agents | length) > 0 then
                 ["Agent states:"]
-                + ($agents | map("- \(.agent): \(.state)\(if (.findingsCount // 0) > 0 then \" (\(.findingsCount) findings)\" else \"\" end)"))
+                + ($agents | map("- \(.agent): \(.state)\(if (.findingsCount // 0) > 0 then " (\(.findingsCount) findings)" else "" end)"))
                 + [""]
               else
                 []
