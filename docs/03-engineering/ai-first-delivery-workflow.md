@@ -28,6 +28,8 @@ The repo-local `ai-code-review` skill owns the judgment:
 - which comments are actionable
 - which comments should be rejected as stale, weak, or out of scope
 
+The boundary is implemented as repo-local hooks under `.agents/skills/ai-code-review/`: a fetcher that normalizes multi-vendor AI review into structured data, and a triager hook that turns that data into a final outcome plus concise rationale.
+
 That boundary matters. AI is used aggressively, but not blindly.
 
 There is also a Telegram notifier for long-running flow milestones. It can send concise updates when a PR opens, when AI review starts, and when review is recorded.
@@ -35,6 +37,6 @@ There is also a Telegram notifier for long-running flow milestones. It can send 
 Current repo entry points:
 
 - ticket-linked flow: [`docs/03-engineering/delivery-orchestrator.md`](./delivery-orchestrator.md)
-- repo-local skill: [`../../.codex/skills/ai-code-review/SKILL.md`](../../.codex/skills/ai-code-review/SKILL.md)
+- repo-local skill: [`../../.agents/skills/ai-code-review/SKILL.md`](../../.agents/skills/ai-code-review/SKILL.md)
 
 This is designed to become template-ready repo infrastructure, not a one-off Pirate Claw trick.
