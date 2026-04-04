@@ -22,7 +22,17 @@ fi
 
 repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 pr_json="$(gh pr view "$pr_number" --json number,title,url,headRefName,baseRefName,isDraft,state,comments,reviews)"
-review_comments_json="$(gh api "repos/$repo/pulls/$pr_number/comments?per_page=100")"
+
+review_comments_json="$(
+  gh api --paginate "repos/$repo/pulls/$pr_number/comments?per_page=100" \
+    --jq '.[]'
+)"
+
+if [[ -n "$review_comments_json" ]]; then
+  review_comments_json="$(printf '%s\n' "$review_comments_json" | jq -s '.')"
+else
+  review_comments_json='[]'
+fi
 
 artifact="$(
   jq -n \

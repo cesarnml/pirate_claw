@@ -166,8 +166,6 @@ type DeliveryNotifier =
 
 const DEFAULT_REVIEW_POLL_INTERVAL_MINUTES = 2;
 const DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES = 8;
-const NO_AI_REVIEW_FEEDBACK_NOTE =
-  'No AI review feedback was detected within the 8-minute polling window.';
 const STANDALONE_AI_REVIEW_SECTION_START = '<!-- codex-ai-review:start -->';
 const STANDALONE_AI_REVIEW_SECTION_END = '<!-- codex-ai-review:end -->';
 
@@ -207,8 +205,6 @@ export async function runDeliveryOrchestrator(
   argv: string[],
   cwd: string,
 ): Promise<number> {
-  await ensureEnvReady(cwd);
-  const notifier = resolveNotifier();
   let parsed:
     | {
         command: string;
@@ -220,6 +216,8 @@ export async function runDeliveryOrchestrator(
     | undefined;
 
   try {
+    await ensureEnvReady(cwd);
+    const notifier = resolveNotifier();
     parsed = parseCliArgs(argv);
     if (parsed.command === 'ai-review') {
       const result = await runStandaloneAiReview(
@@ -367,6 +365,7 @@ export async function runDeliveryOrchestrator(
       }
     }
   } catch (error) {
+    const notifier = resolveNotifier();
     await emitNotificationWarnings(notifier, cwd, [
       buildRunBlockedEvent(
         parsed?.planPath ? derivePlanKey(parsed.planPath) : undefined,
@@ -499,7 +498,7 @@ async function loadDotEnvIntoProcess(cwd: string): Promise<void> {
   const values = parseDotEnv(await readFile(envPath, 'utf8'));
 
   for (const [key, value] of Object.entries(values)) {
-    if (!process.env[key]) {
+    if (typeof process.env[key] === 'undefined') {
       process.env[key] = value;
     }
   }
@@ -1457,12 +1456,18 @@ export function buildReviewPollCheckMinutes(
   intervalMinutes: number,
   maxWaitMinutes: number,
 ): number[] {
+  if (intervalMinutes <= 0 || maxWaitMinutes <= 0) {
+    throw new Error('Review polling interval and max wait must be positive.');
+  }
+
   const checks: number[] = [];
 
-  for (let minute = intervalMinutes; minute <= maxWaitMinutes; minute += 1) {
-    if (minute % intervalMinutes === 0) {
-      checks.push(minute);
-    }
+  for (
+    let minute = intervalMinutes;
+    minute <= maxWaitMinutes;
+    minute += intervalMinutes
+  ) {
+    checks.push(minute);
   }
 
   return checks;
@@ -1517,7 +1522,7 @@ export async function pollReview(
 ): Promise<DeliveryState> {
   const target = findTicketById(state, ticketId);
 
-  if (!target || !target.prNumber) {
+  if (!target || target.status !== 'in_review' || !target.prNumber) {
     throw new Error('No in-review ticket with an open PR was found.');
   }
 
@@ -1527,18 +1532,17 @@ export async function pollReview(
   const updatePullRequestBodyFn =
     dependencies.updatePullRequestBody ?? updatePullRequestBody;
   const openedAt = Date.parse(target.prOpenedAt ?? '');
+  const pollWindowStartedAt = Number.isNaN(openedAt) ? now() : openedAt;
 
   for (const checkMinute of buildReviewPollCheckMinutes(
     state.reviewPollIntervalMinutes,
     state.reviewPollMaxWaitMinutes,
   )) {
-    if (!Number.isNaN(openedAt)) {
-      const dueAt = openedAt + checkMinute * 60_000;
-      const remaining = dueAt - now();
+    const dueAt = pollWindowStartedAt + checkMinute * 60_000;
+    const remaining = dueAt - now();
 
-      if (remaining > 0) {
-        await sleepFn(remaining);
-      }
+    if (remaining > 0) {
+      await sleepFn(remaining);
     }
 
     const result = fetcher(target.worktreePath, target.prNumber);
@@ -1580,7 +1584,9 @@ export async function pollReview(
             ...ticket,
             status: 'reviewed',
             reviewOutcome: 'clean',
-            reviewNote: NO_AI_REVIEW_FEEDBACK_NOTE,
+            reviewNote: formatNoAiReviewFeedbackNote(
+              state.reviewPollMaxWaitMinutes,
+            ),
           }
         : ticket,
     ),
@@ -1593,7 +1599,13 @@ export async function pollReview(
     throw new Error(`Unknown ticket ${target.id}.`);
   }
 
-  await updatePullRequestBodyFn(nextState, updatedTarget);
+  try {
+    await updatePullRequestBodyFn(nextState, updatedTarget);
+  } catch (error) {
+    console.warn(
+      `Review was recorded locally for ${updatedTarget.id}, but PR body update failed: ${formatError(error)}`,
+    );
+  }
   return nextState;
 }
 
@@ -1641,7 +1653,7 @@ async function runStandaloneAiReview(
 
     const standaloneResult: StandaloneAiReviewResult = {
       artifactPath: relativeToRepo(cwd, artifactPath),
-      note: 'AI review feedback detected. Use the repo-local ai-code-review skill to triage the saved artifact.',
+      note: 'AI review feedback detected and recorded for immediate triage.',
       outcome: 'needs_patch',
       prNumber: pullRequest.number,
       prUrl: pullRequest.url,
@@ -1656,7 +1668,7 @@ async function runStandaloneAiReview(
   }
 
   const standaloneResult: StandaloneAiReviewResult = {
-    note: NO_AI_REVIEW_FEEDBACK_NOTE,
+    note: formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
     outcome: 'clean',
     prNumber: pullRequest.number,
     prUrl: pullRequest.url,
@@ -1903,8 +1915,9 @@ export function buildPullRequestBody(
 
     if (ticket.reviewOutcome === 'clean') {
       lines.push(
-        ticket.reviewNote === NO_AI_REVIEW_FEEDBACK_NOTE
-          ? '- No `ai-code-review` feedback was detected during the 8-minute polling window.'
+        ticket.reviewNote ===
+          formatNoAiReviewFeedbackNote(state.reviewPollMaxWaitMinutes)
+          ? `- No \`ai-code-review\` feedback was detected during the ${state.reviewPollMaxWaitMinutes}-minute polling window.`
           : '- `ai-code-review` triage found no prudent follow-up changes.',
       );
     }
@@ -2101,7 +2114,14 @@ export function eventsForPollReviewCommand(
   state: DeliveryState,
   ticketId?: string,
 ): DeliveryNotificationEvent[] {
-  const ticket = findTicketById(state, ticketId);
+  const ticket = ticketId
+    ? state.tickets.find((candidate) => candidate.id === ticketId)
+    : (state.tickets.find((candidate) => candidate.status === 'in_review') ??
+      state.tickets.find(
+        (candidate) =>
+          candidate.status === 'reviewed' &&
+          candidate.reviewOutcome !== undefined,
+      ));
 
   if (!ticket || ticket.status !== 'reviewed' || !ticket.reviewOutcome) {
     return [];
@@ -2705,7 +2725,13 @@ export function formatNotificationMessage(
   cwd: string,
   event: DeliveryNotificationEvent,
 ): string {
-  const header = 'Anton';
+  const header = 'Son of Anton';
+  const standaloneHeader = `Son of Anton PR #${
+    event.kind === 'standalone_review_started' ||
+    event.kind === 'standalone_review_recorded'
+      ? event.prNumber
+      : ''
+  }`.trim();
 
   switch (event.kind) {
     case 'ticket_started':
@@ -2757,19 +2783,13 @@ export function formatNotificationMessage(
         .filter((line): line is string => line !== undefined)
         .join('\n');
     case 'standalone_review_started':
-      return [
-        header,
-        `Standalone AI review started for PR #${event.prNumber}.`,
-        `PR: ${event.prUrl}`,
-        `Cadence: every ${event.reviewPollIntervalMinutes} minutes up to ${event.reviewPollMaxWaitMinutes} minutes`,
-      ].join('\n');
+      return [standaloneHeader, 'AI review started.', event.prUrl].join('\n');
     case 'standalone_review_recorded':
       return [
-        header,
-        `Standalone AI review recorded for PR #${event.prNumber}.`,
+        standaloneHeader,
         `Outcome: ${event.outcome}`,
         event.note ? `Note: ${event.note}` : undefined,
-        `PR: ${event.prUrl}`,
+        event.prUrl,
       ]
         .filter((line): line is string => line !== undefined)
         .join('\n');
@@ -2783,6 +2803,10 @@ export function formatNotificationMessage(
         .filter((line): line is string => line !== undefined)
         .join('\n');
   }
+}
+
+function formatNoAiReviewFeedbackNote(maxWaitMinutes: number): string {
+  return `No AI review feedback was detected within the ${maxWaitMinutes}-minute polling window.`;
 }
 
 export function formatReviewWindowMessage(

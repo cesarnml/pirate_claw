@@ -36,8 +36,8 @@ Use this skill when the orchestrator has saved an AI review artifact or when you
 2. Fetch review data with the repo-local helper script:
    - `.codex/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh <pr-number>`
 3. Apply the detection policy in the helper script:
-   - comments from bot or vendor identities that clearly correspond to AI review
-   - comments whose wording clearly identifies them as AI-generated code review
+   - comments from bot or vendor identities that correspond to AI review
+   - comments whose wording explicitly identifies them as AI-generated code review
    - ordinary human drive-by comments do not count as AI review
 4. Return the helper-script contract to the orchestrator when this is being used inside `poll-review`:
    - `detected=false` means keep polling or auto-clean at the end

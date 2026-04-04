@@ -488,7 +488,7 @@ describe('delivery orchestrator', () => {
         ticketTitle: 'Persist Transmission Identity For Queued Torrents',
         branch: 'codex/p3-01-persist-transmission-identity-for-queued-torrents',
       }),
-    ).toContain('Anton\nP3.01 underway for phase-03.');
+    ).toContain('Son of Anton\nP3.01 underway for phase-03.');
     expect(
       formatNotificationMessage('/tmp/pirate_claw', {
         kind: 'run_blocked',
@@ -496,7 +496,7 @@ describe('delivery orchestrator', () => {
         command: 'open-pr',
         reason: 'No in-progress ticket found to open as a PR.',
       }),
-    ).toContain('Anton\nStopped in phase-03.');
+    ).toContain('Son of Anton\nStopped in phase-03.');
     expect(
       formatNotificationMessage('/tmp/pirate_claw', {
         kind: 'standalone_review_started',
@@ -505,7 +505,7 @@ describe('delivery orchestrator', () => {
         reviewPollIntervalMinutes: 2,
         reviewPollMaxWaitMinutes: 8,
       }),
-    ).toContain('Standalone AI review started for PR #32.');
+    ).toContain('Son of Anton PR #32\nAI review started.');
   });
 
   it('merges the standalone ai review section into a pr body', () => {
@@ -635,6 +635,21 @@ describe('delivery orchestrator', () => {
       ).map((event) => event.kind),
     ).toEqual(['review_recorded']);
     expect(
+      eventsForPollReviewCommand({
+        ...state,
+        tickets: [
+          {
+            ...state.tickets[0]!,
+            status: 'reviewed',
+            reviewOutcome: 'clean',
+            reviewNote:
+              'No AI review feedback was detected within the 8-minute polling window.',
+          },
+          state.tickets[1]!,
+        ],
+      }).map((event) => event.kind),
+    ).toEqual(['review_recorded']);
+    expect(
       eventsForAdvanceCommand(state, {
         ...state,
         tickets: [
@@ -733,6 +748,9 @@ describe('delivery orchestrator', () => {
 
   it('builds the 2/4/6/8-minute review polling schedule', () => {
     expect(buildReviewPollCheckMinutes(2, 8)).toEqual([2, 4, 6, 8]);
+    expect(() => buildReviewPollCheckMinutes(0, 8)).toThrow(
+      'Review polling interval and max wait must be positive.',
+    );
   });
 
   it('parses the ai review fetcher contract', () => {
@@ -750,6 +768,17 @@ describe('delivery orchestrator', () => {
 
     expect(() => parseAiReviewFetcherOutput('not json')).toThrow(
       'AI review fetcher must emit JSON.',
+    );
+
+    expect(() =>
+      parseAiReviewFetcherOutput(
+        JSON.stringify({
+          detected: 'true',
+          artifact: 42,
+        }),
+      ),
+    ).toThrow(
+      'AI review fetcher output must be JSON with boolean `detected` and string `artifact` fields.',
     );
   });
 
@@ -879,6 +908,48 @@ describe('delivery orchestrator', () => {
     ]);
   });
 
+  it('uses the normal polling cadence when prOpenedAt is missing', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+        },
+      ],
+    };
+    const sleeps: number[] = [];
+
+    await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+      },
+      fetcher: () => ({
+        detected: true,
+        artifact: 'normalized ai review artifact',
+      }),
+    });
+
+    expect(sleeps).toEqual([120000]);
+  });
+
   it('keeps notification failures best-effort', async () => {
     const originalToken = process.env.TELEGRAM_BOT_TOKEN;
     const originalChatId = process.env.TELEGRAM_CHAT_ID;
@@ -911,10 +982,16 @@ describe('delivery orchestrator', () => {
 
   it('prefers an explicit review fetcher environment variable', () => {
     const original = process.env.AI_CODE_REVIEW_FETCHER;
-    process.env.AI_CODE_REVIEW_FETCHER = '/tmp/fetch_ai_review.sh';
+    try {
+      process.env.AI_CODE_REVIEW_FETCHER = '/tmp/fetch_ai_review.sh';
 
-    expect(resolveReviewFetcher()).toBe('/tmp/fetch_ai_review.sh');
-
-    process.env.AI_CODE_REVIEW_FETCHER = original;
+      expect(resolveReviewFetcher()).toBe('/tmp/fetch_ai_review.sh');
+    } finally {
+      if (typeof original === 'undefined') {
+        delete process.env.AI_CODE_REVIEW_FETCHER;
+      } else {
+        process.env.AI_CODE_REVIEW_FETCHER = original;
+      }
+    }
   });
 });
