@@ -35,6 +35,6 @@ There is also a Telegram notifier for long-running flow milestones. It can send 
 Current repo entry points:
 
 - ticket-linked flow: [`docs/03-engineering/delivery-orchestrator.md`](./delivery-orchestrator.md)
-- repo-local skill: [`../../.codex/skills/ai-code-review/SKILL.md`](../../.codex/skills/ai-code-review/SKILL.md)
+- repo-local skill: [`../../.agents/skills/ai-code-review/SKILL.md`](../../.agents/skills/ai-code-review/SKILL.md)
 
 This is designed to become template-ready repo infrastructure, not a one-off Pirate Claw trick.

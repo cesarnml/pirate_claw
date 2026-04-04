@@ -50,7 +50,7 @@ The orchestrator owns process mechanics:
 
 It does **not** own AI-review detection heuristics or triage judgment.
 
-That boundary is intentional. The repo-local `ai-code-review` skill under `.codex/skills/ai-code-review/` already defines the repo stance for AI review:
+That boundary is intentional. The repo-local `ai-code-review` skill under `.agents/skills/ai-code-review/` already defines the repo stance for AI review:
 
 - comments are advisory, not gospel
 - weak or mis-scoped comments should be pushed back on

@@ -44,9 +44,15 @@ artifact="$(
         | gsub("\\s+"; " ")
         | ascii_downcase;
 
+      def author_login:
+        .author.login // .user.login // "unknown";
+
+      def author_type:
+        .author.type // .user.type // "unknown";
+
       def looks_like_ai_identity:
-        (.user.login // "" | ascii_downcase) as $login
-        | (.user.type // "" | ascii_downcase) as $type
+        (author_login | ascii_downcase) as $login
+        | (author_type | ascii_downcase) as $type
         | ($login | test("qodo|coderabbit|copilot|code-review|ai[-_]?review|review[-_]?bot"))
           or ($type == "bot" and ($login | test("copilot|rabbit|review|ai|qodo")));
 
@@ -57,7 +63,7 @@ artifact="$(
       def review_entry($kind; $path; $line):
         {
           kind: $kind,
-          author: (.user.login // "unknown"),
+          author: author_login,
           body: (.body // ""),
           url: (.html_url // ""),
           updated_at: (.updated_at // ""),
@@ -100,7 +106,7 @@ artifact="$(
               )
             ) | join("\n")
         }
-    ' 
+    '
 )"
 
 detected="$(echo "$artifact" | jq '.matches | length > 0')"

@@ -34,7 +34,7 @@ Use this skill when the orchestrator has saved an AI review artifact or when you
 
 1. Resolve the PR number with `gh pr view` if the user did not provide one.
 2. Fetch review data with the repo-local helper script:
-   - `.codex/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh <pr-number>`
+   - `.agents/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh <pr-number>`
 3. Apply the detection policy in the helper script:
    - comments from bot or vendor identities that correspond to AI review
    - comments whose wording explicitly identifies them as AI-generated code review

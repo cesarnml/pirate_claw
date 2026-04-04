@@ -706,7 +706,7 @@ export function resolveReviewFetcher(): string {
     return process.env.AI_CODE_REVIEW_FETCHER;
   }
 
-  return '.codex/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh';
+  return '.agents/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh';
 }
 
 export function resolveNotifier(): DeliveryNotifier {
