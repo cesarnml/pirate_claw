@@ -29,7 +29,7 @@ fi
 repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 owner="${repo%%/*}"
 name="${repo##*/}"
-pr_json="$(gh pr view "$pr_number" --json number,title,url,headRefName,baseRefName,isDraft,state,comments,reviews)"
+pr_json="$(gh pr view "$pr_number" --json number,title,url,headRefName,headRefOid,baseRefName,isDraft,state,comments,reviews)"
 
 review_comments_json="$(
   gh api --paginate "repos/$repo/pulls/$pr_number/comments?per_page=100" \
@@ -53,8 +53,10 @@ review_threads_json="$(
           pullRequest(number: $number) {
             reviewThreads(first: 100) {
               nodes {
+                id
                 isResolved
                 isOutdated
+                viewerCanResolve
                 comments(first: 50) {
                   nodes {
                     databaseId
@@ -130,7 +132,9 @@ jq -n \
           | map(
               . + {
                 __thread_is_outdated: ($thread.isOutdated // false),
-                __thread_is_resolved: ($thread.isResolved // false)
+                __thread_is_resolved: ($thread.isResolved // false),
+                __thread_id: ($thread.id // null),
+                __thread_viewer_can_resolve: ($thread.viewerCanResolve // null)
               }
             )
         )
@@ -139,10 +143,12 @@ jq -n \
     def thread_lookup:
       (enrich_threads)
       | map({
+          thread_id: (.__thread_id // null),
           key_db: (if .databaseId then (.databaseId | tostring) else null end),
           key_url: (.url // null),
           is_outdated: .__thread_is_outdated,
-          is_resolved: .__thread_is_resolved
+          is_resolved: .__thread_is_resolved,
+          viewer_can_resolve: (.__thread_viewer_can_resolve // null)
         })
       | map(select(.key_db != null or .key_url != null));
 
@@ -158,8 +164,10 @@ jq -n \
             )
           | .[0]) as $match
       | {
+          thread_id: ($match.thread_id // null),
           is_outdated: ($match.is_outdated // false),
-          is_resolved: ($match.is_resolved // false)
+          is_resolved: ($match.is_resolved // false),
+          viewer_can_resolve: ($match.viewer_can_resolve // null)
         };
 
     def comment_kind($channel):
@@ -194,6 +202,8 @@ jq -n \
             body: body_text,
             path: $path,
             line: $line,
+            thread_id: ($thread_state.thread_id // null),
+            thread_viewer_can_resolve: ($thread_state.viewer_can_resolve // null),
             url: (.html_url // .url // ""),
             updated_at: (.updated_at // .submittedAt // .updatedAt // .createdAt // ""),
             is_outdated: ($thread_state.is_outdated // false),
@@ -209,7 +219,11 @@ jq -n \
     | map(review_entry("review_summary"; null; null)) as $review_summaries
     | $review_comments
     | map(review_entry("inline_review"; (.path // null); (.line // .original_line // null))) as $inline_comments
-    | ($issue_comments + $review_summaries + $inline_comments) as $matches
+    | (
+        ($inline_comments | sort_by((.is_outdated // false), (.is_resolved // false), .vendor, .path, .line))
+        + ($issue_comments | sort_by(.vendor, .updated_at))
+        + ($review_summaries | sort_by(.vendor, .updated_at))
+      ) as $matches
     | ($matches | map(.vendor) | unique | sort) as $vendors
     | (
         $matches
@@ -236,12 +250,14 @@ jq -n \
     | {
         agents: $agents,
         detected: ($matches | length > 0),
+        reviewed_head_sha: ($pr.headRefOid // null),
         artifact_text:
           (
             [
               "PR #\($pr.number): \($pr.title)",
               "URL: \($pr.url)",
               "Branch: \($pr.headRefName) -> \($pr.baseRefName)",
+              "Reviewed head SHA: \($pr.headRefOid // "unknown")",
               "State: \($pr.state)\(if $pr.isDraft then " (draft)" else "" end)",
               "Detected AI review comments: \($matches | length)",
               "Detected AI review agents: \($agents | length)",
@@ -262,6 +278,7 @@ jq -n \
               | map(
                   "- [\(.kind)][\(.vendor)][\(.channel)][\(.derived_state)] \(.author_login)"
                   + (if .path then " on \(.path):\(.line // 0)" else "" end)
+                  + (if .thread_id then " [thread \(.thread_id)]" else "" end)
                   + (if .is_resolved then " [resolved]" else "" end)
                   + (if .is_outdated then " [outdated]" else "" end)
                   + (if .updated_at != "" then " at \(.updated_at)" else "" end)
