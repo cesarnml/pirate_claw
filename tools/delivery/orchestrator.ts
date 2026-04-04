@@ -2328,6 +2328,10 @@ export async function pollReview(
       triage.vendors.length > 0 ? triage.vendors : detectedReview.vendors;
     const nextStatus =
       triage.outcome === 'needs_patch' ? 'needs_patch' : 'reviewed';
+    const latestReviewOutcome =
+      triage.outcome === 'clean' || triage.outcome === 'patched'
+        ? triage.outcome
+        : undefined;
     const nextState: DeliveryState = {
       ...state,
       tickets: state.tickets.map((ticket) =>
@@ -2349,17 +2353,20 @@ export async function pollReview(
               reviewFetchedAt: new Date(now()).toISOString(),
               reviewHeadSha: detectedReview.reviewedHeadSha,
               reviewNonActionSummary: triage.nonActionSummary,
-              reviewOutcome:
-                triage.outcome === 'clean' || triage.outcome === 'patched'
-                  ? triage.outcome
-                  : undefined,
+              reviewOutcome: mergeReviewOutcome(
+                ticket.reviewOutcome,
+                latestReviewOutcome,
+              ),
               reviewNote:
                 reviewPollResult.status === 'partial_timeout'
                   ? formatPartialAiReviewTimeoutNote(
                       reviewPollResult.effectiveMaxWaitMinutes,
                       reviewPollResult.incompleteAgents,
                     )
-                  : triage.note,
+                  : ticket.reviewOutcome === 'patched' &&
+                      triage.outcome === 'clean'
+                    ? formatCumulativePatchedReviewNote(triage.note)
+                    : triage.note,
               reviewIncompleteAgents:
                 reviewPollResult.status === 'partial_timeout'
                   ? reviewPollResult.incompleteAgents
@@ -2406,13 +2413,19 @@ export async function pollReview(
             reviewArtifactPath: undefined,
             reviewHeadSha: undefined,
             reviewNonActionSummary: undefined,
-            reviewOutcome: 'clean',
+            reviewOutcome: mergeReviewOutcome(ticket.reviewOutcome, 'clean'),
             reviewNote: reviewPollResult.incompleteAgents?.length
               ? formatIncompleteAiReviewWithoutFindingsNote(
                   reviewPollResult.effectiveMaxWaitMinutes,
                   reviewPollResult.incompleteAgents,
                 )
-              : formatNoAiReviewFeedbackNote(state.reviewPollMaxWaitMinutes),
+              : ticket.reviewOutcome === 'patched'
+                ? formatCumulativePatchedReviewNote(
+                    formatNoAiReviewFeedbackNote(
+                      state.reviewPollMaxWaitMinutes,
+                    ),
+                  )
+                : formatNoAiReviewFeedbackNote(state.reviewPollMaxWaitMinutes),
             reviewIncompleteAgents: reviewPollResult.incompleteAgents,
             reviewThreadResolutions: undefined,
             reviewVendors: [],
@@ -2444,6 +2457,10 @@ async function runStandaloneAiReview(
   prNumber?: number,
 ): Promise<StandaloneAiReviewResult> {
   const pullRequest = resolveStandalonePullRequest(cwd, prNumber);
+  const previousOutcome = await readStandaloneAiReviewOutcome(
+    cwd,
+    pullRequest.number,
+  );
 
   await emitNotificationWarnings(notifier, cwd, [
     buildStandaloneReviewStartedEvent(pullRequest.number, pullRequest.url),
@@ -2478,6 +2495,14 @@ async function runStandaloneAiReview(
         threadResolutions,
       );
     }
+    const latestOutcome =
+      triage.outcome === 'needs_patch'
+        ? 'operator_input_needed'
+        : triage.outcome;
+    const cumulativeOutcome: ReviewResult =
+      latestOutcome === 'clean' || latestOutcome === 'patched'
+        ? (mergeReviewOutcome(previousOutcome, latestOutcome) ?? latestOutcome)
+        : latestOutcome;
     const standaloneResult: StandaloneAiReviewResult = {
       actionSummary: triage.actionSummary,
       artifactJsonPath: relativeToRepo(cwd, artifacts.artifactJsonPath),
@@ -2492,13 +2517,12 @@ async function runStandaloneAiReview(
               reviewPollResult.effectiveMaxWaitMinutes,
               reviewPollResult.incompleteAgents,
             )
-          : triage.note,
+          : cumulativeOutcome === 'patched' && latestOutcome === 'clean'
+            ? formatCumulativePatchedReviewNote(triage.note)
+            : triage.note,
       comments: detectedReview.comments,
       nonActionSummary: triage.nonActionSummary,
-      outcome:
-        triage.outcome === 'needs_patch'
-          ? 'operator_input_needed'
-          : triage.outcome,
+      outcome: cumulativeOutcome,
       prNumber: pullRequest.number,
       prUrl: pullRequest.url,
       reviewedHeadSha: detectedReview.reviewedHeadSha,
@@ -2529,8 +2553,12 @@ async function runStandaloneAiReview(
           reviewPollResult.effectiveMaxWaitMinutes,
           reviewPollResult.incompleteAgents,
         )
-      : formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
-    outcome: 'clean',
+      : previousOutcome === 'patched'
+        ? formatCumulativePatchedReviewNote(
+            formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
+          )
+        : formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
+    outcome: mergeReviewOutcome(previousOutcome, 'clean') ?? 'clean',
     prNumber: pullRequest.number,
     prUrl: pullRequest.url,
     vendors: [],
@@ -2657,11 +2685,16 @@ export async function recordReview(
               outcome === 'operator_input_needed'
                 ? 'operator_input_needed'
                 : 'reviewed',
-            reviewOutcome:
+            reviewOutcome: mergeReviewOutcome(
+              ticket.reviewOutcome,
               outcome === 'clean' || outcome === 'patched'
                 ? outcome
                 : undefined,
-            reviewNote: note ?? ticket.reviewNote,
+            ),
+            reviewNote:
+              ticket.reviewOutcome === 'patched' && outcome === 'clean'
+                ? formatCumulativePatchedReviewNote(note ?? ticket.reviewNote)
+                : (note ?? ticket.reviewNote),
             reviewThreadResolutions:
               outcome === 'patched' ? reviewThreadResolutions : undefined,
           }
@@ -2841,6 +2874,54 @@ function shortenSha(sha: string | undefined): string | undefined {
   return sha ? sha.slice(0, 12) : undefined;
 }
 
+function mergeReviewOutcome(
+  previous: ReviewOutcome | undefined,
+  next: ReviewOutcome | undefined,
+): ReviewOutcome | undefined {
+  if (previous === 'patched' || next === 'patched') {
+    return 'patched';
+  }
+
+  return previous ?? next;
+}
+
+function formatCumulativePatchedReviewNote(note: string | undefined): string {
+  if (note === undefined || note.length === 0) {
+    return 'Earlier review cycles led to prudent follow-up patches; the latest review pass found no additional prudent changes.';
+  }
+
+  if (note.includes('no additional prudent follow-up changes')) {
+    return note;
+  }
+
+  return `${note} Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.`;
+}
+
+async function readStandaloneAiReviewOutcome(
+  cwd: string,
+  prNumber: number,
+): Promise<ReviewOutcome | undefined> {
+  const notePath = resolve(
+    cwd,
+    '.agents/ai-review',
+    `pr-${prNumber}`,
+    'note.md',
+  );
+
+  if (!existsSync(notePath)) {
+    return undefined;
+  }
+
+  const note = await readFile(notePath, 'utf8');
+  const match = note.match(/^- Outcome: `([^`]+)`$/m);
+
+  if (match?.[1] === 'clean' || match?.[1] === 'patched') {
+    return match[1];
+  }
+
+  return undefined;
+}
+
 function summarizeReviewComment(body: string): string {
   const normalized = body.replace(/\s+/g, ' ').trim();
   return normalized.length > 140
@@ -2883,73 +2964,68 @@ function formatResolutionSuffix(
   }
 }
 
-function describeReviewComment(
+function extractHighlightedReviewText(body: string): string | undefined {
+  const boldMatches = [...body.matchAll(/\*\*([^*]+)\*\*/g)];
+
+  for (const match of boldMatches) {
+    const candidate = match[1]?.trim();
+    if (
+      candidate &&
+      !candidate.toLowerCase().startsWith('actionable comments posted')
+    ) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+function summarizeReviewerFacingFinding(body: string): string {
+  const highlighted = extractHighlightedReviewText(body);
+  if (highlighted) {
+    return highlighted;
+  }
+
+  const firstMeaningfulLine = body
+    .split('\n')
+    .map((line) => line.trim())
+    .find(
+      (line) =>
+        line.length > 0 &&
+        !line.startsWith('```') &&
+        !line.startsWith('<') &&
+        !line.startsWith('>') &&
+        !line.startsWith('<!--'),
+    );
+
+  return summarizeReviewComment(firstMeaningfulLine ?? body);
+}
+
+function formatReviewFindingBullet(
   comment: AiReviewComment,
-  context: 'current' | 'history',
-  status: TicketStatus | ReviewResult,
-  resolution: AiReviewThreadResolution | undefined,
+  detail?: string,
 ): string {
-  if (context === 'history') {
-    return 'stale history';
-  }
+  const base = `- [${comment.vendor}] ${summarizeReviewerFacingFinding(comment.body)}`;
+  const suffix = detail ? ` (${detail})` : '';
+  return `${base}${suffix}${formatReviewCommentLocation(comment)}${formatReviewThreadLink(comment.url)}`;
+}
 
-  if (comment.isOutdated) {
-    return 'outdated';
-  }
-
-  if (comment.isResolved) {
-    return 'already resolved';
-  }
-
-  if (comment.kind === 'summary') {
-    return 'summary only';
-  }
-
-  if (comment.kind === 'unknown') {
-    return 'manual judgment';
-  }
-
-  if (status === 'patched') {
-    return `patched${formatResolutionSuffix(resolution)}`;
-  }
-
-  if (status === 'needs_patch') {
-    return 'follow-up pending';
-  }
-
-  if (status === 'operator_input_needed') {
-    return 'operator input needed';
-  }
-
-  return 'finding';
+function buildReviewCommentBullet(
+  comment: AiReviewComment,
+  detail?: string,
+): string {
+  return formatReviewFindingBullet(comment, detail);
 }
 
 function buildReviewCommentBullets(
   comments: AiReviewComment[] | undefined,
-  context: 'current' | 'history',
-  status: TicketStatus | ReviewResult,
-  threadResolutions: AiReviewThreadResolution[] | undefined,
+  detail?: string,
 ): string[] {
   if (!comments || comments.length === 0) {
     return [];
   }
 
-  const resolutionByThreadId = new Map(
-    (threadResolutions ?? []).map((resolution) => [
-      resolution.threadId,
-      resolution,
-    ]),
-  );
-
-  return comments.map((comment) => {
-    const description = describeReviewComment(
-      comment,
-      context,
-      status,
-      comment.threadId ? resolutionByThreadId.get(comment.threadId) : undefined,
-    );
-    return `- [${comment.vendor}] ${description}: ${summarizeReviewComment(comment.body)}${formatReviewCommentLocation(comment)}${formatReviewThreadLink(comment.url)}`;
-  });
+  return comments.map((comment) => buildReviewCommentBullet(comment, detail));
 }
 
 function buildAiReviewDetailLines(input: {
@@ -2993,34 +3069,10 @@ function buildAiReviewDetailLines(input: {
     );
   }
 
-  if (reviewStatus === 'clean') {
-    lines.push(
-      input.note === formatNoAiReviewFeedbackNote(input.maxWaitMinutes)
-        ? `- No \`ai-code-review\` feedback was detected during the ${input.maxWaitMinutes}-minute polling window.`
-        : '- `ai-code-review` triage found no prudent follow-up changes.',
-    );
-  } else if (reviewStatus === 'needs_patch') {
-    lines.push(
-      '- `ai-code-review` triage found actionable follow-up work that still needs patching.',
-    );
-  } else if (reviewStatus === 'patched') {
-    lines.push(
-      '- `ai-code-review` triage led to prudent follow-up patches that are now included in this branch.',
-    );
-  } else {
-    lines.push(
-      '- `ai-code-review` stopped for operator input before follow-up could be completed safely.',
-    );
-  }
-
   if (input.reviewedHeadSha && input.currentHeadSha && !appliesToCurrentHead) {
     lines.push(
-      '- no current-SHA `ai-code-review` status is recorded for the current branch head; the latest recorded review is shown below as stale history.',
+      '- the latest recorded external AI review applies to an older branch head; the prior review history is shown below for debugging.',
     );
-  }
-
-  if (input.note) {
-    lines.push(`- follow-up note: ${input.note}`);
   }
 
   if (input.vendors && input.vendors.length > 0) {
@@ -3029,30 +3081,92 @@ function buildAiReviewDetailLines(input: {
     );
   }
 
-  if (input.actionSummary) {
-    lines.push(`- action summary: ${input.actionSummary}`);
-  }
-
-  if (input.nonActionSummary) {
-    lines.push(`- non-action summary: ${input.nonActionSummary}`);
-  }
-
-  const bullets = buildReviewCommentBullets(
-    input.comments,
-    appliesToCurrentHead || !input.reviewedHeadSha ? 'current' : 'history',
-    reviewStatus,
-    input.threadResolutions,
+  const effectiveContext =
+    input.reviewedHeadSha && input.currentHeadSha && !appliesToCurrentHead
+      ? 'history'
+      : 'current';
+  const currentComments =
+    effectiveContext === 'current' ? (input.comments ?? []) : [];
+  const currentActionableComments = currentComments.filter(
+    (comment) =>
+      !comment.isOutdated && !comment.isResolved && comment.kind !== 'summary',
   );
+  const currentSummaryNoiseComments = currentComments.filter(
+    (comment) =>
+      !comment.isOutdated && !comment.isResolved && comment.kind === 'summary',
+  );
+  const staleOrResolvedComments =
+    effectiveContext === 'history'
+      ? (input.comments ?? [])
+      : (input.comments ?? []).filter(
+          (comment) => comment.isOutdated || comment.isResolved,
+        );
 
-  if (bullets.length > 0) {
+  const resolutionByThreadId = new Map(
+    (input.threadResolutions ?? []).map((resolution) => [
+      resolution.threadId,
+      resolution,
+    ]),
+  );
+  const resolvedFindingComments = [
+    ...(reviewStatus === 'patched' ? currentActionableComments : []),
+    ...staleOrResolvedComments,
+  ];
+  const unresolvedFindingComments =
+    reviewStatus === 'needs_patch' || reviewStatus === 'operator_input_needed'
+      ? currentActionableComments
+      : [];
+
+  if (
+    reviewStatus === 'clean' &&
+    currentActionableComments.length === 0 &&
+    currentSummaryNoiseComments.length === 0 &&
+    resolvedFindingComments.length === 0
+  ) {
+    lines.push('- no prudent follow-up changes were required.');
+  }
+
+  const resolvedFindingBullets = resolvedFindingComments.map((comment) => {
+    const resolution = comment.threadId
+      ? resolutionByThreadId.get(comment.threadId)
+      : undefined;
+    const detail =
+      comment.isResolved || comment.isOutdated || effectiveContext === 'history'
+        ? undefined
+        : resolution
+          ? formatResolutionSuffix(resolution).replace(/^;\s*/, '')
+          : reviewStatus === 'patched'
+            ? 'patched'
+            : undefined;
+    return buildReviewCommentBullet(comment, detail);
+  });
+
+  if (resolvedFindingBullets.length > 0) {
     lines.push(
       '',
-      appliesToCurrentHead || !input.reviewedHeadSha
-        ? '### Review Items'
-        : '### Stale Review History',
+      '### Resolved Review Findings',
       '',
-      ...bullets,
+      ...resolvedFindingBullets,
     );
+  }
+
+  const unresolvedFindingBullets = buildReviewCommentBullets(
+    unresolvedFindingComments,
+  );
+
+  if (unresolvedFindingBullets.length > 0) {
+    lines.push(
+      '',
+      '### Unresolved Review Findings',
+      '',
+      ...unresolvedFindingBullets,
+    );
+    if (input.note) {
+      lines.push('', `- triage note: ${input.note}`);
+    }
+    if (input.actionSummary) {
+      lines.push(`- triage summary: ${input.actionSummary}`);
+    }
   }
 
   return lines;
@@ -3104,7 +3218,7 @@ export function buildPullRequestBody(
     ticket.status === 'needs_patch' ||
     ticket.status === 'operator_input_needed'
   ) {
-    lines.push('', '## AI Review Follow-Up', '');
+    lines.push('', '## External AI Review', '');
     lines.push(
       ...buildAiReviewDetailLines({
         actionSummary: ticket.reviewActionSummary,
@@ -3549,7 +3663,11 @@ export function buildStandaloneAiReviewSection(
     currentHeadSha?: string;
   } = {},
 ): string {
-  const lines = [STANDALONE_AI_REVIEW_SECTION_START, '## AI Review', ''];
+  const lines = [
+    STANDALONE_AI_REVIEW_SECTION_START,
+    '## External AI Review',
+    '',
+  ];
   lines.push(
     ...buildAiReviewDetailLines({
       actionSummary: result.actionSummary,
@@ -3564,16 +3682,6 @@ export function buildStandaloneAiReviewSection(
       vendors: result.vendors,
     }),
   );
-
-  lines.push(`- outcome: \`${result.outcome}\``);
-
-  if (result.artifactJsonPath) {
-    lines.push(`- artifact (json): \`${result.artifactJsonPath}\``);
-  }
-
-  if (result.artifactTextPath) {
-    lines.push(`- artifact (text): \`${result.artifactTextPath}\``);
-  }
 
   lines.push(STANDALONE_AI_REVIEW_SECTION_END);
   return lines.join('\n');

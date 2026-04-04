@@ -567,7 +567,7 @@ describe('delivery orchestrator', () => {
         ],
         vendors: ['coderabbit'],
       }),
-    ).toContain('triage led to prudent follow-up patches');
+    ).toContain('## External AI Review');
 
     expect(
       buildStandaloneAiReviewSection({
@@ -575,7 +575,20 @@ describe('delivery orchestrator', () => {
         note: 'External AI review completed without prudent follow-up changes.',
         vendors: ['qodo'],
       }),
-    ).toContain('triage found no prudent follow-up changes');
+    ).toContain('no prudent follow-up changes were required.');
+  });
+
+  it('keeps standalone pr bodies free of artifact paths', () => {
+    const body = buildStandaloneAiReviewSection({
+      outcome: 'patched',
+      note: 'Patched the prudent AI review follow-up.',
+      artifactJsonPath: '.codex/ai-review/pr-32/review.json',
+      artifactTextPath: '.codex/ai-review/pr-32/review.txt',
+      vendors: ['coderabbit'],
+    });
+
+    expect(body).not.toContain('artifact (json)');
+    expect(body).not.toContain('artifact (text)');
   });
 
   it('does not include external summary-only noise in the ticket pr body', () => {
@@ -606,11 +619,134 @@ describe('delivery orchestrator', () => {
       },
     );
 
-    expect(body).toContain(
-      'External AI review completed without prudent follow-up changes.',
-    );
+    expect(body).toContain('no prudent follow-up changes were required.');
     expect(body).not.toContain('Ignored 1 summary comment');
+    expect(body).not.toContain('### Vendor Summary Noise');
     expect(body).not.toContain('non-action summary:');
+    expect(body).not.toContain('summary-only updates');
+  });
+
+  it('omits summary noise and renders resolved findings for reviewers', () => {
+    const body = buildPullRequestBody(
+      {
+        planKey: 'phase-03',
+        planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
+        tickets: [],
+      },
+      {
+        id: 'P3.01',
+        title: 'Persist Transmission Identity For Queued Torrents',
+        ticketFile:
+          'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+        baseBranch: 'main',
+        reviewActionSummary: 'Patched 1 finding comment.',
+        reviewComments: [
+          {
+            vendor: 'coderabbit',
+            channel: 'inline_review',
+            authorLogin: 'coderabbitai',
+            authorType: 'Bot',
+            body: 'Guard the null return here.',
+            kind: 'finding',
+            path: 'src/example.ts',
+            line: 42,
+            threadId: 'thread_example_1',
+            url: 'https://example.test/comment/1',
+          },
+          {
+            vendor: 'qodo',
+            channel: 'review_summary',
+            authorLogin: 'qodo-bot',
+            authorType: 'Bot',
+            body: 'Overall this looks good.',
+            kind: 'summary',
+            url: 'https://example.test/comment/2',
+          },
+          {
+            vendor: 'qodo',
+            channel: 'review_summary',
+            authorLogin: 'qodo-bot',
+            authorType: 'Bot',
+            body: 'No blocking issues found.',
+            kind: 'summary',
+            url: 'https://example.test/comment/3',
+          },
+          {
+            vendor: 'coderabbit',
+            channel: 'inline_review',
+            authorLogin: 'coderabbitai',
+            authorType: 'Bot',
+            body: 'Previous concern already resolved.',
+            isResolved: true,
+            kind: 'finding',
+            path: 'src/example.ts',
+            line: 30,
+            threadId: 'thread_example_2',
+            url: 'https://example.test/comment/4',
+          },
+        ],
+        reviewHeadSha: 'abcdef1234567890',
+        reviewNote: 'Patched the prudent AI review follow-up.',
+        reviewOutcome: 'patched',
+        reviewThreadResolutions: [
+          {
+            status: 'resolved',
+            threadId: 'thread_example_1',
+            url: 'https://example.test/comment/1',
+            vendor: 'coderabbit',
+          },
+        ],
+        reviewVendors: ['coderabbit', 'qodo'],
+        status: 'reviewed',
+      },
+      {
+        currentHeadSha: 'abcdef1234567890',
+      },
+    );
+
+    expect(body).toContain('## External AI Review');
+    expect(body).toContain('### Resolved Review Findings');
+    expect(body).toContain(
+      '[coderabbit] Guard the null return here. (native GitHub thread resolved)',
+    );
+    expect(body).not.toContain('### Vendor Summary Noise');
+    expect(body).not.toContain('[qodo] compressed 2 summary-only updates.');
+    expect(body).not.toContain('Overall this looks good.');
+    expect(body).toContain('### Resolved Review Findings');
+    expect(body).toContain('[coderabbit] Previous concern already resolved.');
+  });
+
+  it('keeps reviewed findings current when the current head sha is unknown', () => {
+    const body = buildStandaloneAiReviewSection({
+      outcome: 'operator_input_needed',
+      note: 'Actionable AI review findings were detected and still need follow-up.',
+      reviewedHeadSha: 'abcdef1234567890',
+      comments: [
+        {
+          vendor: 'coderabbit',
+          channel: 'inline_review',
+          authorLogin: 'coderabbitai',
+          authorType: 'Bot',
+          body: 'Guard the null return here.',
+          kind: 'finding',
+          path: 'src/example.ts',
+          line: 42,
+          url: 'https://example.test/comment/1',
+        },
+      ],
+      vendors: ['coderabbit'],
+    });
+
+    expect(body).toContain('### Unresolved Review Findings');
+    expect(body).not.toContain('### Resolved Review Findings');
+    expect(body).not.toContain(
+      'the latest recorded external AI review applies to an older branch head',
+    );
   });
 
   it('renders stale ai review history separately from current head status', () => {
@@ -667,12 +803,10 @@ describe('delivery orchestrator', () => {
     );
 
     expect(body).toContain(
-      'no current-SHA `ai-code-review` status is recorded',
+      'the latest recorded external AI review applies to an older branch head',
     );
-    expect(body).toContain('### Stale Review History');
-    expect(body).toContain(
-      '[coderabbit] stale history: Guard the null return here.',
-    );
+    expect(body).toContain('### Resolved Review Findings');
+    expect(body).toContain('[coderabbit] Guard the null return here.');
     expect(body).toContain('[thread](https://example.test/comment/1)');
   });
 
@@ -1522,6 +1656,120 @@ describe('delivery orchestrator', () => {
     ]);
   });
 
+  it('preserves patched as the cumulative outcome when a later poll is clean', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+          reviewOutcome: 'patched',
+          reviewNote: 'Patched the prudent AI review follow-up.',
+        },
+      ],
+    };
+
+    const nextState = await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async () => {},
+      fetcher: () => ({
+        agents: [
+          {
+            agent: 'coderabbit',
+            state: 'completed',
+            note: 'review completed without actionable findings',
+          },
+        ],
+        detected: true,
+        artifactText: 'normalized ai review artifact',
+        reviewedHeadSha: 'abcdef1234567890',
+        vendors: ['coderabbit'],
+        comments: [],
+      }),
+      triager: () => ({
+        outcome: 'clean',
+        note: 'External AI review completed without prudent follow-up changes.',
+        vendors: ['coderabbit'],
+      }),
+      updatePullRequestBody: async () => {},
+    });
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote:
+        'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
+    });
+  });
+
+  it('preserves patched as the cumulative outcome when a later poll finds no ai review', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+          reviewOutcome: 'patched',
+          reviewNote: 'Patched the prudent AI review follow-up.',
+        },
+      ],
+    };
+
+    const nextState = await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async () => {},
+      fetcher: () => ({
+        agents: [],
+        detected: false,
+        artifactText: '',
+        vendors: [],
+        comments: [],
+      }),
+      updatePullRequestBody: async () => {},
+    });
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote:
+        'No AI review feedback was detected within the 8-minute polling window. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
+    });
+  });
+
   it('uses the normal polling cadence when prOpenedAt is missing', async () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
@@ -1663,6 +1911,52 @@ describe('delivery orchestrator', () => {
           vendor: 'coderabbit',
         },
       ],
+    });
+  });
+
+  it('does not downgrade a patched review outcome when recording clean later', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'operator_input_needed',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          reviewOutcome: 'patched',
+          reviewNote: 'Patched the prudent AI review follow-up.',
+        },
+      ],
+    };
+
+    const nextState = await recordReview(
+      state,
+      '/tmp/pirate_claw',
+      'P3.01',
+      'clean',
+      'External AI review completed without prudent follow-up changes.',
+      {
+        updatePullRequestBody: async () => {},
+      },
+    );
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote:
+        'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
     });
   });
 
