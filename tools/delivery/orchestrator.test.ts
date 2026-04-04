@@ -723,6 +723,34 @@ describe('delivery orchestrator', () => {
     );
   });
 
+  it('keeps reviewed findings current when the current head sha is unknown', () => {
+    const body = buildStandaloneAiReviewSection({
+      outcome: 'operator_input_needed',
+      note: 'Actionable AI review findings were detected and still need follow-up.',
+      reviewedHeadSha: 'abcdef1234567890',
+      comments: [
+        {
+          vendor: 'coderabbit',
+          channel: 'inline_review',
+          authorLogin: 'coderabbitai',
+          authorType: 'Bot',
+          body: 'Guard the null return here.',
+          kind: 'finding',
+          path: 'src/example.ts',
+          line: 42,
+          url: 'https://example.test/comment/1',
+        },
+      ],
+      vendors: ['coderabbit'],
+    });
+
+    expect(body).toContain('### Current Findings');
+    expect(body).not.toContain('### Stale / Resolved History');
+    expect(body).not.toContain(
+      'no current-SHA `ai-code-review` status is recorded',
+    );
+  });
+
   it('renders stale ai review history separately from current head status', () => {
     const body = buildPullRequestBody(
       {

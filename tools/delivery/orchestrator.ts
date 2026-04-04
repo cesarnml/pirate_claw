@@ -2928,14 +2928,8 @@ function buildReviewCommentBullet(
   comment: AiReviewComment,
   context: 'current' | 'history',
   status: TicketStatus | ReviewResult,
-  threadResolutions: AiReviewThreadResolution[] | undefined,
+  resolutionByThreadId: ReadonlyMap<string, AiReviewThreadResolution>,
 ): string {
-  const resolutionByThreadId = new Map(
-    (threadResolutions ?? []).map((resolution) => [
-      resolution.threadId,
-      resolution,
-    ]),
-  );
   const description = describeReviewComment(
     comment,
     context,
@@ -2955,8 +2949,15 @@ function buildReviewCommentBullets(
     return [];
   }
 
+  const resolutionByThreadId = new Map(
+    (threadResolutions ?? []).map((resolution) => [
+      resolution.threadId,
+      resolution,
+    ]),
+  );
+
   return comments.map((comment) =>
-    buildReviewCommentBullet(comment, context, status, threadResolutions),
+    buildReviewCommentBullet(comment, context, status, resolutionByThreadId),
   );
 }
 
@@ -3074,7 +3075,9 @@ function buildAiReviewDetailLines(input: {
   }
 
   const effectiveContext =
-    appliesToCurrentHead || !input.reviewedHeadSha ? 'current' : 'history';
+    input.reviewedHeadSha && input.currentHeadSha && !appliesToCurrentHead
+      ? 'history'
+      : 'current';
   const currentComments =
     effectiveContext === 'current' ? (input.comments ?? []) : [];
   const currentActionableComments = currentComments.filter(
