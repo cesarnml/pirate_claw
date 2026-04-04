@@ -3,6 +3,7 @@ node_modules/
 .env
 .codex/delivery/
 .codex/analysis/
+.codex/ai-review/
 pirate-claw.config.json
 pirate-claw.db
 .env
