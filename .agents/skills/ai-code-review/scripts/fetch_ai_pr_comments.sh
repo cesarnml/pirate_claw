@@ -30,6 +30,8 @@ repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 owner="${repo%%/*}"
 name="${repo##*/}"
 pr_json="$(gh pr view "$pr_number" --json number,title,url,headRefName,headRefOid,baseRefName,isDraft,state,comments,reviews)"
+temp_dir="$(mktemp -d)"
+trap 'rm -rf "$temp_dir"' EXIT
 
 review_comments_json="$(
   gh api --paginate "repos/$repo/pulls/$pr_number/comments?per_page=100" \
@@ -169,7 +171,8 @@ fetch_thread_comments_page() {
   fi
 }
 
-review_threads_json='[]'
+thread_pages_file="$temp_dir/review-thread-pages.jsonl"
+: >"$thread_pages_file"
 thread_cursor=""
 
 while :; do
@@ -177,12 +180,7 @@ while :; do
   thread_nodes_json="$(printf '%s' "$thread_page_json" | jq '.data.repository.pullRequest.reviewThreads.nodes')"
 
   if [[ "$thread_nodes_json" != "[]" ]]; then
-    review_threads_json="$(
-      jq -n \
-        --argjson existing "$review_threads_json" \
-        --argjson nodes "$thread_nodes_json" \
-        '$existing + $nodes'
-    )"
+    printf '%s\n' "$thread_nodes_json" >>"$thread_pages_file"
   fi
 
   thread_has_next="$(printf '%s' "$thread_page_json" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage // false')"
@@ -193,40 +191,45 @@ while :; do
   thread_cursor="$(printf '%s' "$thread_page_json" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')"
 done
 
-expanded_review_threads_json='[]'
+if [[ -s "$thread_pages_file" ]]; then
+  review_threads_json="$(jq -s 'add // []' "$thread_pages_file")"
+else
+  review_threads_json='[]'
+fi
+
+expanded_threads_file="$temp_dir/expanded-review-threads.jsonl"
+: >"$expanded_threads_file"
 while IFS= read -r thread_json; do
   [[ -z "$thread_json" ]] && continue
 
   thread_id="$(printf '%s' "$thread_json" | jq -r '.id')"
+  comment_pages_file="$(mktemp "$temp_dir/thread-comments.XXXXXX.jsonl")"
   comment_nodes_json="$(printf '%s' "$thread_json" | jq '.comments.nodes // []')"
+  printf '%s\n' "$comment_nodes_json" >"$comment_pages_file"
   comment_has_next="$(printf '%s' "$thread_json" | jq -r '.comments.pageInfo.hasNextPage // false')"
   comment_cursor="$(printf '%s' "$thread_json" | jq -r '.comments.pageInfo.endCursor // ""')"
 
   while [[ "$comment_has_next" == "true" ]]; do
     comment_page_json="$(fetch_thread_comments_page "$thread_id" "$comment_cursor")"
     page_nodes_json="$(printf '%s' "$comment_page_json" | jq '.data.node.comments.nodes // []')"
-    comment_nodes_json="$(
-      jq -n \
-        --argjson existing "$comment_nodes_json" \
-        --argjson nodes "$page_nodes_json" \
-        '$existing + $nodes'
-    )"
+    printf '%s\n' "$page_nodes_json" >>"$comment_pages_file"
     comment_has_next="$(printf '%s' "$comment_page_json" | jq -r '.data.node.comments.pageInfo.hasNextPage // false')"
     comment_cursor="$(printf '%s' "$comment_page_json" | jq -r '.data.node.comments.pageInfo.endCursor // ""')"
   done
 
+  comment_nodes_json="$(jq -s 'add // []' "$comment_pages_file")"
+  rm -f "$comment_pages_file"
   expanded_thread_json="$(
     printf '%s' "$thread_json" | jq --argjson nodes "$comment_nodes_json" '.comments = { nodes: $nodes }'
   )"
-  expanded_review_threads_json="$(
-    jq -n \
-      --argjson existing "$expanded_review_threads_json" \
-      --argjson thread "$expanded_thread_json" \
-      '$existing + [$thread]'
-  )"
+  printf '%s\n' "$expanded_thread_json" >>"$expanded_threads_file"
 done < <(printf '%s' "$review_threads_json" | jq -c '.[]')
 
-review_threads_json="$expanded_review_threads_json"
+if [[ -s "$expanded_threads_file" ]]; then
+  review_threads_json="$(jq -s '.' "$expanded_threads_file")"
+else
+  review_threads_json='[]'
+fi
 
 jq -n \
   --argjson pr "$pr_json" \
@@ -236,6 +239,7 @@ jq -n \
       tostring
       | gsub("\r"; "")
       | gsub("\\s+"; " ")
+      | gsub("^ +| +$"; "")
       | ascii_downcase;
 
     def author_login:
@@ -327,7 +331,6 @@ jq -n \
       | if $channel == "inline_review" then
           if (comment_thread_state.is_outdated or comment_thread_state.is_resolved) then "unknown" else "finding" end
         elif $channel == "review_summary" and ($body | length) == 0 then "summary"
-        elif looks_like_started_text or looks_like_summary_noise_text then "summary"
         elif looks_like_started_text or looks_like_summary_noise_text then "summary"
         elif ($body | test("summary|overall|overview|high level|high-level|general feedback|looks good|no major issues|quick recap")) then "summary"
         elif ($body | test("should|could|must|consider|missing|bug|issue|incorrect|guard|handle|return|null|undefined|race|rename|suggestion:|nit:|nitpick")) then "finding"
