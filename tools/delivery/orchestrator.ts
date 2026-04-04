@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 
 export type TicketStatus =
@@ -43,7 +42,8 @@ export type DeliveryState = {
   statePath: string;
   reviewsDirPath: string;
   handoffsDirPath: string;
-  reviewWaitMinutes: number;
+  reviewPollIntervalMinutes: number;
+  reviewPollMaxWaitMinutes: number;
   tickets: TicketState[];
 };
 
@@ -53,7 +53,8 @@ export type OrchestratorOptions = {
   statePath: string;
   reviewsDirPath: string;
   handoffsDirPath: string;
-  reviewWaitMinutes: number;
+  reviewPollIntervalMinutes: number;
+  reviewPollMaxWaitMinutes: number;
 };
 
 type RepairStateResult = {
@@ -102,8 +103,10 @@ export type DeliveryNotificationEvent =
       ticketTitle: string;
       branch: string;
       prUrl: string;
-      reviewWaitMinutes: number;
-      dueAt: string;
+      reviewPollIntervalMinutes: number;
+      reviewPollMaxWaitMinutes: number;
+      firstCheckAt: string;
+      finalCheckAt: string;
     }
   | {
       kind: 'review_recorded';
@@ -142,7 +145,25 @@ type DeliveryNotifier =
       chatId: string;
     };
 
-const DEFAULT_REVIEW_WAIT_MINUTES = 5;
+const DEFAULT_REVIEW_POLL_INTERVAL_MINUTES = 2;
+const DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES = 8;
+const NO_AI_REVIEW_FEEDBACK_NOTE =
+  'No AI review feedback was detected within the 8-minute polling window.';
+
+type AiReviewFetcherResult = {
+  detected: boolean;
+  artifact: string;
+};
+
+type PollReviewDependencies = {
+  fetcher?: (worktreePath: string, prNumber: number) => AiReviewFetcherResult;
+  now?: () => number;
+  sleep?: (milliseconds: number) => Promise<void>;
+  updatePullRequestBody?: (
+    state: DeliveryState,
+    ticket: TicketState,
+  ) => void | Promise<void>;
+};
 
 export async function runDeliveryOrchestrator(
   argv: string[],
@@ -225,10 +246,15 @@ export async function runDeliveryOrchestrator(
         );
         return 0;
       }
-      case 'fetch-review': {
-        const nextState = await fetchReview(state, cwd, parsed.positionals[0]);
+      case 'poll-review': {
+        const nextState = await pollReview(state, cwd, parsed.positionals[0]);
         await saveState(cwd, nextState);
         console.log(formatStatus(nextState));
+        await emitNotificationWarnings(
+          notifier,
+          cwd,
+          eventsForPollReviewCommand(nextState, parsed.positionals[0]),
+        );
         return 0;
       }
       case 'record-review': {
@@ -361,7 +387,8 @@ export function syncStateWithPlan(
     statePath: options.statePath,
     reviewsDirPath: options.reviewsDirPath,
     handoffsDirPath: options.handoffsDirPath,
-    reviewWaitMinutes: options.reviewWaitMinutes,
+    reviewPollIntervalMinutes: options.reviewPollIntervalMinutes,
+    reviewPollMaxWaitMinutes: options.reviewPollMaxWaitMinutes,
     tickets: ticketDefinitions.map((definition, index) => {
       const previous = existingById.get(definition.id);
       const inferredTicket = inferredById.get(definition.id);
@@ -498,15 +525,11 @@ export function deriveWorktreePath(cwd: string, ticketId: string): string {
 }
 
 export function resolveReviewFetcher(): string {
-  if (process.env.QODO_REVIEW_FETCHER) {
-    return process.env.QODO_REVIEW_FETCHER;
+  if (process.env.AI_CODE_REVIEW_FETCHER) {
+    return process.env.AI_CODE_REVIEW_FETCHER;
   }
 
-  const codexHome = process.env.CODEX_HOME ?? join(homedir(), '.codex');
-  return join(
-    codexHome,
-    'skills/qodo-pr-review/scripts/fetch_qodo_pr_comments.sh',
-  );
+  return '.codex/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh';
 }
 
 export function resolveNotifier(): DeliveryNotifier {
@@ -546,7 +569,8 @@ export function createOptions(input: {
     statePath: `.codex/delivery/${planKey}/state.json`,
     reviewsDirPath: `.codex/delivery/${planKey}/reviews`,
     handoffsDirPath: `.codex/delivery/${planKey}/handoffs`,
-    reviewWaitMinutes: DEFAULT_REVIEW_WAIT_MINUTES,
+    reviewPollIntervalMinutes: DEFAULT_REVIEW_POLL_INTERVAL_MINUTES,
+    reviewPollMaxWaitMinutes: DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES,
   };
 }
 
@@ -627,7 +651,7 @@ function getUsage(): string {
     '  repair-state',
     '  start [ticket-id]',
     '  open-pr [ticket-id]',
-    '  fetch-review [ticket-id]',
+    '  poll-review [ticket-id]',
     '  record-review <ticket-id> <clean|needs_patch|patched> [note]',
     '  advance [--no-start-next]',
     '  restack [ticket-id]',
@@ -890,7 +914,8 @@ function inferStateFromRepo(
     statePath: options.statePath,
     reviewsDirPath: options.reviewsDirPath,
     handoffsDirPath: options.handoffsDirPath,
-    reviewWaitMinutes: options.reviewWaitMinutes,
+    reviewPollIntervalMinutes: options.reviewPollIntervalMinutes,
+    reviewPollMaxWaitMinutes: options.reviewPollMaxWaitMinutes,
     tickets,
   };
 }
@@ -1208,10 +1233,64 @@ async function openPullRequest(
   };
 }
 
-async function fetchReview(
+export function buildReviewPollCheckMinutes(
+  intervalMinutes: number,
+  maxWaitMinutes: number,
+): number[] {
+  const checks: number[] = [];
+
+  for (let minute = intervalMinutes; minute <= maxWaitMinutes; minute += 1) {
+    if (minute % intervalMinutes === 0) {
+      checks.push(minute);
+    }
+  }
+
+  return checks;
+}
+
+export function parseAiReviewFetcherOutput(
+  output: string,
+): AiReviewFetcherResult {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(output);
+  } catch (error) {
+    throw new Error(
+      `AI review fetcher must emit JSON. ${formatError(error)}\n${output.trim()}`.trim(),
+    );
+  }
+
+  const record = parsed as Record<string, unknown>;
+
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    typeof record.detected !== 'boolean' ||
+    typeof record.artifact !== 'string'
+  ) {
+    throw new Error(
+      'AI review fetcher output must be JSON with boolean `detected` and string `artifact` fields.',
+    );
+  }
+
+  return parsed as AiReviewFetcherResult;
+}
+
+function runAiReviewFetcher(
+  worktreePath: string,
+  prNumber: number,
+): AiReviewFetcherResult {
+  const fetcher = resolveReviewFetcher();
+  const output = runProcess(worktreePath, [fetcher, String(prNumber)]);
+  return parseAiReviewFetcherOutput(output);
+}
+
+export async function pollReview(
   state: DeliveryState,
   cwd: string,
   ticketId?: string,
+  dependencies: PollReviewDependencies = {},
 ): Promise<DeliveryState> {
   const target = findTicketById(state, ticketId);
 
@@ -1219,42 +1298,80 @@ async function fetchReview(
     throw new Error('No in-review ticket with an open PR was found.');
   }
 
+  const now = dependencies.now ?? Date.now;
+  const sleepFn = dependencies.sleep ?? sleep;
+  const fetcher = dependencies.fetcher ?? runAiReviewFetcher;
+  const updatePullRequestBodyFn =
+    dependencies.updatePullRequestBody ?? updatePullRequestBody;
   const openedAt = Date.parse(target.prOpenedAt ?? '');
-  if (!Number.isNaN(openedAt)) {
-    const dueAt = openedAt + state.reviewWaitMinutes * 60_000;
-    const remaining = dueAt - Date.now();
 
-    if (remaining > 0) {
-      await sleep(remaining);
+  for (const checkMinute of buildReviewPollCheckMinutes(
+    state.reviewPollIntervalMinutes,
+    state.reviewPollMaxWaitMinutes,
+  )) {
+    if (!Number.isNaN(openedAt)) {
+      const dueAt = openedAt + checkMinute * 60_000;
+      const remaining = dueAt - now();
+
+      if (remaining > 0) {
+        await sleepFn(remaining);
+      }
     }
+
+    const result = fetcher(target.worktreePath, target.prNumber);
+
+    if (!result.detected) {
+      continue;
+    }
+
+    const artifactPath = resolve(
+      cwd,
+      state.reviewsDirPath,
+      `${target.id}-ai-review.txt`,
+    );
+    await mkdir(dirname(artifactPath), { recursive: true });
+    await writeFile(artifactPath, result.artifact, 'utf8');
+
+    return {
+      ...state,
+      tickets: state.tickets.map((ticket) =>
+        ticket.id === target.id
+          ? {
+              ...ticket,
+              status: 'review_fetched',
+              reviewArtifactPath: relativeToRepo(cwd, artifactPath),
+              reviewFetchedAt: new Date(now()).toISOString(),
+              reviewOutcome: undefined,
+              reviewNote: undefined,
+            }
+          : ticket,
+      ),
+    };
   }
 
-  const fetcher = resolveReviewFetcher();
-  const artifactPath = resolve(
-    cwd,
-    state.reviewsDirPath,
-    `${target.id}-qodo.txt`,
-  );
-  await mkdir(dirname(artifactPath), { recursive: true });
-  const output = runProcess(target.worktreePath, [
-    fetcher,
-    String(target.prNumber),
-  ]);
-  await writeFile(artifactPath, output, 'utf8');
-
-  return {
+  const nextState: DeliveryState = {
     ...state,
     tickets: state.tickets.map((ticket) =>
       ticket.id === target.id
         ? {
             ...ticket,
-            status: 'review_fetched',
-            reviewArtifactPath: relativeToRepo(cwd, artifactPath),
-            reviewFetchedAt: new Date().toISOString(),
+            status: 'reviewed',
+            reviewOutcome: 'clean',
+            reviewNote: NO_AI_REVIEW_FEEDBACK_NOTE,
           }
         : ticket,
     ),
   };
+  const updatedTarget = nextState.tickets.find(
+    (ticket) => ticket.id === target.id,
+  );
+
+  if (!updatedTarget) {
+    throw new Error(`Unknown ticket ${target.id}.`);
+  }
+
+  await updatePullRequestBodyFn(nextState, updatedTarget);
+  return nextState;
 }
 
 async function recordReview(
@@ -1464,19 +1581,21 @@ export function buildPullRequestBody(
 
     if (ticket.reviewOutcome === 'clean') {
       lines.push(
-        '- `qodo-code-review` triage found no prudent follow-up changes.',
+        ticket.reviewNote === NO_AI_REVIEW_FEEDBACK_NOTE
+          ? '- No `ai-code-review` feedback was detected during the 8-minute polling window.'
+          : '- `ai-code-review` triage found no prudent follow-up changes.',
       );
     }
 
     if (ticket.reviewOutcome === 'needs_patch') {
       lines.push(
-        '- `qodo-code-review` triage found actionable follow-up work that still needs patching.',
+        '- `ai-code-review` triage found actionable follow-up work that still needs patching.',
       );
     }
 
     if (ticket.reviewOutcome === 'patched') {
       lines.push(
-        '- `qodo-code-review` triage led to prudent follow-up patches that are now included in this branch.',
+        '- `ai-code-review` triage led to prudent follow-up patches that are now included in this branch.',
       );
     }
 
@@ -1592,8 +1711,14 @@ function buildReviewWindowReadyEvent(
     ticketTitle: ticket.title,
     branch: ticket.branch,
     prUrl: ticket.prUrl,
-    reviewWaitMinutes: state.reviewWaitMinutes,
-    dueAt: new Date(openedAt + state.reviewWaitMinutes * 60_000).toISOString(),
+    reviewPollIntervalMinutes: state.reviewPollIntervalMinutes,
+    reviewPollMaxWaitMinutes: state.reviewPollMaxWaitMinutes,
+    firstCheckAt: new Date(
+      openedAt + state.reviewPollIntervalMinutes * 60_000,
+    ).toISOString(),
+    finalCheckAt: new Date(
+      openedAt + state.reviewPollMaxWaitMinutes * 60_000,
+    ).toISOString(),
   };
 }
 
@@ -1648,6 +1773,21 @@ export function eventsForRecordReviewCommand(
         (event): event is DeliveryNotificationEvent => event !== undefined,
       )
     : [];
+}
+
+export function eventsForPollReviewCommand(
+  state: DeliveryState,
+  ticketId?: string,
+): DeliveryNotificationEvent[] {
+  const ticket = findTicketById(state, ticketId);
+
+  if (!ticket || ticket.status !== 'reviewed' || !ticket.reviewOutcome) {
+    return [];
+  }
+
+  return [buildReviewRecordedEvent(state, ticket)].filter(
+    (event): event is DeliveryNotificationEvent => event !== undefined,
+  );
 }
 
 export function eventsForAdvanceCommand(
@@ -2114,7 +2254,8 @@ function formatStatus(state: DeliveryState): string {
     `plan=${state.planPath}`,
     `state=${state.statePath}`,
     `handoffs=${state.handoffsDirPath}`,
-    `review_wait_minutes=${state.reviewWaitMinutes}`,
+    `review_poll_interval_minutes=${state.reviewPollIntervalMinutes}`,
+    `review_poll_max_wait_minutes=${state.reviewPollMaxWaitMinutes}`,
     '',
     ...state.tickets.map((ticket) =>
       [
@@ -2179,8 +2320,9 @@ export function formatNotificationMessage(
         event.ticketTitle,
         `Branch: ${event.branch}`,
         `PR: ${event.prUrl}`,
-        `Wait: ${event.reviewWaitMinutes} minutes`,
-        `Due: ${event.dueAt}`,
+        `Cadence: every ${event.reviewPollIntervalMinutes} minutes up to ${event.reviewPollMaxWaitMinutes} minutes`,
+        `First check: ${event.firstCheckAt}`,
+        `Final check: ${event.finalCheckAt}`,
       ].join('\n');
     case 'review_recorded':
       return [
@@ -2232,15 +2374,24 @@ export function formatReviewWindowMessage(
     return '';
   }
 
-  const dueAt = new Date(
-    openedAt + state.reviewWaitMinutes * 60_000,
+  const checks = buildReviewPollCheckMinutes(
+    state.reviewPollIntervalMinutes,
+    state.reviewPollMaxWaitMinutes,
+  );
+  const firstCheckAt = new Date(
+    openedAt + state.reviewPollIntervalMinutes * 60_000,
+  ).toISOString();
+  const finalCheckAt = new Date(
+    openedAt + state.reviewPollMaxWaitMinutes * 60_000,
   ).toISOString();
 
   return [
     'AI Review Window',
-    `- wait window: ${state.reviewWaitMinutes} minutes`,
-    `- review due at: ${dueAt}`,
-    `- if no \`qodo-code-review\` feedback appears by then, record the review as \`clean\` and continue`,
+    `- polling cadence: every ${state.reviewPollIntervalMinutes} minutes up to ${state.reviewPollMaxWaitMinutes} minutes`,
+    `- checks at: ${checks.join(', ')} minutes after PR open`,
+    `- first check at: ${firstCheckAt}`,
+    `- final check at: ${finalCheckAt}`,
+    '- if no `ai-code-review` feedback is detected by the final check, the orchestrator records `clean` and continues',
   ].join('\n');
 }
 

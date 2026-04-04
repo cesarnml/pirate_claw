@@ -4,8 +4,8 @@
 - Prefer `bun run deliver --plan ...` over ad hoc implementation.
 - For orchestrated ticket work, the handoff under `.codex/delivery/<plan-key>/handoffs/` is required input alongside the plan and ticket docs.
 - `begin phase` / `implement phase` means run the stacked-ticket workflow until blocked, not just the first ticket.
-- Phase flow: implement, verify, push/open PR, wait through the configured `qodo-code-review` window, patch prudent findings if any appear, refresh PR state, then advance.
-- No `qodo-code-review` feedback after the wait window is not a blocker; record `clean` and continue unless real ambiguity or actionable feedback exists.
+- Phase flow: implement, verify, push/open PR, run the configured `ai-code-review` polling window, patch prudent findings if any appear, refresh PR state, then advance.
+- No `ai-code-review` feedback by the final polling check is not a blocker; record `clean` and continue unless real ambiguity or actionable feedback exists.
 - During external waits, read-ahead into the next ticket, handoff, and adjacent seams is encouraged. Do not write ahead until the current ticket is cleared.
 - Stop only for unsafe work, missing prerequisites, ambiguous review triage, orchestrator blockage, or explicit user interruption.
 
