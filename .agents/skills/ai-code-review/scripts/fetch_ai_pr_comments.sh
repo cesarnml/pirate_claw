@@ -194,6 +194,8 @@ jq -n \
       | (comment_thread_state) as $thread_state
       | if $vendor == null then
           empty
+        elif $channel == "review_summary" and ((body_text | normalize_text) | length) == 0 then
+          empty
         else
           {
             vendor: $vendor,
