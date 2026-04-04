@@ -1656,6 +1656,120 @@ describe('delivery orchestrator', () => {
     ]);
   });
 
+  it('preserves patched as the cumulative outcome when a later poll is clean', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+          reviewOutcome: 'patched',
+          reviewNote: 'Patched the prudent AI review follow-up.',
+        },
+      ],
+    };
+
+    const nextState = await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async () => {},
+      fetcher: () => ({
+        agents: [
+          {
+            agent: 'coderabbit',
+            state: 'completed',
+            note: 'review completed without actionable findings',
+          },
+        ],
+        detected: true,
+        artifactText: 'normalized ai review artifact',
+        reviewedHeadSha: 'abcdef1234567890',
+        vendors: ['coderabbit'],
+        comments: [],
+      }),
+      triager: () => ({
+        outcome: 'clean',
+        note: 'External AI review completed without prudent follow-up changes.',
+        vendors: ['coderabbit'],
+      }),
+      updatePullRequestBody: async () => {},
+    });
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote:
+        'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
+    });
+  });
+
+  it('preserves patched as the cumulative outcome when a later poll finds no ai review', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+          reviewOutcome: 'patched',
+          reviewNote: 'Patched the prudent AI review follow-up.',
+        },
+      ],
+    };
+
+    const nextState = await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async () => {},
+      fetcher: () => ({
+        agents: [],
+        detected: false,
+        artifactText: '',
+        vendors: [],
+        comments: [],
+      }),
+      updatePullRequestBody: async () => {},
+    });
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote:
+        'No AI review feedback was detected within the 8-minute polling window. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
+    });
+  });
+
   it('uses the normal polling cadence when prOpenedAt is missing', async () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
@@ -1797,6 +1911,52 @@ describe('delivery orchestrator', () => {
           vendor: 'coderabbit',
         },
       ],
+    });
+  });
+
+  it('does not downgrade a patched review outcome when recording clean later', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'operator_input_needed',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          reviewOutcome: 'patched',
+          reviewNote: 'Patched the prudent AI review follow-up.',
+        },
+      ],
+    };
+
+    const nextState = await recordReview(
+      state,
+      '/tmp/pirate_claw',
+      'P3.01',
+      'clean',
+      'External AI review completed without prudent follow-up changes.',
+      {
+        updatePullRequestBody: async () => {},
+      },
+    );
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote:
+        'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
     });
   });
 

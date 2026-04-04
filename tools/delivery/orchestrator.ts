@@ -2328,6 +2328,10 @@ export async function pollReview(
       triage.vendors.length > 0 ? triage.vendors : detectedReview.vendors;
     const nextStatus =
       triage.outcome === 'needs_patch' ? 'needs_patch' : 'reviewed';
+    const latestReviewOutcome =
+      triage.outcome === 'clean' || triage.outcome === 'patched'
+        ? triage.outcome
+        : undefined;
     const nextState: DeliveryState = {
       ...state,
       tickets: state.tickets.map((ticket) =>
@@ -2349,17 +2353,20 @@ export async function pollReview(
               reviewFetchedAt: new Date(now()).toISOString(),
               reviewHeadSha: detectedReview.reviewedHeadSha,
               reviewNonActionSummary: triage.nonActionSummary,
-              reviewOutcome:
-                triage.outcome === 'clean' || triage.outcome === 'patched'
-                  ? triage.outcome
-                  : undefined,
+              reviewOutcome: mergeReviewOutcome(
+                ticket.reviewOutcome,
+                latestReviewOutcome,
+              ),
               reviewNote:
                 reviewPollResult.status === 'partial_timeout'
                   ? formatPartialAiReviewTimeoutNote(
                       reviewPollResult.effectiveMaxWaitMinutes,
                       reviewPollResult.incompleteAgents,
                     )
-                  : triage.note,
+                  : ticket.reviewOutcome === 'patched' &&
+                      triage.outcome === 'clean'
+                    ? formatCumulativePatchedReviewNote(triage.note)
+                    : triage.note,
               reviewIncompleteAgents:
                 reviewPollResult.status === 'partial_timeout'
                   ? reviewPollResult.incompleteAgents
@@ -2406,13 +2413,19 @@ export async function pollReview(
             reviewArtifactPath: undefined,
             reviewHeadSha: undefined,
             reviewNonActionSummary: undefined,
-            reviewOutcome: 'clean',
+            reviewOutcome: mergeReviewOutcome(ticket.reviewOutcome, 'clean'),
             reviewNote: reviewPollResult.incompleteAgents?.length
               ? formatIncompleteAiReviewWithoutFindingsNote(
                   reviewPollResult.effectiveMaxWaitMinutes,
                   reviewPollResult.incompleteAgents,
                 )
-              : formatNoAiReviewFeedbackNote(state.reviewPollMaxWaitMinutes),
+              : ticket.reviewOutcome === 'patched'
+                ? formatCumulativePatchedReviewNote(
+                    formatNoAiReviewFeedbackNote(
+                      state.reviewPollMaxWaitMinutes,
+                    ),
+                  )
+                : formatNoAiReviewFeedbackNote(state.reviewPollMaxWaitMinutes),
             reviewIncompleteAgents: reviewPollResult.incompleteAgents,
             reviewThreadResolutions: undefined,
             reviewVendors: [],
@@ -2444,6 +2457,10 @@ async function runStandaloneAiReview(
   prNumber?: number,
 ): Promise<StandaloneAiReviewResult> {
   const pullRequest = resolveStandalonePullRequest(cwd, prNumber);
+  const previousOutcome = await readStandaloneAiReviewOutcome(
+    cwd,
+    pullRequest.number,
+  );
 
   await emitNotificationWarnings(notifier, cwd, [
     buildStandaloneReviewStartedEvent(pullRequest.number, pullRequest.url),
@@ -2478,6 +2495,14 @@ async function runStandaloneAiReview(
         threadResolutions,
       );
     }
+    const latestOutcome =
+      triage.outcome === 'needs_patch'
+        ? 'operator_input_needed'
+        : triage.outcome;
+    const cumulativeOutcome: ReviewResult =
+      latestOutcome === 'clean' || latestOutcome === 'patched'
+        ? (mergeReviewOutcome(previousOutcome, latestOutcome) ?? latestOutcome)
+        : latestOutcome;
     const standaloneResult: StandaloneAiReviewResult = {
       actionSummary: triage.actionSummary,
       artifactJsonPath: relativeToRepo(cwd, artifacts.artifactJsonPath),
@@ -2492,13 +2517,12 @@ async function runStandaloneAiReview(
               reviewPollResult.effectiveMaxWaitMinutes,
               reviewPollResult.incompleteAgents,
             )
-          : triage.note,
+          : cumulativeOutcome === 'patched' && latestOutcome === 'clean'
+            ? formatCumulativePatchedReviewNote(triage.note)
+            : triage.note,
       comments: detectedReview.comments,
       nonActionSummary: triage.nonActionSummary,
-      outcome:
-        triage.outcome === 'needs_patch'
-          ? 'operator_input_needed'
-          : triage.outcome,
+      outcome: cumulativeOutcome,
       prNumber: pullRequest.number,
       prUrl: pullRequest.url,
       reviewedHeadSha: detectedReview.reviewedHeadSha,
@@ -2529,8 +2553,12 @@ async function runStandaloneAiReview(
           reviewPollResult.effectiveMaxWaitMinutes,
           reviewPollResult.incompleteAgents,
         )
-      : formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
-    outcome: 'clean',
+      : previousOutcome === 'patched'
+        ? formatCumulativePatchedReviewNote(
+            formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
+          )
+        : formatNoAiReviewFeedbackNote(DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES),
+    outcome: mergeReviewOutcome(previousOutcome, 'clean') ?? 'clean',
     prNumber: pullRequest.number,
     prUrl: pullRequest.url,
     vendors: [],
@@ -2657,11 +2685,16 @@ export async function recordReview(
               outcome === 'operator_input_needed'
                 ? 'operator_input_needed'
                 : 'reviewed',
-            reviewOutcome:
+            reviewOutcome: mergeReviewOutcome(
+              ticket.reviewOutcome,
               outcome === 'clean' || outcome === 'patched'
                 ? outcome
                 : undefined,
-            reviewNote: note ?? ticket.reviewNote,
+            ),
+            reviewNote:
+              ticket.reviewOutcome === 'patched' && outcome === 'clean'
+                ? formatCumulativePatchedReviewNote(note ?? ticket.reviewNote)
+                : (note ?? ticket.reviewNote),
             reviewThreadResolutions:
               outcome === 'patched' ? reviewThreadResolutions : undefined,
           }
@@ -2839,6 +2872,54 @@ function preferCodexBranch(branches: string[]): string {
 
 function shortenSha(sha: string | undefined): string | undefined {
   return sha ? sha.slice(0, 12) : undefined;
+}
+
+function mergeReviewOutcome(
+  previous: ReviewOutcome | undefined,
+  next: ReviewOutcome | undefined,
+): ReviewOutcome | undefined {
+  if (previous === 'patched' || next === 'patched') {
+    return 'patched';
+  }
+
+  return previous ?? next;
+}
+
+function formatCumulativePatchedReviewNote(note: string | undefined): string {
+  if (note === undefined || note.length === 0) {
+    return 'Earlier review cycles led to prudent follow-up patches; the latest review pass found no additional prudent changes.';
+  }
+
+  if (note.includes('no additional prudent follow-up changes')) {
+    return note;
+  }
+
+  return `${note} Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.`;
+}
+
+async function readStandaloneAiReviewOutcome(
+  cwd: string,
+  prNumber: number,
+): Promise<ReviewOutcome | undefined> {
+  const notePath = resolve(
+    cwd,
+    '.agents/ai-review',
+    `pr-${prNumber}`,
+    'note.md',
+  );
+
+  if (!existsSync(notePath)) {
+    return undefined;
+  }
+
+  const note = await readFile(notePath, 'utf8');
+  const match = note.match(/^- Outcome: `([^`]+)`$/m);
+
+  if (match?.[1] === 'clean' || match?.[1] === 'patched') {
+    return match[1];
+  }
+
+  return undefined;
 }
 
 function summarizeReviewComment(body: string): string {
