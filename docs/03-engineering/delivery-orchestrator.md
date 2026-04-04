@@ -43,7 +43,7 @@ The orchestrator owns process mechanics:
 - stacked PR base chaining
 - idempotent PR open/update behavior for already-pushed ticket branches
 - a 2/4/6/8-minute ai-review polling loop after PR open
-- invoking the repo-local `ai-code-review` fetcher and persisting its normalized artifact when AI review is detected
+- invoking the repo-local `ai-code-review` fetcher and persisting structured `json` plus rendered `txt` artifacts when AI review is detected
 - optional Telegram milestone notifications for long-running delivery runs
 - blocking advancement until review has been explicitly recorded or auto-recorded as `clean` after the final polling check
 - refreshing the current PR body from recorded ai-cr follow-up notes immediately before advancing to the next ticket
@@ -56,14 +56,19 @@ That boundary is intentional. The repo-local `ai-code-review` skill under `.agen
 - weak or mis-scoped comments should be pushed back on
 - only prudent, concrete fixes should be patched
 
-So the orchestrator only consumes the skill's fetcher contract:
+So the orchestrator only consumes the skill hook contracts:
 
-- `detected=false`: keep polling, or auto-record `clean` on the final check
-- `detected=true`: save the normalized artifact and hand off to the skill for judgment
+- fetcher:
+  - `detected=false`: keep polling, or auto-record `clean` on the final check
+  - `detected=true`: save structured and rendered artifacts, then call the triager hook
+- triager:
+  - returns `clean`, `needs_patch`, or `patched`
+  - returns the final note plus concise action and non-action summaries
+  - may be overridden with `AI_CODE_REVIEW_TRIAGER` without changing orchestrator code
 
 The absence of `ai-code-review` comments after the final 8-minute polling check is not itself a blocker. In that case, the orchestrator records the review as `clean`, updates the PR metadata, and continues unless another real ambiguity or prerequisite issue exists.
 
-When ai-cr triage leads to prudent branch changes, the orchestrator updates the PR body as the final step of `advance`. That timing is intentional: the PR description should reflect the exact branch state that is being handed off before the next ticket starts.
+When the triager hook resolves to `clean` or `patched`, `poll-review` records that result immediately. When it resolves to `needs_patch`, the ticket stays blocked for follow-up with the saved artifacts and triage note. PR body updates remain best-effort in either case.
 
 ## Ticket Context Reset
 
@@ -83,7 +88,7 @@ The handoff includes:
 - prior ticket PR and review metadata when there is a previous ticket
 - explicit stop conditions for when the worker should pause instead of widening scope
 
-This does not automatically create a brand-new Codex thread, but it is the current repo mechanism for reducing reasoning carryover between tickets while preserving stacked branch continuity.
+This does not automatically create a brand-new agent session, but it is the current repo mechanism for reducing reasoning carryover between tickets while preserving stacked branch continuity.
 
 During external waits such as AI-review windows, the worker may read ahead into the next ticket, handoff, and adjacent seams to prepare the next slice. That read-ahead must not turn into write-ahead; implementation for the next ticket still starts only after the current ticket is cleared.
 
@@ -129,7 +134,7 @@ Available commands:
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md start
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md open-pr
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md poll-review
-# if ai review comments were found, use the ai-code-review skill to triage the saved review artifact
+# if the triager hook leaves the ticket at needs_patch, follow up and then record the final outcome
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md record-review P2.02 patched "patched the two actionable correctness issues"
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md advance
 ```
@@ -143,7 +148,7 @@ bun run deliver ai-review
 
 At each ticket boundary, read the generated handoff artifact before continuing implementation.
 
-After `open-pr`, the orchestrator should surface the ai-review polling cadence and check timestamps. `poll-review` checks at 2, 4, 6, and 8 minutes after PR open, stops immediately when AI review comments are detected, and otherwise auto-records `clean` at the final check.
+After `open-pr`, the orchestrator should surface the ai-review polling cadence and check timestamps. `poll-review` checks at 2, 4, 6, and 8 minutes after PR open, stops immediately when AI review comments are detected, writes `json` and `txt` artifacts, runs the triager hook, and otherwise auto-records `clean` at the final check.
 
 If a parent ticket was squash-merged onto `main`, run:
 

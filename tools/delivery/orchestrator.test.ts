@@ -28,11 +28,13 @@ import {
   parseDotEnv,
   parseGitWorktreeList,
   parseAiReviewFetcherOutput,
+  parseAiReviewTriagerOutput,
   parsePlan,
   pollReview,
   resolvePlanPathForBranch,
   resolveNotifier,
   resolveReviewFetcher,
+  resolveReviewTriager,
   summarizeStateDifferences,
   syncStateWithPlan,
   type DeliveryState,
@@ -511,16 +513,20 @@ describe('delivery orchestrator', () => {
   it('merges the standalone ai review section into a pr body', () => {
     const section = buildStandaloneAiReviewSection({
       outcome: 'needs_patch',
-      note: 'AI review feedback detected.',
-      artifactPath: '.codex/ai-review/pr-32/review.txt',
+      note: 'Actionable AI review findings were detected.',
+      vendors: ['coderabbit', 'qodo'],
+      actionSummary: 'Flagged 2 finding comments for follow-up.',
+      nonActionSummary: 'Ignored 1 summary comment.',
+      artifactJsonPath: '.codex/ai-review/pr-32/review.json',
+      artifactTextPath: '.codex/ai-review/pr-32/review.txt',
     });
 
     expect(
       mergeStandaloneAiReviewSection('## Summary\n- existing body', section),
-    ).toContain('<!-- codex-ai-review:start -->');
+    ).toContain('<!-- ai-review:start -->');
     expect(
       mergeStandaloneAiReviewSection(
-        '## Summary\n- existing body\n\n<!-- codex-ai-review:start -->\nold\n<!-- codex-ai-review:end -->\n',
+        '## Summary\n- existing body\n\n<!-- ai-review:start -->\nold\n<!-- ai-review:end -->\n',
         section,
       ),
     ).not.toContain('\nold\n');
@@ -758,12 +764,58 @@ describe('delivery orchestrator', () => {
       parseAiReviewFetcherOutput(
         JSON.stringify({
           detected: true,
-          artifact: 'normalized review artifact',
+          artifact_text: 'normalized review artifact',
+          vendors: ['coderabbit', 'qodo'],
+          comments: [
+            {
+              vendor: 'coderabbit',
+              channel: 'inline_review',
+              author_login: 'coderabbitai',
+              author_type: 'Bot',
+              body: 'Guard the null return here.',
+              path: 'src/example.ts',
+              line: 42,
+              url: 'https://example.test/comment/1',
+              updated_at: '2026-04-04T10:00:00.000Z',
+              kind: 'finding',
+            },
+            {
+              vendor: 'qodo',
+              channel: 'review_summary',
+              author_login: 'qodo-bot',
+              author_type: 'Bot',
+              body: 'Overall this looks good.',
+              kind: 'summary',
+            },
+          ],
         }),
       ),
     ).toEqual({
       detected: true,
-      artifact: 'normalized review artifact',
+      artifactText: 'normalized review artifact',
+      vendors: ['coderabbit', 'qodo'],
+      comments: [
+        {
+          vendor: 'coderabbit',
+          channel: 'inline_review',
+          authorLogin: 'coderabbitai',
+          authorType: 'Bot',
+          body: 'Guard the null return here.',
+          path: 'src/example.ts',
+          line: 42,
+          url: 'https://example.test/comment/1',
+          updatedAt: '2026-04-04T10:00:00.000Z',
+          kind: 'finding',
+        },
+        {
+          vendor: 'qodo',
+          channel: 'review_summary',
+          authorLogin: 'qodo-bot',
+          authorType: 'Bot',
+          body: 'Overall this looks good.',
+          kind: 'summary',
+        },
+      ],
     });
 
     expect(() => parseAiReviewFetcherOutput('not json')).toThrow(
@@ -774,12 +826,34 @@ describe('delivery orchestrator', () => {
       parseAiReviewFetcherOutput(
         JSON.stringify({
           detected: 'true',
-          artifact: 42,
+          artifact_text: 42,
+          vendors: 'coderabbit',
+          comments: {},
         }),
       ),
     ).toThrow(
-      'AI review fetcher output must be JSON with boolean `detected` and string `artifact` fields.',
+      'AI review fetcher output must be JSON with boolean `detected`, string `artifact_text`, string[] `vendors`, and array `comments` fields.',
     );
+  });
+
+  it('parses the ai review triager contract', () => {
+    expect(
+      parseAiReviewTriagerOutput(
+        JSON.stringify({
+          outcome: 'needs_patch',
+          note: 'Actionable comments still need follow-up.',
+          action_summary: 'Flagged 2 finding comments for follow-up.',
+          non_action_summary: 'Ignored 1 summary comment.',
+          vendors: ['coderabbit', 'qodo'],
+        }),
+      ),
+    ).toEqual({
+      outcome: 'needs_patch',
+      note: 'Actionable comments still need follow-up.',
+      actionSummary: 'Flagged 2 finding comments for follow-up.',
+      nonActionSummary: 'Ignored 1 summary comment.',
+      vendors: ['coderabbit', 'qodo'],
+    });
   });
 
   it('stops polling early when ai review is detected and saves the artifact', async () => {
@@ -824,30 +898,148 @@ describe('delivery orchestrator', () => {
           return fetchCount === 1
             ? {
                 detected: false,
-                artifact: '',
+                artifactText: '',
+                vendors: [],
+                comments: [],
               }
             : {
                 detected: true,
-                artifact: 'normalized ai review artifact',
+                artifactText: 'normalized ai review artifact',
+                vendors: ['coderabbit', 'qodo'],
+                comments: [
+                  {
+                    vendor: 'coderabbit',
+                    channel: 'inline_review',
+                    authorLogin: 'coderabbitai',
+                    authorType: 'Bot',
+                    body: 'Guard the null return here.',
+                    kind: 'finding',
+                  },
+                  {
+                    vendor: 'qodo',
+                    channel: 'review_summary',
+                    authorLogin: 'qodo-bot',
+                    authorType: 'Bot',
+                    body: 'Overall this looks good.',
+                    kind: 'summary',
+                  },
+                ],
               };
         },
+        triager: () => ({
+          outcome: 'needs_patch',
+          note: 'Actionable AI review findings were detected and still need follow-up.',
+          actionSummary: 'Flagged 1 finding comment for follow-up.',
+          nonActionSummary: 'Ignored 1 summary comment.',
+          vendors: ['coderabbit', 'qodo'],
+        }),
       });
 
       expect(sleeps).toEqual([120000, 240000]);
       expect(fetchCount).toBe(2);
       expect(nextState.tickets[0]?.status).toBe('review_fetched');
+      expect(nextState.tickets[0]?.reviewArtifactJsonPath).toBe(
+        '.codex/delivery/phase-03/reviews/P3.01-ai-review.json',
+      );
       expect(nextState.tickets[0]?.reviewArtifactPath).toBe(
         '.codex/delivery/phase-03/reviews/P3.01-ai-review.txt',
       );
+      expect(nextState.tickets[0]?.reviewVendors).toEqual([
+        'coderabbit',
+        'qodo',
+      ]);
       expect(
         await readFile(
           join(cwd, '.codex/delivery/phase-03/reviews/P3.01-ai-review.txt'),
           'utf8',
         ),
       ).toBe('normalized ai review artifact');
+      expect(
+        JSON.parse(
+          await readFile(
+            join(cwd, '.codex/delivery/phase-03/reviews/P3.01-ai-review.json'),
+            'utf8',
+          ),
+        ),
+      ).toMatchObject({
+        detected: true,
+        vendors: ['coderabbit', 'qodo'],
+      });
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
+  });
+
+  it('records patched review outcomes immediately when the triager resolves them', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+        },
+      ],
+    };
+    const prBodyUpdates: string[] = [];
+
+    const nextState = await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async () => {},
+      fetcher: () => ({
+        detected: true,
+        artifactText: 'normalized ai review artifact',
+        vendors: ['coderabbit'],
+        comments: [
+          {
+            vendor: 'coderabbit',
+            channel: 'inline_review',
+            authorLogin: 'coderabbitai',
+            authorType: 'Bot',
+            body: 'Guard the null return here.',
+            kind: 'finding',
+          },
+        ],
+      }),
+      triager: () => ({
+        outcome: 'patched',
+        note: 'Patched the prudent AI review follow-up.',
+        actionSummary: 'Patched 1 finding comment.',
+        nonActionSummary: undefined,
+        vendors: ['coderabbit'],
+      }),
+      updatePullRequestBody: async (updatedState, ticket) => {
+        prBodyUpdates.push(
+          `${updatedState.planKey}:${ticket.reviewOutcome}:${ticket.reviewNote}`,
+        );
+      },
+    });
+
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'patched',
+      reviewNote: 'Patched the prudent AI review follow-up.',
+      reviewVendors: ['coderabbit'],
+    });
+    expect(prBodyUpdates).toEqual([
+      'phase-03:patched:Patched the prudent AI review follow-up.',
+    ]);
   });
 
   it('auto-records clean when no ai review appears by the final check', async () => {
@@ -887,7 +1079,9 @@ describe('delivery orchestrator', () => {
       },
       fetcher: () => ({
         detected: false,
-        artifact: '',
+        artifactText: '',
+        vendors: [],
+        comments: [],
       }),
       updatePullRequestBody: async (updatedState, ticket) => {
         prBodyUpdates.push(
@@ -943,7 +1137,25 @@ describe('delivery orchestrator', () => {
       },
       fetcher: () => ({
         detected: true,
-        artifact: 'normalized ai review artifact',
+        artifactText: 'normalized ai review artifact',
+        vendors: ['coderabbit'],
+        comments: [
+          {
+            vendor: 'coderabbit',
+            channel: 'inline_review',
+            authorLogin: 'coderabbitai',
+            authorType: 'Bot',
+            body: 'Guard the null return here.',
+            kind: 'finding',
+          },
+        ],
+      }),
+      triager: () => ({
+        outcome: 'needs_patch',
+        note: 'Actionable AI review findings were detected and still need follow-up.',
+        actionSummary: 'Flagged 1 finding comment for follow-up.',
+        nonActionSummary: undefined,
+        vendors: ['coderabbit'],
       }),
     });
 
@@ -991,6 +1203,21 @@ describe('delivery orchestrator', () => {
         delete process.env.AI_CODE_REVIEW_FETCHER;
       } else {
         process.env.AI_CODE_REVIEW_FETCHER = original;
+      }
+    }
+  });
+
+  it('prefers an explicit review triager environment variable', () => {
+    const original = process.env.AI_CODE_REVIEW_TRIAGER;
+    try {
+      process.env.AI_CODE_REVIEW_TRIAGER = '/tmp/triage_ai_review.sh';
+
+      expect(resolveReviewTriager()).toBe('/tmp/triage_ai_review.sh');
+    } finally {
+      if (typeof original === 'undefined') {
+        delete process.env.AI_CODE_REVIEW_TRIAGER;
+      } else {
+        process.env.AI_CODE_REVIEW_TRIAGER = original;
       }
     }
   });

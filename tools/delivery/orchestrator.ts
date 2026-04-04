@@ -31,9 +31,13 @@ export type TicketState = TicketDefinition & {
   prUrl?: string;
   prOpenedAt?: string;
   reviewArtifactPath?: string;
+  reviewArtifactJsonPath?: string;
+  reviewActionSummary?: string;
   reviewFetchedAt?: string;
+  reviewNonActionSummary?: string;
   reviewOutcome?: ReviewOutcome;
   reviewNote?: string;
+  reviewVendors?: string[];
 };
 
 export type DeliveryState = {
@@ -166,18 +170,52 @@ type DeliveryNotifier =
 
 const DEFAULT_REVIEW_POLL_INTERVAL_MINUTES = 2;
 const DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES = 8;
-const STANDALONE_AI_REVIEW_SECTION_START = '<!-- codex-ai-review:start -->';
-const STANDALONE_AI_REVIEW_SECTION_END = '<!-- codex-ai-review:end -->';
+const STANDALONE_AI_REVIEW_SECTION_START = '<!-- ai-review:start -->';
+const STANDALONE_AI_REVIEW_SECTION_END = '<!-- ai-review:end -->';
+
+type AiReviewCommentChannel =
+  | 'issue_comment'
+  | 'review_summary'
+  | 'inline_review';
+
+type AiReviewCommentKind = 'summary' | 'finding' | 'unknown';
+
+type AiReviewComment = {
+  authorLogin: string;
+  authorType: string;
+  body: string;
+  channel: AiReviewCommentChannel;
+  kind: AiReviewCommentKind;
+  line?: number;
+  path?: string;
+  updatedAt?: string;
+  url?: string;
+  vendor: string;
+};
 
 type AiReviewFetcherResult = {
+  artifactText: string;
+  comments: AiReviewComment[];
   detected: boolean;
-  artifact: string;
+  vendors: string[];
+};
+
+type AiReviewTriagerResult = {
+  actionSummary?: string;
+  note: string;
+  nonActionSummary?: string;
+  outcome: ReviewOutcome;
+  vendors: string[];
 };
 
 type PollReviewDependencies = {
   fetcher?: (worktreePath: string, prNumber: number) => AiReviewFetcherResult;
   now?: () => number;
   sleep?: (milliseconds: number) => Promise<void>;
+  triager?: (
+    worktreePath: string,
+    artifactJsonPath: string,
+  ) => AiReviewTriagerResult;
   updatePullRequestBody?: (
     state: DeliveryState,
     ticket: TicketState,
@@ -185,11 +223,15 @@ type PollReviewDependencies = {
 };
 
 type StandaloneAiReviewResult = {
-  artifactPath?: string;
+  actionSummary?: string;
+  artifactJsonPath?: string;
+  artifactTextPath?: string;
   note: string;
+  nonActionSummary?: string;
   outcome: ReviewOutcome;
   prNumber: number;
   prUrl: string;
+  vendors: string[];
 };
 
 type StandalonePullRequest = {
@@ -611,10 +653,19 @@ export function syncStateWithPlan(
         prOpenedAt: previous?.prOpenedAt ?? inferredTicket?.prOpenedAt,
         reviewArtifactPath:
           previous?.reviewArtifactPath ?? inferredTicket?.reviewArtifactPath,
+        reviewArtifactJsonPath:
+          previous?.reviewArtifactJsonPath ??
+          inferredTicket?.reviewArtifactJsonPath,
+        reviewActionSummary:
+          previous?.reviewActionSummary ?? inferredTicket?.reviewActionSummary,
         reviewFetchedAt:
           previous?.reviewFetchedAt ?? inferredTicket?.reviewFetchedAt,
+        reviewNonActionSummary:
+          previous?.reviewNonActionSummary ??
+          inferredTicket?.reviewNonActionSummary,
         reviewOutcome: previous?.reviewOutcome ?? inferredTicket?.reviewOutcome,
         reviewNote: previous?.reviewNote ?? inferredTicket?.reviewNote,
+        reviewVendors: previous?.reviewVendors ?? inferredTicket?.reviewVendors,
       };
     }),
   };
@@ -707,6 +758,14 @@ export function resolveReviewFetcher(): string {
   }
 
   return '.agents/skills/ai-code-review/scripts/fetch_ai_pr_comments.sh';
+}
+
+export function resolveReviewTriager(): string {
+  if (process.env.AI_CODE_REVIEW_TRIAGER) {
+    return process.env.AI_CODE_REVIEW_TRIAGER;
+  }
+
+  return '.agents/skills/ai-code-review/scripts/triage_ai_review.sh';
 }
 
 export function resolveNotifier(): DeliveryNotifier {
@@ -1095,9 +1154,13 @@ function inferStateFromRepo(
       prUrl: pr?.url,
       prOpenedAt: undefined,
       reviewArtifactPath: undefined,
+      reviewArtifactJsonPath: undefined,
+      reviewActionSummary: undefined,
       reviewFetchedAt: undefined,
+      reviewNonActionSummary: undefined,
       reviewOutcome: undefined,
       reviewNote: undefined,
+      reviewVendors: undefined,
     };
   });
 
@@ -1473,6 +1536,40 @@ export function buildReviewPollCheckMinutes(
   return checks;
 }
 
+export function resolveReviewPollWindowStart(
+  startedAt: string | undefined,
+  now: () => number = Date.now,
+): { pollWindowStartedAt: number; pollWindowStartedAtIso: string } {
+  const parsed = Date.parse(startedAt ?? '');
+
+  if (!Number.isNaN(parsed)) {
+    return {
+      pollWindowStartedAt: parsed,
+      pollWindowStartedAtIso: new Date(parsed).toISOString(),
+    };
+  }
+
+  const fallback = now();
+  return {
+    pollWindowStartedAt: fallback,
+    pollWindowStartedAtIso: new Date(fallback).toISOString(),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function parseOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
 export function parseAiReviewFetcherOutput(
   output: string,
 ): AiReviewFetcherResult {
@@ -1489,20 +1586,78 @@ export function parseAiReviewFetcherOutput(
     );
   }
 
-  const record = parsed as Record<string, unknown>;
-
-  if (
-    !parsed ||
-    typeof parsed !== 'object' ||
-    typeof record.detected !== 'boolean' ||
-    typeof record.artifact !== 'string'
-  ) {
+  if (!isRecord(parsed)) {
     throw new Error(
-      'AI review fetcher output must be JSON with boolean `detected` and string `artifact` fields.',
+      'AI review fetcher output must be a JSON object with `detected`, `artifact_text`, `vendors`, and `comments` fields.',
     );
   }
 
-  return parsed as AiReviewFetcherResult;
+  if (
+    typeof parsed.detected !== 'boolean' ||
+    typeof parsed.artifact_text !== 'string' ||
+    !Array.isArray(parsed.vendors) ||
+    !parsed.vendors.every((value) => typeof value === 'string') ||
+    !Array.isArray(parsed.comments)
+  ) {
+    throw new Error(
+      'AI review fetcher output must be JSON with boolean `detected`, string `artifact_text`, string[] `vendors`, and array `comments` fields.',
+    );
+  }
+
+  const comments = parsed.comments.map((entry) => {
+    if (!isRecord(entry)) {
+      throw new Error('AI review fetcher comments must be JSON objects.');
+    }
+
+    if (
+      typeof entry.vendor !== 'string' ||
+      typeof entry.channel !== 'string' ||
+      typeof entry.author_login !== 'string' ||
+      typeof entry.author_type !== 'string' ||
+      typeof entry.body !== 'string' ||
+      typeof entry.kind !== 'string'
+    ) {
+      throw new Error(
+        'AI review fetcher comments must include string `vendor`, `channel`, `author_login`, `author_type`, `body`, and `kind` fields.',
+      );
+    }
+
+    if (
+      entry.channel !== 'issue_comment' &&
+      entry.channel !== 'review_summary' &&
+      entry.channel !== 'inline_review'
+    ) {
+      throw new Error(`Unknown AI review comment channel: ${entry.channel}`);
+    }
+
+    if (
+      entry.kind !== 'summary' &&
+      entry.kind !== 'finding' &&
+      entry.kind !== 'unknown'
+    ) {
+      throw new Error(`Unknown AI review comment kind: ${entry.kind}`);
+    }
+
+    return {
+      authorLogin: entry.author_login,
+      authorType: entry.author_type,
+      body: entry.body,
+      channel: entry.channel,
+      kind: entry.kind,
+      line: parseOptionalNumber(entry.line),
+      path: parseOptionalString(entry.path),
+      updatedAt: parseOptionalString(entry.updated_at),
+      url: parseOptionalString(entry.url),
+      vendor: entry.vendor,
+    } satisfies AiReviewComment;
+  });
+
+  return {
+    artifactText: parsed.artifact_text,
+    comments,
+    detected: parsed.detected,
+    vendors: parsed.vendors,
+  };
 }
 
 function runAiReviewFetcher(
@@ -1512,6 +1667,132 @@ function runAiReviewFetcher(
   const fetcher = resolveReviewFetcher();
   const output = runProcess(worktreePath, [fetcher, String(prNumber)]);
   return parseAiReviewFetcherOutput(output);
+}
+
+export function parseAiReviewTriagerOutput(
+  output: string,
+): AiReviewTriagerResult {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(output);
+  } catch (error) {
+    throw new Error(
+      `AI review triager must emit JSON. ${formatError(error)}\n${output.trim()}`.trim(),
+      {
+        cause: error,
+      },
+    );
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error(
+      'AI review triager output must be a JSON object with `outcome`, `note`, and `vendors` fields.',
+    );
+  }
+
+  if (
+    (parsed.outcome !== 'clean' &&
+      parsed.outcome !== 'needs_patch' &&
+      parsed.outcome !== 'patched') ||
+    typeof parsed.note !== 'string' ||
+    !Array.isArray(parsed.vendors) ||
+    !parsed.vendors.every((value) => typeof value === 'string')
+  ) {
+    throw new Error(
+      'AI review triager output must be JSON with `outcome`, string `note`, and string[] `vendors` fields.',
+    );
+  }
+
+  return {
+    actionSummary: parseOptionalString(parsed.action_summary),
+    note: parsed.note,
+    nonActionSummary: parseOptionalString(parsed.non_action_summary),
+    outcome: parsed.outcome,
+    vendors: parsed.vendors,
+  };
+}
+
+function runAiReviewTriager(
+  worktreePath: string,
+  artifactJsonPath: string,
+): AiReviewTriagerResult {
+  const triager = resolveReviewTriager();
+  const output = runProcess(worktreePath, [triager, artifactJsonPath]);
+  return parseAiReviewTriagerOutput(output);
+}
+
+async function pollForAiReview(
+  worktreePath: string,
+  prNumber: number,
+  intervalMinutes: number,
+  maxWaitMinutes: number,
+  pollWindowStartedAt: number,
+  dependencies: Pick<PollReviewDependencies, 'fetcher' | 'now' | 'sleep'> = {},
+): Promise<AiReviewFetcherResult | undefined> {
+  const now = dependencies.now ?? Date.now;
+  const sleepFn = dependencies.sleep ?? sleep;
+  const fetcher = dependencies.fetcher ?? runAiReviewFetcher;
+
+  for (const checkMinute of buildReviewPollCheckMinutes(
+    intervalMinutes,
+    maxWaitMinutes,
+  )) {
+    const dueAt = pollWindowStartedAt + checkMinute * 60_000;
+    const remaining = dueAt - now();
+
+    if (remaining > 0) {
+      await sleepFn(remaining);
+    }
+
+    const result = fetcher(worktreePath, prNumber);
+
+    if (result.detected) {
+      return result;
+    }
+  }
+
+  return undefined;
+}
+
+async function writeAiReviewArtifacts(
+  artifactStemPath: string,
+  result: AiReviewFetcherResult,
+): Promise<{ artifactJsonPath: string; artifactTextPath: string }> {
+  const artifactJsonPath = `${artifactStemPath}.json`;
+  const artifactTextPath = `${artifactStemPath}.txt`;
+
+  await mkdir(dirname(artifactJsonPath), { recursive: true });
+  await writeFile(
+    artifactJsonPath,
+    JSON.stringify(
+      {
+        detected: result.detected,
+        vendors: result.vendors,
+        comments: result.comments.map((comment) => ({
+          author_login: comment.authorLogin,
+          author_type: comment.authorType,
+          body: comment.body,
+          channel: comment.channel,
+          kind: comment.kind,
+          line: comment.line ?? null,
+          path: comment.path ?? null,
+          updated_at: comment.updatedAt ?? null,
+          url: comment.url ?? null,
+          vendor: comment.vendor,
+        })),
+      },
+      null,
+      2,
+    ) + '\n',
+    'utf8',
+  );
+  await writeFile(artifactTextPath, result.artifactText, 'utf8');
+
+  return {
+    artifactJsonPath,
+    artifactTextPath,
+  };
 }
 
 export async function pollReview(
@@ -1527,53 +1808,73 @@ export async function pollReview(
   }
 
   const now = dependencies.now ?? Date.now;
-  const sleepFn = dependencies.sleep ?? sleep;
-  const fetcher = dependencies.fetcher ?? runAiReviewFetcher;
+  const triager = dependencies.triager ?? runAiReviewTriager;
   const updatePullRequestBodyFn =
     dependencies.updatePullRequestBody ?? updatePullRequestBody;
-  const openedAt = Date.parse(target.prOpenedAt ?? '');
-  const pollWindowStartedAt = Number.isNaN(openedAt) ? now() : openedAt;
-
-  for (const checkMinute of buildReviewPollCheckMinutes(
+  const { pollWindowStartedAt, pollWindowStartedAtIso } =
+    resolveReviewPollWindowStart(target.prOpenedAt, now);
+  const detectedReview = await pollForAiReview(
+    target.worktreePath,
+    target.prNumber,
     state.reviewPollIntervalMinutes,
     state.reviewPollMaxWaitMinutes,
-  )) {
-    const dueAt = pollWindowStartedAt + checkMinute * 60_000;
-    const remaining = dueAt - now();
+    pollWindowStartedAt,
+    dependencies,
+  );
 
-    if (remaining > 0) {
-      await sleepFn(remaining);
-    }
-
-    const result = fetcher(target.worktreePath, target.prNumber);
-
-    if (!result.detected) {
-      continue;
-    }
-
-    const artifactPath = resolve(
-      cwd,
-      state.reviewsDirPath,
-      `${target.id}-ai-review.txt`,
+  if (detectedReview) {
+    const artifacts = await writeAiReviewArtifacts(
+      resolve(cwd, state.reviewsDirPath, `${target.id}-ai-review`),
+      detectedReview,
     );
-    await mkdir(dirname(artifactPath), { recursive: true });
-    await writeFile(artifactPath, result.artifact, 'utf8');
-
-    return {
+    const triage = triager(target.worktreePath, artifacts.artifactJsonPath);
+    const reviewVendors =
+      triage.vendors.length > 0 ? triage.vendors : detectedReview.vendors;
+    const nextStatus =
+      triage.outcome === 'needs_patch' ? 'review_fetched' : 'reviewed';
+    const nextState: DeliveryState = {
       ...state,
       tickets: state.tickets.map((ticket) =>
         ticket.id === target.id
           ? {
               ...ticket,
-              status: 'review_fetched',
-              reviewArtifactPath: relativeToRepo(cwd, artifactPath),
+              prOpenedAt: ticket.prOpenedAt ?? pollWindowStartedAtIso,
+              status: nextStatus,
+              reviewActionSummary: triage.actionSummary,
+              reviewArtifactJsonPath: relativeToRepo(
+                cwd,
+                artifacts.artifactJsonPath,
+              ),
+              reviewArtifactPath: relativeToRepo(
+                cwd,
+                artifacts.artifactTextPath,
+              ),
               reviewFetchedAt: new Date(now()).toISOString(),
-              reviewOutcome: undefined,
-              reviewNote: undefined,
+              reviewNonActionSummary: triage.nonActionSummary,
+              reviewOutcome: triage.outcome,
+              reviewNote: triage.note,
+              reviewVendors,
             }
           : ticket,
       ),
     };
+    const updatedTarget = nextState.tickets.find(
+      (ticket) => ticket.id === target.id,
+    );
+
+    if (!updatedTarget) {
+      throw new Error(`Unknown ticket ${target.id}.`);
+    }
+
+    try {
+      await updatePullRequestBodyFn(nextState, updatedTarget);
+    } catch (error) {
+      console.warn(
+        `Review was recorded locally for ${updatedTarget.id}, but PR body update failed: ${formatError(error)}`,
+      );
+    }
+
+    return nextState;
   }
 
   const nextState: DeliveryState = {
@@ -1582,11 +1883,17 @@ export async function pollReview(
       ticket.id === target.id
         ? {
             ...ticket,
+            prOpenedAt: ticket.prOpenedAt ?? pollWindowStartedAtIso,
             status: 'reviewed',
+            reviewActionSummary: undefined,
+            reviewArtifactJsonPath: undefined,
+            reviewArtifactPath: undefined,
+            reviewNonActionSummary: undefined,
             reviewOutcome: 'clean',
             reviewNote: formatNoAiReviewFeedbackNote(
               state.reviewPollMaxWaitMinutes,
             ),
+            reviewVendors: [],
           }
         : ticket,
     ),
@@ -1620,50 +1927,45 @@ async function runStandaloneAiReview(
     buildStandaloneReviewStartedEvent(pullRequest.number, pullRequest.url),
   ]);
 
-  const fetcher = runAiReviewFetcher;
-  const openedAt = Date.parse(pullRequest.createdAt);
-
-  for (const checkMinute of buildReviewPollCheckMinutes(
+  const commandStartedAt = Date.now();
+  const detectedReview = await pollForAiReview(
+    cwd,
+    pullRequest.number,
     DEFAULT_REVIEW_POLL_INTERVAL_MINUTES,
     DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES,
-  )) {
-    if (!Number.isNaN(openedAt)) {
-      const dueAt = openedAt + checkMinute * 60_000;
-      const remaining = dueAt - Date.now();
+    commandStartedAt,
+  );
 
-      if (remaining > 0) {
-        await sleep(remaining);
-      }
-    }
-
-    const result = fetcher(cwd, pullRequest.number);
-
-    if (!result.detected) {
-      continue;
-    }
-
-    const artifactPath = resolve(
-      cwd,
-      '.codex/ai-review',
-      `pr-${pullRequest.number}`,
-      'review.txt',
+  if (detectedReview) {
+    const artifacts = await writeAiReviewArtifacts(
+      resolve(cwd, '.codex/ai-review', `pr-${pullRequest.number}`, 'review'),
+      detectedReview,
     );
-    await mkdir(dirname(artifactPath), { recursive: true });
-    await writeFile(artifactPath, result.artifact, 'utf8');
-
+    const triage = runAiReviewTriager(cwd, artifacts.artifactJsonPath);
     const standaloneResult: StandaloneAiReviewResult = {
-      artifactPath: relativeToRepo(cwd, artifactPath),
-      note: 'AI review feedback detected and recorded for immediate triage.',
-      outcome: 'needs_patch',
+      actionSummary: triage.actionSummary,
+      artifactJsonPath: relativeToRepo(cwd, artifacts.artifactJsonPath),
+      artifactTextPath: relativeToRepo(cwd, artifacts.artifactTextPath),
+      note: triage.note,
+      nonActionSummary: triage.nonActionSummary,
+      outcome: triage.outcome,
       prNumber: pullRequest.number,
       prUrl: pullRequest.url,
+      vendors:
+        triage.vendors.length > 0 ? triage.vendors : detectedReview.vendors,
     };
     await writeStandaloneAiReviewNote(
       cwd,
       pullRequest.number,
       standaloneResult,
     );
-    updateStandalonePullRequestBody(cwd, pullRequest, standaloneResult);
+    try {
+      updateStandalonePullRequestBody(cwd, pullRequest, standaloneResult);
+    } catch (error) {
+      console.warn(
+        `Standalone AI review was recorded locally for PR #${pullRequest.number}, but PR body update failed: ${formatError(error)}`,
+      );
+    }
     return standaloneResult;
   }
 
@@ -1672,9 +1974,16 @@ async function runStandaloneAiReview(
     outcome: 'clean',
     prNumber: pullRequest.number,
     prUrl: pullRequest.url,
+    vendors: [],
   };
   await writeStandaloneAiReviewNote(cwd, pullRequest.number, standaloneResult);
-  updateStandalonePullRequestBody(cwd, pullRequest, standaloneResult);
+  try {
+    updateStandalonePullRequestBody(cwd, pullRequest, standaloneResult);
+  } catch (error) {
+    console.warn(
+      `Standalone AI review was recorded locally for PR #${pullRequest.number}, but PR body update failed: ${formatError(error)}`,
+    );
+  }
   return standaloneResult;
 }
 
@@ -1697,9 +2006,21 @@ async function writeStandaloneAiReviewNote(
       '',
       `- PR: ${result.prUrl}`,
       `- Outcome: \`${result.outcome}\``,
+      result.vendors.length > 0
+        ? `- Vendors: ${result.vendors.map((vendor) => `\`${vendor}\``).join(', ')}`
+        : undefined,
+      result.actionSummary
+        ? `- Action summary: ${result.actionSummary}`
+        : undefined,
+      result.nonActionSummary
+        ? `- Non-action summary: ${result.nonActionSummary}`
+        : undefined,
       `- Note: ${result.note}`,
-      result.artifactPath
-        ? `- Artifact: \`${result.artifactPath}\``
+      result.artifactJsonPath
+        ? `- Artifact (json): \`${result.artifactJsonPath}\``
+        : undefined,
+      result.artifactTextPath
+        ? `- Artifact (text): \`${result.artifactTextPath}\``
         : undefined,
     ]
       .filter((line): line is string => line !== undefined)
@@ -1898,8 +2219,11 @@ export function buildPullRequestBody(
     | 'title'
     | 'ticketFile'
     | 'baseBranch'
+    | 'reviewActionSummary'
     | 'reviewOutcome'
     | 'reviewNote'
+    | 'reviewNonActionSummary'
+    | 'reviewVendors'
   >,
 ): string {
   const lines = [
@@ -1936,6 +2260,20 @@ export function buildPullRequestBody(
 
     if (ticket.reviewNote) {
       lines.push(`- follow-up note: ${ticket.reviewNote}`);
+    }
+
+    if (ticket.reviewVendors && ticket.reviewVendors.length > 0) {
+      lines.push(
+        `- vendors: ${ticket.reviewVendors.map((vendor) => `\`${vendor}\``).join(', ')}`,
+      );
+    }
+
+    if (ticket.reviewActionSummary) {
+      lines.push(`- action summary: ${ticket.reviewActionSummary}`);
+    }
+
+    if (ticket.reviewNonActionSummary) {
+      lines.push(`- non-action summary: ${ticket.reviewNonActionSummary}`);
     }
   }
 
@@ -2237,8 +2575,20 @@ export function buildTicketHandoff(
       lines.push(`- Review note: ${previous.reviewNote}`);
     }
 
+    if (previous.reviewVendors && previous.reviewVendors.length > 0) {
+      lines.push(
+        `- Review vendors: ${previous.reviewVendors.map((vendor) => `\`${vendor}\``).join(', ')}`,
+      );
+    }
+
     if (previous.reviewArtifactPath) {
       lines.push(`- Review artifact: \`${previous.reviewArtifactPath}\``);
+    }
+
+    if (previous.reviewArtifactJsonPath) {
+      lines.push(
+        `- Review artifact (json): \`${previous.reviewArtifactJsonPath}\``,
+      );
     }
   }
 
@@ -2302,7 +2652,16 @@ function updatePullRequestBody(
 }
 
 export function buildStandaloneAiReviewSection(
-  result: Pick<StandaloneAiReviewResult, 'artifactPath' | 'note' | 'outcome'>,
+  result: Pick<
+    StandaloneAiReviewResult,
+    | 'actionSummary'
+    | 'artifactJsonPath'
+    | 'artifactTextPath'
+    | 'note'
+    | 'nonActionSummary'
+    | 'outcome'
+    | 'vendors'
+  >,
 ): string {
   const lines = [STANDALONE_AI_REVIEW_SECTION_START, '## AI Review', ''];
 
@@ -2319,8 +2678,26 @@ export function buildStandaloneAiReviewSection(
   lines.push(`- outcome: \`${result.outcome}\``);
   lines.push(`- note: ${result.note}`);
 
-  if (result.artifactPath) {
-    lines.push(`- artifact: \`${result.artifactPath}\``);
+  if (result.vendors.length > 0) {
+    lines.push(
+      `- vendors: ${result.vendors.map((vendor) => `\`${vendor}\``).join(', ')}`,
+    );
+  }
+
+  if (result.actionSummary) {
+    lines.push(`- action summary: ${result.actionSummary}`);
+  }
+
+  if (result.nonActionSummary) {
+    lines.push(`- non-action summary: ${result.nonActionSummary}`);
+  }
+
+  if (result.artifactJsonPath) {
+    lines.push(`- artifact (json): \`${result.artifactJsonPath}\``);
+  }
+
+  if (result.artifactTextPath) {
+    lines.push(`- artifact (text): \`${result.artifactTextPath}\``);
   }
 
   lines.push(STANDALONE_AI_REVIEW_SECTION_END);
@@ -2694,8 +3071,14 @@ function formatStatus(state: DeliveryState): string {
         `worktree=${ticket.worktreePath}`,
         ticket.handoffPath ? `handoff=${ticket.handoffPath}` : undefined,
         ticket.prUrl ? `pr=${ticket.prUrl}` : undefined,
+        ticket.reviewArtifactJsonPath
+          ? `review_artifact_json=${ticket.reviewArtifactJsonPath}`
+          : undefined,
         ticket.reviewArtifactPath
           ? `review_artifact=${ticket.reviewArtifactPath}`
+          : undefined,
+        ticket.reviewVendors && ticket.reviewVendors.length > 0
+          ? `review_vendors=${ticket.reviewVendors.join(',')}`
           : undefined,
         ticket.reviewOutcome
           ? `review_outcome=${ticket.reviewOutcome}`
@@ -2853,7 +3236,19 @@ function formatStandaloneAiReviewResult(
     'Standalone AI Review',
     `pr=${result.prUrl}`,
     `outcome=${result.outcome}`,
-    result.artifactPath ? `artifact=${result.artifactPath}` : undefined,
+    result.vendors.length > 0
+      ? `vendors=${result.vendors.join(',')}`
+      : undefined,
+    result.artifactJsonPath
+      ? `artifact_json=${result.artifactJsonPath}`
+      : undefined,
+    result.artifactTextPath
+      ? `artifact_text=${result.artifactTextPath}`
+      : undefined,
+    result.actionSummary ? `action_summary=${result.actionSummary}` : undefined,
+    result.nonActionSummary
+      ? `non_action_summary=${result.nonActionSummary}`
+      : undefined,
     `note=${result.note}`,
   ]
     .filter((line): line is string => line !== undefined)
