@@ -578,6 +578,19 @@ describe('delivery orchestrator', () => {
     ).toContain('triage found no prudent follow-up changes');
   });
 
+  it('keeps standalone pr bodies free of artifact paths', () => {
+    const body = buildStandaloneAiReviewSection({
+      outcome: 'patched',
+      note: 'Patched the prudent AI review follow-up.',
+      artifactJsonPath: '.codex/ai-review/pr-32/review.json',
+      artifactTextPath: '.codex/ai-review/pr-32/review.txt',
+      vendors: ['coderabbit'],
+    });
+
+    expect(body).not.toContain('artifact (json)');
+    expect(body).not.toContain('artifact (text)');
+  });
+
   it('does not include external summary-only noise in the ticket pr body', () => {
     const body = buildPullRequestBody(
       {
@@ -610,7 +623,104 @@ describe('delivery orchestrator', () => {
       'External AI review completed without prudent follow-up changes.',
     );
     expect(body).not.toContain('Ignored 1 summary comment');
+    expect(body).not.toContain('### Vendor Summary Noise');
     expect(body).not.toContain('non-action summary:');
+  });
+
+  it('compresses current vendor summary noise and demotes resolved items', () => {
+    const body = buildPullRequestBody(
+      {
+        planKey: 'phase-03',
+        planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
+        tickets: [],
+      },
+      {
+        id: 'P3.01',
+        title: 'Persist Transmission Identity For Queued Torrents',
+        ticketFile:
+          'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+        baseBranch: 'main',
+        reviewActionSummary: 'Patched 1 finding comment.',
+        reviewComments: [
+          {
+            vendor: 'coderabbit',
+            channel: 'inline_review',
+            authorLogin: 'coderabbitai',
+            authorType: 'Bot',
+            body: 'Guard the null return here.',
+            kind: 'finding',
+            path: 'src/example.ts',
+            line: 42,
+            threadId: 'thread_example_1',
+            url: 'https://example.test/comment/1',
+          },
+          {
+            vendor: 'qodo',
+            channel: 'review_summary',
+            authorLogin: 'qodo-bot',
+            authorType: 'Bot',
+            body: 'Overall this looks good.',
+            kind: 'summary',
+            url: 'https://example.test/comment/2',
+          },
+          {
+            vendor: 'qodo',
+            channel: 'review_summary',
+            authorLogin: 'qodo-bot',
+            authorType: 'Bot',
+            body: 'No blocking issues found.',
+            kind: 'summary',
+            url: 'https://example.test/comment/3',
+          },
+          {
+            vendor: 'coderabbit',
+            channel: 'inline_review',
+            authorLogin: 'coderabbitai',
+            authorType: 'Bot',
+            body: 'Previous concern already resolved.',
+            isResolved: true,
+            kind: 'finding',
+            path: 'src/example.ts',
+            line: 30,
+            threadId: 'thread_example_2',
+            url: 'https://example.test/comment/4',
+          },
+        ],
+        reviewHeadSha: 'abcdef1234567890',
+        reviewNote: 'Patched the prudent AI review follow-up.',
+        reviewOutcome: 'patched',
+        reviewThreadResolutions: [
+          {
+            status: 'resolved',
+            threadId: 'thread_example_1',
+            url: 'https://example.test/comment/1',
+            vendor: 'coderabbit',
+          },
+        ],
+        reviewVendors: ['coderabbit', 'qodo'],
+        status: 'reviewed',
+      },
+      {
+        currentHeadSha: 'abcdef1234567890',
+      },
+    );
+
+    expect(body).toContain('### Current Findings');
+    expect(body).toContain(
+      '[coderabbit] patched; native GitHub thread resolved: Guard the null return here.',
+    );
+    expect(body).toContain('### Vendor Summary Noise');
+    expect(body).toContain('[qodo] compressed 2 summary-only updates.');
+    expect(body).not.toContain('[qodo] summary only: Overall this looks good.');
+    expect(body).toContain('### Stale / Resolved History');
+    expect(body).toContain(
+      '[coderabbit] already resolved: Previous concern already resolved.',
+    );
   });
 
   it('renders stale ai review history separately from current head status', () => {
@@ -669,7 +779,7 @@ describe('delivery orchestrator', () => {
     expect(body).toContain(
       'no current-SHA `ai-code-review` status is recorded',
     );
-    expect(body).toContain('### Stale Review History');
+    expect(body).toContain('### Stale / Resolved History');
     expect(body).toContain(
       '[coderabbit] stale history: Guard the null return here.',
     );

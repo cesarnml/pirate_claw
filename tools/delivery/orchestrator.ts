@@ -2924,6 +2924,27 @@ function describeReviewComment(
   return 'finding';
 }
 
+function buildReviewCommentBullet(
+  comment: AiReviewComment,
+  context: 'current' | 'history',
+  status: TicketStatus | ReviewResult,
+  threadResolutions: AiReviewThreadResolution[] | undefined,
+): string {
+  const resolutionByThreadId = new Map(
+    (threadResolutions ?? []).map((resolution) => [
+      resolution.threadId,
+      resolution,
+    ]),
+  );
+  const description = describeReviewComment(
+    comment,
+    context,
+    status,
+    comment.threadId ? resolutionByThreadId.get(comment.threadId) : undefined,
+  );
+  return `- [${comment.vendor}] ${description}: ${summarizeReviewComment(comment.body)}${formatReviewCommentLocation(comment)}${formatReviewThreadLink(comment.url)}`;
+}
+
 function buildReviewCommentBullets(
   comments: AiReviewComment[] | undefined,
   context: 'current' | 'history',
@@ -2934,21 +2955,40 @@ function buildReviewCommentBullets(
     return [];
   }
 
-  const resolutionByThreadId = new Map(
-    (threadResolutions ?? []).map((resolution) => [
-      resolution.threadId,
-      resolution,
-    ]),
+  return comments.map((comment) =>
+    buildReviewCommentBullet(comment, context, status, threadResolutions),
   );
+}
 
-  return comments.map((comment) => {
-    const description = describeReviewComment(
-      comment,
-      context,
-      status,
-      comment.threadId ? resolutionByThreadId.get(comment.threadId) : undefined,
-    );
-    return `- [${comment.vendor}] ${description}: ${summarizeReviewComment(comment.body)}${formatReviewCommentLocation(comment)}${formatReviewThreadLink(comment.url)}`;
+function formatVendorSourceLinks(comments: AiReviewComment[]): string {
+  const urls = [
+    ...new Set(comments.map((comment) => comment.url).filter(Boolean)),
+  ];
+
+  if (urls.length === 1) {
+    return ` [source](${urls[0]})`;
+  }
+
+  return '';
+}
+
+function buildVendorSummaryNoiseBullets(comments: AiReviewComment[]): string[] {
+  if (comments.length === 0) {
+    return [];
+  }
+
+  const commentsByVendor = new Map<string, AiReviewComment[]>();
+
+  for (const comment of comments) {
+    const existing = commentsByVendor.get(comment.vendor) ?? [];
+    existing.push(comment);
+    commentsByVendor.set(comment.vendor, existing);
+  }
+
+  return [...commentsByVendor.entries()].map(([vendor, vendorComments]) => {
+    const count = vendorComments.length;
+    const noun = count === 1 ? 'summary-only update' : 'summary-only updates';
+    return `- [${vendor}] compressed ${count} ${noun}.${formatVendorSourceLinks(vendorComments)}`;
   });
 }
 
@@ -3033,25 +3073,62 @@ function buildAiReviewDetailLines(input: {
     lines.push(`- action summary: ${input.actionSummary}`);
   }
 
-  if (input.nonActionSummary) {
-    lines.push(`- non-action summary: ${input.nonActionSummary}`);
-  }
+  const effectiveContext =
+    appliesToCurrentHead || !input.reviewedHeadSha ? 'current' : 'history';
+  const currentComments =
+    effectiveContext === 'current' ? (input.comments ?? []) : [];
+  const currentActionableComments = currentComments.filter(
+    (comment) =>
+      !comment.isOutdated && !comment.isResolved && comment.kind !== 'summary',
+  );
+  const currentSummaryNoiseComments = currentComments.filter(
+    (comment) =>
+      !comment.isOutdated && !comment.isResolved && comment.kind === 'summary',
+  );
+  const staleOrResolvedComments =
+    effectiveContext === 'history'
+      ? (input.comments ?? [])
+      : (input.comments ?? []).filter(
+          (comment) => comment.isOutdated || comment.isResolved,
+        );
 
-  const bullets = buildReviewCommentBullets(
-    input.comments,
-    appliesToCurrentHead || !input.reviewedHeadSha ? 'current' : 'history',
+  const currentActionBullets = buildReviewCommentBullets(
+    currentActionableComments,
+    'current',
     reviewStatus,
     input.threadResolutions,
   );
 
-  if (bullets.length > 0) {
+  if (currentActionBullets.length > 0) {
+    lines.push('', '### Current Findings', '', ...currentActionBullets);
+  }
+
+  const vendorSummaryNoiseBullets = buildVendorSummaryNoiseBullets(
+    currentSummaryNoiseComments,
+  );
+
+  if (vendorSummaryNoiseBullets.length > 0) {
     lines.push(
       '',
-      appliesToCurrentHead || !input.reviewedHeadSha
-        ? '### Review Items'
-        : '### Stale Review History',
+      '### Vendor Summary Noise',
       '',
-      ...bullets,
+      ...vendorSummaryNoiseBullets,
+    );
+  }
+
+  const staleOrResolvedBullets = buildReviewCommentBullets(
+    staleOrResolvedComments,
+    effectiveContext === 'history' ? 'history' : 'current',
+    reviewStatus,
+    input.threadResolutions,
+  );
+
+  if (staleOrResolvedBullets.length > 0) {
+    lines.push(
+      '',
+      '### Stale / Resolved History',
+      '',
+      ...staleOrResolvedBullets,
     );
   }
 
@@ -3566,14 +3643,6 @@ export function buildStandaloneAiReviewSection(
   );
 
   lines.push(`- outcome: \`${result.outcome}\``);
-
-  if (result.artifactJsonPath) {
-    lines.push(`- artifact (json): \`${result.artifactJsonPath}\``);
-  }
-
-  if (result.artifactTextPath) {
-    lines.push(`- artifact (text): \`${result.artifactTextPath}\``);
-  }
 
   lines.push(STANDALONE_AI_REVIEW_SECTION_END);
   return lines.join('\n');
