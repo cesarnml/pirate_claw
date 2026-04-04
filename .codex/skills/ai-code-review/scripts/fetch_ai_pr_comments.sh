@@ -73,7 +73,7 @@ artifact="$(
                 "PR #\($pr.number): \($pr.title)",
                 "URL: \($pr.url)",
                 "Branch: \($pr.headRefName) -> \($pr.baseRefName)",
-                "State: \($pr.state)\(if $pr.isDraft then \" (draft)\" else \"\" end)",
+                "State: \($pr.state)\(if $pr.isDraft then " (draft)" else "" end)",
                 "",
                 "Detected AI review comments: \($matches | length)"
               ]
