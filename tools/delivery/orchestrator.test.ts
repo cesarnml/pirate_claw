@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   buildStandaloneAiReviewSection,
   buildReviewPollCheckMinutes,
+  buildPullRequestBody,
   buildPullRequestTitle,
   buildTicketHandoff,
   canAdvanceTicket,
@@ -556,10 +557,45 @@ describe('delivery orchestrator', () => {
     expect(
       buildStandaloneAiReviewSection({
         outcome: 'clean',
-        note: 'Detected AI review comments were summary-only and did not merit follow-up changes.',
+        note: 'External AI review completed without prudent follow-up changes.',
         vendors: ['qodo'],
       }),
     ).toContain('did not merit follow-up changes');
+  });
+
+  it('does not include external summary-only noise in the ticket pr body', () => {
+    const body = buildPullRequestBody(
+      {
+        planKey: 'phase-03',
+        planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
+        tickets: [],
+      },
+      {
+        id: 'P3.01',
+        title: 'Persist Transmission Identity For Queued Torrents',
+        ticketFile:
+          'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+        baseBranch: 'main',
+        status: 'reviewed',
+        reviewOutcome: 'clean',
+        reviewNote:
+          'External AI review completed without prudent follow-up changes.',
+        reviewNonActionSummary: undefined,
+        reviewActionSummary: undefined,
+        reviewVendors: ['coderabbit', 'qodo'],
+      },
+    );
+
+    expect(body).toContain(
+      'External AI review completed without prudent follow-up changes.',
+    );
+    expect(body).not.toContain('Ignored 1 summary comment');
+    expect(body).not.toContain('non-action summary:');
   });
 
   it('surfaces the review wait window after opening a PR', () => {

@@ -76,6 +76,7 @@ Use this skill when the orchestrator has saved an AI review artifact or when you
 
 - Start with whether AI review comments were found.
 - Filter out generic summary noise by default and focus on unresolved review items.
+- Treat external AI summary posts as orchestration state signals, not PR-body content.
 - State which comments are actionable and which should be rejected.
 - Group by unresolved issue, not by raw API payload.
 - Include file and line when available.
