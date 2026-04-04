@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  buildStandaloneAiReviewSection,
+  buildReviewPollCheckMinutes,
   buildPullRequestTitle,
   buildTicketHandoff,
   canAdvanceTicket,
@@ -14,14 +16,20 @@ import {
   deriveWorktreePath,
   eventsForAdvanceCommand,
   eventsForOpenPrCommand,
+  eventsForPollReviewCommand,
   eventsForRecordReviewCommand,
   eventsForStartCommand,
   findExistingBranch,
   findTicketByBranch,
   formatNotificationMessage,
   formatReviewWindowMessage,
+  mergeStandaloneAiReviewSection,
   notifyBestEffort,
+  parseDotEnv,
+  parseGitWorktreeList,
+  parseAiReviewFetcherOutput,
   parsePlan,
+  pollReview,
   resolvePlanPathForBranch,
   resolveNotifier,
   resolveReviewFetcher,
@@ -80,7 +88,8 @@ describe('delivery orchestrator', () => {
       statePath: '.codex/delivery/phase-03/state.json',
       reviewsDirPath: '.codex/delivery/phase-03/reviews',
       handoffsDirPath: '.codex/delivery/phase-03/handoffs',
-      reviewWaitMinutes: 5,
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
     });
   });
 
@@ -94,7 +103,8 @@ describe('delivery orchestrator', () => {
       statePath: options.statePath,
       reviewsDirPath: options.reviewsDirPath,
       handoffsDirPath: options.handoffsDirPath,
-      reviewWaitMinutes: 5,
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
       tickets: [
         {
           id: 'P2.01',
@@ -153,7 +163,8 @@ describe('delivery orchestrator', () => {
         statePath: '.codex/delivery/phase-02/state.json',
         reviewsDirPath: '.codex/delivery/phase-02/reviews',
         handoffsDirPath: '.codex/delivery/phase-02/handoffs',
-        reviewWaitMinutes: 5,
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
         tickets: [
           {
             id: 'P2.01',
@@ -167,7 +178,7 @@ describe('delivery orchestrator', () => {
             worktreePath: '/tmp/p2_01',
             prUrl: 'https://example.test/pull/14',
             reviewArtifactPath:
-              '.codex/delivery/phase-02/reviews/P2.01-qodo.txt',
+              '.codex/delivery/phase-02/reviews/P2.01-ai-review.txt',
             reviewOutcome: 'patched',
             reviewNote: 'patched the two actionable correctness issues',
           },
@@ -202,7 +213,7 @@ describe('delivery orchestrator', () => {
     expect(handoff).toContain('Previous PR: https://example.test/pull/14');
     expect(handoff).toContain('Review outcome: `patched`');
     expect(handoff).toContain(
-      'Review artifact: `.codex/delivery/phase-02/reviews/P2.01-qodo.txt`',
+      'Review artifact: `.codex/delivery/phase-02/reviews/P2.01-ai-review.txt`',
     );
   });
 
@@ -225,6 +236,48 @@ describe('delivery orchestrator', () => {
     expect(derivePlanKey('./plans/custom/implementation-plan.md')).toBe(
       'custom',
     );
+  });
+
+  it('parses git worktree porcelain output and finds branch metadata', () => {
+    expect(
+      parseGitWorktreeList(
+        [
+          'worktree /Users/cesar/code/pirate_claw',
+          'HEAD abc123',
+          'branch refs/heads/main',
+          '',
+          'worktree /Users/cesar/.codex/worktrees/3cc9/pirate_claw',
+          'HEAD def456',
+          'branch refs/heads/codex/ai-code-review-template-boundary',
+          '',
+        ].join('\n'),
+      ),
+    ).toEqual([
+      {
+        path: '/Users/cesar/code/pirate_claw',
+        branch: 'refs/heads/main',
+      },
+      {
+        path: '/Users/cesar/.codex/worktrees/3cc9/pirate_claw',
+        branch: 'refs/heads/codex/ai-code-review-template-boundary',
+      },
+    ]);
+  });
+
+  it('parses dotenv content for missing process env hydration', () => {
+    expect(
+      parseDotEnv(
+        [
+          '# comment',
+          'TELEGRAM_BOT_TOKEN=bot-token',
+          'TELEGRAM_CHAT_ID="chat-id"',
+          '',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      TELEGRAM_BOT_TOKEN: 'bot-token',
+      TELEGRAM_CHAT_ID: 'chat-id',
+    });
   });
 
   it('prefers existing ticket-id branch matches over title-derived names', () => {
@@ -255,7 +308,8 @@ describe('delivery orchestrator', () => {
           statePath: '.codex/delivery/phase-03/state.json',
           reviewsDirPath: '.codex/delivery/phase-03/reviews',
           handoffsDirPath: '.codex/delivery/phase-03/handoffs',
-          reviewWaitMinutes: 5,
+          reviewPollIntervalMinutes: 2,
+          reviewPollMaxWaitMinutes: 8,
           tickets: [
             {
               id: 'P3.01',
@@ -434,7 +488,7 @@ describe('delivery orchestrator', () => {
         ticketTitle: 'Persist Transmission Identity For Queued Torrents',
         branch: 'codex/p3-01-persist-transmission-identity-for-queued-torrents',
       }),
-    ).toContain('Anton\nP3.01 underway for phase-03.');
+    ).toContain('Son of Anton\nP3.01 underway for phase-03.');
     expect(
       formatNotificationMessage('/tmp/pirate_claw', {
         kind: 'run_blocked',
@@ -442,7 +496,34 @@ describe('delivery orchestrator', () => {
         command: 'open-pr',
         reason: 'No in-progress ticket found to open as a PR.',
       }),
-    ).toContain('Anton\nStopped in phase-03.');
+    ).toContain('Son of Anton\nStopped in phase-03.');
+    expect(
+      formatNotificationMessage('/tmp/pirate_claw', {
+        kind: 'standalone_review_started',
+        prNumber: 32,
+        prUrl: 'https://example.test/pull/32',
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
+      }),
+    ).toContain('Son of Anton PR #32\nAI review started.');
+  });
+
+  it('merges the standalone ai review section into a pr body', () => {
+    const section = buildStandaloneAiReviewSection({
+      outcome: 'needs_patch',
+      note: 'AI review feedback detected.',
+      artifactPath: '.codex/ai-review/pr-32/review.txt',
+    });
+
+    expect(
+      mergeStandaloneAiReviewSection('## Summary\n- existing body', section),
+    ).toContain('<!-- codex-ai-review:start -->');
+    expect(
+      mergeStandaloneAiReviewSection(
+        '## Summary\n- existing body\n\n<!-- codex-ai-review:start -->\nold\n<!-- codex-ai-review:end -->\n',
+        section,
+      ),
+    ).not.toContain('\nold\n');
   });
 
   it('surfaces the review wait window after opening a PR', () => {
@@ -453,7 +534,8 @@ describe('delivery orchestrator', () => {
         statePath: '.codex/delivery/phase-03/state.json',
         reviewsDirPath: '.codex/delivery/phase-03/reviews',
         handoffsDirPath: '.codex/delivery/phase-03/handoffs',
-        reviewWaitMinutes: 5,
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
         tickets: [
           {
             id: 'P3.01',
@@ -476,9 +558,13 @@ describe('delivery orchestrator', () => {
     );
 
     expect(message).toContain('AI Review Window');
-    expect(message).toContain('wait window: 5 minutes');
-    expect(message).toContain('review due at: 2026-04-01T10:05:00.000Z');
-    expect(message).toContain('record the review as `clean` and continue');
+    expect(message).toContain(
+      'polling cadence: every 2 minutes up to 8 minutes',
+    );
+    expect(message).toContain('checks at: 2, 4, 6, 8 minutes after PR open');
+    expect(message).toContain('first check at: 2026-04-01T10:02:00.000Z');
+    expect(message).toContain('final check at: 2026-04-01T10:08:00.000Z');
+    expect(message).toContain('the orchestrator records `clean` and continues');
   });
 
   it('maps orchestrator commands to notification events', () => {
@@ -488,7 +574,8 @@ describe('delivery orchestrator', () => {
       statePath: '.codex/delivery/phase-03/state.json',
       reviewsDirPath: '.codex/delivery/phase-03/reviews',
       handoffsDirPath: '.codex/delivery/phase-03/handoffs',
-      reviewWaitMinutes: 5,
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
       tickets: [
         {
           id: 'P3.01',
@@ -531,6 +618,38 @@ describe('delivery orchestrator', () => {
       eventsForRecordReviewCommand(state, 'P3.01').map((event) => event.kind),
     ).toEqual(['review_recorded']);
     expect(
+      eventsForPollReviewCommand(
+        {
+          ...state,
+          tickets: [
+            {
+              ...state.tickets[0]!,
+              status: 'reviewed',
+              reviewNote:
+                'No AI review feedback was detected within the 8-minute polling window.',
+            },
+            state.tickets[1]!,
+          ],
+        },
+        'P3.01',
+      ).map((event) => event.kind),
+    ).toEqual(['review_recorded']);
+    expect(
+      eventsForPollReviewCommand({
+        ...state,
+        tickets: [
+          {
+            ...state.tickets[0]!,
+            status: 'reviewed',
+            reviewOutcome: 'clean',
+            reviewNote:
+              'No AI review feedback was detected within the 8-minute polling window.',
+          },
+          state.tickets[1]!,
+        ],
+      }).map((event) => event.kind),
+    ).toEqual(['review_recorded']);
+    expect(
       eventsForAdvanceCommand(state, {
         ...state,
         tickets: [
@@ -555,7 +674,8 @@ describe('delivery orchestrator', () => {
         statePath: '.codex/delivery/phase-03/state.json',
         reviewsDirPath: '.codex/delivery/phase-03/reviews',
         handoffsDirPath: '.codex/delivery/phase-03/handoffs',
-        reviewWaitMinutes: 5,
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
         tickets: [
           {
             id: 'P3.01',
@@ -578,7 +698,8 @@ describe('delivery orchestrator', () => {
         statePath: '.codex/delivery/phase-03/state.json',
         reviewsDirPath: '.codex/delivery/phase-03/reviews',
         handoffsDirPath: '.codex/delivery/phase-03/handoffs',
-        reviewWaitMinutes: 5,
+        reviewPollIntervalMinutes: 2,
+        reviewPollMaxWaitMinutes: 8,
         tickets: [
           {
             id: 'P3.01',
@@ -625,6 +746,210 @@ describe('delivery orchestrator', () => {
     }
   });
 
+  it('builds the 2/4/6/8-minute review polling schedule', () => {
+    expect(buildReviewPollCheckMinutes(2, 8)).toEqual([2, 4, 6, 8]);
+    expect(() => buildReviewPollCheckMinutes(0, 8)).toThrow(
+      'Review polling interval and max wait must be positive.',
+    );
+  });
+
+  it('parses the ai review fetcher contract', () => {
+    expect(
+      parseAiReviewFetcherOutput(
+        JSON.stringify({
+          detected: true,
+          artifact: 'normalized review artifact',
+        }),
+      ),
+    ).toEqual({
+      detected: true,
+      artifact: 'normalized review artifact',
+    });
+
+    expect(() => parseAiReviewFetcherOutput('not json')).toThrow(
+      'AI review fetcher must emit JSON.',
+    );
+
+    expect(() =>
+      parseAiReviewFetcherOutput(
+        JSON.stringify({
+          detected: 'true',
+          artifact: 42,
+        }),
+      ),
+    ).toThrow(
+      'AI review fetcher output must be JSON with boolean `detected` and string `artifact` fields.',
+    );
+  });
+
+  it('stops polling early when ai review is detected and saves the artifact', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+        },
+      ],
+    };
+    const cwd = await mkdtemp(join(tmpdir(), 'orchestrator-poll-'));
+    const sleeps: number[] = [];
+    let fetchCount = 0;
+
+    try {
+      const nextState = await pollReview(state, cwd, 'P3.01', {
+        now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+        sleep: async (milliseconds) => {
+          sleeps.push(milliseconds);
+        },
+        fetcher: () => {
+          fetchCount += 1;
+          return fetchCount === 1
+            ? {
+                detected: false,
+                artifact: '',
+              }
+            : {
+                detected: true,
+                artifact: 'normalized ai review artifact',
+              };
+        },
+      });
+
+      expect(sleeps).toEqual([120000, 240000]);
+      expect(fetchCount).toBe(2);
+      expect(nextState.tickets[0]?.status).toBe('review_fetched');
+      expect(nextState.tickets[0]?.reviewArtifactPath).toBe(
+        '.codex/delivery/phase-03/reviews/P3.01-ai-review.txt',
+      );
+      expect(
+        await readFile(
+          join(cwd, '.codex/delivery/phase-03/reviews/P3.01-ai-review.txt'),
+          'utf8',
+        ),
+      ).toBe('normalized ai review artifact');
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('auto-records clean when no ai review appears by the final check', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+        },
+      ],
+    };
+    const sleeps: number[] = [];
+    const prBodyUpdates: string[] = [];
+
+    const nextState = await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+      },
+      fetcher: () => ({
+        detected: false,
+        artifact: '',
+      }),
+      updatePullRequestBody: async (updatedState, ticket) => {
+        prBodyUpdates.push(
+          `${updatedState.planKey}:${ticket.reviewNote ?? ''}`,
+        );
+      },
+    });
+
+    expect(sleeps).toEqual([120000, 240000, 360000, 480000]);
+    expect(nextState.tickets[0]).toMatchObject({
+      status: 'reviewed',
+      reviewOutcome: 'clean',
+      reviewNote:
+        'No AI review feedback was detected within the 8-minute polling window.',
+    });
+    expect(prBodyUpdates).toEqual([
+      'phase-03:No AI review feedback was detected within the 8-minute polling window.',
+    ]);
+  });
+
+  it('uses the normal polling cadence when prOpenedAt is missing', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.codex/delivery/phase-03/state.json',
+      reviewsDirPath: '.codex/delivery/phase-03/reviews',
+      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 8,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+        },
+      ],
+    };
+    const sleeps: number[] = [];
+
+    await pollReview(state, '/tmp/pirate_claw', 'P3.01', {
+      now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+      },
+      fetcher: () => ({
+        detected: true,
+        artifact: 'normalized ai review artifact',
+      }),
+    });
+
+    expect(sleeps).toEqual([120000]);
+  });
+
   it('keeps notification failures best-effort', async () => {
     const originalToken = process.env.TELEGRAM_BOT_TOKEN;
     const originalChatId = process.env.TELEGRAM_CHAT_ID;
@@ -656,11 +981,17 @@ describe('delivery orchestrator', () => {
   });
 
   it('prefers an explicit review fetcher environment variable', () => {
-    const original = process.env.QODO_REVIEW_FETCHER;
-    process.env.QODO_REVIEW_FETCHER = '/tmp/fetch_qodo.sh';
+    const original = process.env.AI_CODE_REVIEW_FETCHER;
+    try {
+      process.env.AI_CODE_REVIEW_FETCHER = '/tmp/fetch_ai_review.sh';
 
-    expect(resolveReviewFetcher()).toBe('/tmp/fetch_qodo.sh');
-
-    process.env.QODO_REVIEW_FETCHER = original;
+      expect(resolveReviewFetcher()).toBe('/tmp/fetch_ai_review.sh');
+    } finally {
+      if (typeof original === 'undefined') {
+        delete process.env.AI_CODE_REVIEW_FETCHER;
+      } else {
+        process.env.AI_CODE_REVIEW_FETCHER = original;
+      }
+    }
   });
 });

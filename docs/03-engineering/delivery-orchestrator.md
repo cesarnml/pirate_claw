@@ -42,23 +42,26 @@ The orchestrator owns process mechanics:
 - bootstrapping fresh Bun ticket work trees before implementation starts
 - stacked PR base chaining
 - idempotent PR open/update behavior for already-pushed ticket branches
-- a 5-minute review wait before fetch
-- saving raw `qodo-code-review` output locally
+- a 2/4/6/8-minute ai-review polling loop after PR open
+- invoking the repo-local `ai-code-review` fetcher and persisting its normalized artifact when AI review is detected
 - optional Telegram milestone notifications for long-running delivery runs
-- blocking advancement until review has been explicitly recorded
+- blocking advancement until review has been explicitly recorded or auto-recorded as `clean` after the final polling check
 - refreshing the current PR body from recorded ai-cr follow-up notes immediately before advancing to the next ticket
 
-It does **not** own AI-review judgment.
+It does **not** own AI-review detection heuristics or triage judgment.
 
-That boundary is intentional. The `qodo-code-review` skill already defines the repo stance for AI review:
+That boundary is intentional. The repo-local `ai-code-review` skill under `.codex/skills/ai-code-review/` already defines the repo stance for AI review:
 
 - comments are advisory, not gospel
 - weak or mis-scoped comments should be pushed back on
 - only prudent, concrete fixes should be patched
 
-So the script fetches and stores review output, but humans or agents still use the skill to decide whether a comment matters.
+So the orchestrator only consumes the skill's fetcher contract:
 
-The absence of `qodo-code-review` comments after the configured wait window is not itself a blocker. In that case, record the review as `clean` and continue unless another real ambiguity or prerequisite issue exists.
+- `detected=false`: keep polling, or auto-record `clean` on the final check
+- `detected=true`: save the normalized artifact and hand off to the skill for judgment
+
+The absence of `ai-code-review` comments after the final 8-minute polling check is not itself a blocker. In that case, the orchestrator records the review as `clean`, updates the PR metadata, and continues unless another real ambiguity or prerequisite issue exists.
 
 When ai-cr triage leads to prudent branch changes, the orchestrator updates the PR body as the final step of `advance`. That timing is intentional: the PR description should reflect the exact branch state that is being handed off before the next ticket starts.
 
@@ -83,6 +86,8 @@ The handoff includes:
 This does not automatically create a brand-new Codex thread, but it is the current repo mechanism for reducing reasoning carryover between tickets while preserving stacked branch continuity.
 
 During external waits such as AI-review windows, the worker may read ahead into the next ticket, handoff, and adjacent seams to prepare the next slice. That read-ahead must not turn into write-ahead; implementation for the next ticket still starts only after the current ticket is cleared.
+
+That policy applies only to ticket-linked delivery PRs. Standalone manual `ai-review` runs for non-ticket PRs do not have a next-ticket boundary, so there is no analogous look-ahead rule there.
 
 ## Existing Phase 02 Work
 
@@ -110,9 +115,10 @@ Available commands:
 - `sync`
 - `status`
 - `repair-state`
+- `ai-review [--pr <number>]`
 - `start [ticket-id]`
 - `open-pr [ticket-id]`
-- `fetch-review [ticket-id]`
+- `poll-review [ticket-id]`
 - `record-review <ticket-id> <clean|needs_patch|patched> [note]`
 - `advance [--no-start-next]`
 - `restack [ticket-id]`
@@ -122,15 +128,22 @@ Available commands:
 ```bash
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md start
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md open-pr
-bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md fetch-review
-# use the qodo-code-review skill to triage the saved review artifact
+bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md poll-review
+# if ai review comments were found, use the ai-code-review skill to triage the saved review artifact
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md record-review P2.02 patched "patched the two actionable correctness issues"
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md advance
 ```
 
+For a non-ticket PR, run the manual standalone path:
+
+```bash
+bun run deliver ai-review
+# or: bun run deliver ai-review --pr 32
+```
+
 At each ticket boundary, read the generated handoff artifact before continuing implementation.
 
-After `open-pr`, the orchestrator should surface the review wait window and the earliest meaningful review-fetch time. An immediate lack of AI comments is informational only; the decisive check happens after that window elapses.
+After `open-pr`, the orchestrator should surface the ai-review polling cadence and check timestamps. `poll-review` checks at 2, 4, 6, and 8 minutes after PR open, stops immediately when AI review comments are detected, and otherwise auto-records `clean` at the final check.
 
 If a parent ticket was squash-merged onto `main`, run:
 
@@ -184,6 +197,7 @@ PR descriptions are maintained as delivery metadata, not one-shot text.
 - `open-pr` uses a human-readable Conventional-Commit-style title plus the delivery ticket suffix, for example `feat: add torrent lifecycle reconciliation [P3.02]`
 - rerunning `open-pr` refreshes the existing PR title/body instead of failing on an already-open branch
 - `record-review` stores the triage result and optional note
+- `poll-review` auto-records `clean` when no `ai-code-review` feedback is detected by the final check and refreshes the PR body immediately
 - `advance` refreshes the PR body from that recorded review state, then marks the ticket done and optionally starts the next one
 
 This matters because the repo squash-merges PRs onto `main`, so the PR body needs to mention prudent ai-cr follow-up work before the stack moves on.

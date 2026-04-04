@@ -157,6 +157,9 @@ Useful local commands:
 - `bun run verify`
 - `bun run ci`
 - `bun run deliver restack` to restack the current delivery ticket after its parent PR was squash-merged to `main`
+- `bun run deliver --plan <plan-path> poll-review` to run the orchestrator's 2/4/6/8-minute `ai-code-review` polling loop for the active PR
+
+The review fetcher and triage guidance for that flow live in the repo-local skill at [`./.codex/skills/ai-code-review/SKILL.md`](./.codex/skills/ai-code-review/SKILL.md).
 
 If you are working on the repo rather than just using the CLI, start with [`docs/00-overview/start-here.md`](./docs/00-overview/start-here.md).
 
