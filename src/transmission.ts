@@ -2,6 +2,7 @@ import type { TransmissionConfig } from './config';
 
 export type SubmitDownloadInput = {
   downloadUrl: string;
+  labels?: string[];
 };
 
 export type SubmissionSuccess = {
@@ -71,63 +72,32 @@ async function submitToTransmission(
   config: TransmissionConfig,
   input: SubmitDownloadInput,
 ): Promise<SubmissionResult> {
-  const firstResponse = await sendRpcRequest(
-    config,
-    buildSubmitRequestBody(config, input),
-  );
+  const firstResponse = await sendSubmitRpcRequest(config, input);
 
   if (!firstResponse.ok) {
     return firstResponse.error;
   }
+  const result = await parseSubmissionResponse(firstResponse.response);
 
-  let response = firstResponse.response;
-
-  if (response.status === 409) {
-    const sessionId = response.headers.get('x-transmission-session-id');
-
-    if (!sessionId) {
-      return {
-        ok: false,
-        code: 'session_error',
-        message:
-          'Transmission session negotiation failed: missing X-Transmission-Session-Id header.',
-      };
-    }
-
-    const retryResponse = await sendRpcRequest(
-      config,
-      buildSubmitRequestBody(config, input),
-      sessionId,
-    );
-
-    if (!retryResponse.ok) {
-      return retryResponse.error;
-    }
-
-    response = retryResponse.response;
+  if (!shouldRetryWithoutLabels(input, result)) {
+    return result;
   }
 
-  if (!response.ok) {
-    return {
-      ok: false,
-      code: 'http_error',
-      message: `Transmission RPC request failed with HTTP ${response.status}.`,
-    };
+  console.warn(
+    'Transmission rejected label arguments; retrying submission without labels.',
+  );
+
+  const fallbackResponse = await sendSubmitRpcRequest(
+    config,
+    { ...input, labels: undefined },
+    firstResponse.sessionId,
+  );
+
+  if (!fallbackResponse.ok) {
+    return fallbackResponse.error;
   }
 
-  let parsed: unknown;
-
-  try {
-    parsed = await response.json();
-  } catch {
-    return {
-      ok: false,
-      code: 'invalid_response',
-      message: 'Transmission RPC response was not valid JSON.',
-    };
-  }
-
-  return parseSubmissionResult(parsed);
+  return parseSubmissionResponse(fallbackResponse.response);
 }
 
 async function lookupTorrentsInTransmission(
@@ -230,6 +200,72 @@ async function sendRpcRequest(
   }
 }
 
+async function sendSubmitRpcRequest(
+  config: TransmissionConfig,
+  input: SubmitDownloadInput,
+  sessionId?: string,
+): Promise<
+  | {
+      ok: true;
+      response: Response;
+      sessionId?: string;
+    }
+  | {
+      ok: false;
+      error: SubmissionFailure;
+    }
+> {
+  const firstResponse = await sendRpcRequest(
+    config,
+    buildSubmitRequestBody(config, input),
+    sessionId,
+  );
+
+  if (!firstResponse.ok) {
+    return firstResponse;
+  }
+
+  if (firstResponse.response.status !== 409) {
+    return {
+      ok: true,
+      response: firstResponse.response,
+      sessionId,
+    };
+  }
+
+  const negotiatedSessionId = firstResponse.response.headers.get(
+    'x-transmission-session-id',
+  );
+
+  if (!negotiatedSessionId) {
+    return {
+      ok: false,
+      error: {
+        ok: false,
+        code: 'session_error',
+        message:
+          'Transmission session negotiation failed: missing X-Transmission-Session-Id header.',
+      },
+    };
+  }
+
+  const retryResponse = await sendRpcRequest(
+    config,
+    buildSubmitRequestBody(config, input),
+    negotiatedSessionId,
+  );
+
+  if (!retryResponse.ok) {
+    return retryResponse;
+  }
+
+  return {
+    ok: true,
+    response: retryResponse.response,
+    sessionId: negotiatedSessionId,
+  };
+}
+
 function buildHeaders(
   config: TransmissionConfig,
   sessionId?: string,
@@ -254,6 +290,7 @@ function buildSubmitRequestBody(
   arguments: {
     filename: string;
     'download-dir'?: string;
+    labels?: string[];
   };
 } {
   return {
@@ -261,8 +298,51 @@ function buildSubmitRequestBody(
     arguments: {
       filename: input.downloadUrl,
       ...(config.downloadDir ? { 'download-dir': config.downloadDir } : {}),
+      ...(input.labels && input.labels.length > 0
+        ? { labels: input.labels }
+        : {}),
     },
   };
+}
+
+async function parseSubmissionResponse(
+  response: Response,
+): Promise<SubmissionResult> {
+  if (!response.ok) {
+    return {
+      ok: false,
+      code: 'http_error',
+      message: `Transmission RPC request failed with HTTP ${response.status}.`,
+    };
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = await response.json();
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC response was not valid JSON.',
+    };
+  }
+
+  return parseSubmissionResult(parsed);
+}
+
+function shouldRetryWithoutLabels(
+  input: SubmitDownloadInput,
+  result: SubmissionResult,
+): boolean {
+  return (
+    Array.isArray(input.labels) &&
+    input.labels.length > 0 &&
+    !result.ok &&
+    result.code === 'rpc_error' &&
+    /labels?/i.test(result.message) &&
+    /(invalid|unknown|unsupported|unrecognized)/i.test(result.message)
+  );
 }
 
 function buildLookupRequestBody(input: LookupTorrentsInput): {
