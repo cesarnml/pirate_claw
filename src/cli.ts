@@ -98,8 +98,9 @@ export async function runCli(argv: string[]): Promise<number> {
         const downloader = createTransmissionDownloader(config.transmission);
 
         const controller = new AbortController();
-        process.on('SIGINT', () => controller.abort());
-        process.on('SIGTERM', () => controller.abort());
+        const onSignal = () => controller.abort();
+        process.once('SIGINT', onSignal);
+        process.once('SIGTERM', onSignal);
 
         await runDaemonLoop({
           runCycle: async () => {

@@ -95,7 +95,7 @@ describe('daemon', () => {
     expect(log).toContain('daemon stopped');
   });
 
-  it('stops immediately when signal is already aborted', async () => {
+  it('runs initial cycles then stops without scheduling when signal is pre-aborted', async () => {
     const log: string[] = [];
     const controller = new AbortController();
     controller.abort();
