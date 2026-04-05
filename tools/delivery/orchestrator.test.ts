@@ -545,6 +545,25 @@ describe('delivery orchestrator', () => {
         section,
       ),
     ).not.toContain('\nold\n');
+    const sanitized = mergeStandaloneAiReviewSection(
+      '## Summary\n- existing body\n\n## Summary by CodeRabbit\n- noisy recap\n\n## Verification\n- bun run verify\n',
+      section,
+    );
+    expect(sanitized).not.toContain('Summary by CodeRabbit');
+    expect(sanitized).not.toContain('## Verification');
+    const replaced = mergeStandaloneAiReviewSection(
+      '## Summary\n- existing body\n\n<!-- ai-review:start -->\n## External AI Review\n\n## Verification\n- stale\n<!-- ai-review:end -->\n',
+      section,
+    );
+    expect(replaced.match(/<!-- ai-review:start -->/g)?.length ?? 0).toBe(1);
+    expect(replaced).not.toContain('- stale');
+    const deduped = mergeStandaloneAiReviewSection(
+      '## Summary\n- existing body\n\n<!-- ai-review:start -->\nold-1\n<!-- ai-review:end -->\n\n<!-- ai-review:start -->\nold-2\n<!-- ai-review:end -->\n',
+      section,
+    );
+    expect(deduped.match(/<!-- ai-review:start -->/g)?.length ?? 0).toBe(1);
+    expect(deduped).not.toContain('old-1');
+    expect(deduped).not.toContain('old-2');
   });
 
   it('renders final standalone ai review outcomes accurately', () => {
@@ -577,6 +596,13 @@ describe('delivery orchestrator', () => {
         vendors: ['qodo'],
       }),
     ).toContain('no prudent follow-up changes were required.');
+    expect(
+      buildStandaloneAiReviewSection({
+        outcome: 'clean',
+        note: 'External AI review completed without prudent follow-up changes.',
+        vendors: ['qodo'],
+      }),
+    ).toContain('- outcome: `clean`');
   });
 
   it('keeps standalone pr bodies free of artifact paths', () => {
@@ -625,6 +651,7 @@ describe('delivery orchestrator', () => {
     expect(body).not.toContain('### Vendor Summary Noise');
     expect(body).not.toContain('non-action summary:');
     expect(body).not.toContain('summary-only updates');
+    expect(body).not.toContain('## Verification');
   });
 
   it('renders no-action rationale when non-action summary exists on clean outcome', () => {
@@ -642,7 +669,7 @@ describe('delivery orchestrator', () => {
     );
   });
 
-  it('omits summary noise and renders resolved findings for reviewers', () => {
+  it('omits summary noise and renders actions taken for reviewers', () => {
     const body = buildPullRequestBody(
       {
         planKey: 'phase-03',
@@ -721,20 +748,30 @@ describe('delivery orchestrator', () => {
         status: 'reviewed',
       },
       {
+        actionCommits: [
+          {
+            sha: 'c87f955ca43a1234',
+            subject: 'resolve null-guard follow-up',
+            vendors: ['coderabbit'],
+          },
+        ],
         currentHeadSha: 'abcdef1234567890',
       },
     );
 
     expect(body).toContain('## External AI Review');
-    expect(body).toContain('### Resolved Review Findings');
+    expect(body).toContain('### Actions Taken');
     expect(body).toContain(
-      '[coderabbit] Guard the null return here. (native GitHub thread resolved)',
+      '`c87f955ca43a` [coderabbit] resolve null-guard follow-up',
     );
     expect(body).not.toContain('### Vendor Summary Noise');
     expect(body).not.toContain('[qodo] compressed 2 summary-only updates.');
     expect(body).not.toContain('Overall this looks good.');
-    expect(body).toContain('### Resolved Review Findings');
-    expect(body).toContain('[coderabbit] Previous concern already resolved.');
+    expect(body).not.toContain('### Resolved Review Findings');
+    expect(body).not.toContain(
+      '[coderabbit] Previous concern already resolved.',
+    );
+    expect(body).toContain('- outcome: `patched`');
   });
 
   it('keeps reviewed findings current when the current head sha is unknown', () => {
@@ -1251,7 +1288,9 @@ describe('delivery orchestrator', () => {
 
   it('accepts reviewer-facing markdown with proper headings and lists', () => {
     expect(() =>
-      assertReviewerFacingMarkdown('## Summary\n\n- item\n\n## Verification\n'),
+      assertReviewerFacingMarkdown(
+        '## Summary\n\n- item\n\n## External AI Review\n',
+      ),
     ).not.toThrow();
   });
 
@@ -1259,6 +1298,44 @@ describe('delivery orchestrator', () => {
     expect(() =>
       assertReviewerFacingMarkdown(
         '## Summary\n\n- guard against literal `\\\\n` in malformed generated bodies\n',
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects pr bodies that contain banned headings', () => {
+    expect(() =>
+      assertReviewerFacingMarkdown('## Summary by CodeRabbit\n\n- noisy recap'),
+    ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('## Verification\n\n- bun run verify'),
+    ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('## Verification ##\n\n- bun run verify'),
+    ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('## Summary by: Qodo\n\n- noisy recap'),
+    ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('Verification\n---\n\n- bun run verify'),
+    ).toThrow('PR body guard failed: banned section heading');
+  });
+
+  it('does not strip banned-looking headings inside fenced code blocks', () => {
+    const merged = mergeStandaloneAiReviewSection(
+      '## Summary\n\n~~~md\n```ts\n## Verification\n```\n- example snippet\n~~~\n',
+      buildStandaloneAiReviewSection({
+        outcome: 'clean',
+        note: 'External AI review completed without prudent follow-up changes.',
+        vendors: ['coderabbit'],
+      }),
+    );
+    expect(merged).toContain('~~~md');
+    expect(merged).toContain('```ts');
+    expect(merged).toContain('## Verification');
+    expect(merged).toContain('- example snippet');
+    expect(() =>
+      assertReviewerFacingMarkdown(
+        '## Summary\n\n~~~md\n```ts\n## Verification\n```\n- example snippet\n~~~\n',
       ),
     ).not.toThrow();
   });
