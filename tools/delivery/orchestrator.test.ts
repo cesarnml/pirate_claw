@@ -121,10 +121,10 @@ describe('delivery orchestrator', () => {
           ticketFile:
             'docs/02-delivery/phase-02/ticket-01-enclosure-first-feed-parsing.md',
           status: 'done',
-          branch: 'codex/p2-01-enclosure-first-feed-parsing',
+          branch: 'agents/p2-01-enclosure-first-feed-parsing',
           baseBranch: 'main',
           worktreePath: '/tmp/p2_01',
-          handoffPath: '.codex/delivery/phase-02/handoffs/p2-01-handoff.md',
+          handoffPath: '.agents/delivery/phase-02/handoffs/p2-01-handoff.md',
           handoffGeneratedAt: '2026-04-01T00:00:00.000Z',
           prNumber: 14,
           prUrl: 'https://example.test/pull/14',
@@ -158,8 +158,8 @@ describe('delivery orchestrator', () => {
     expect(synced.tickets[0]?.prNumber).toBe(14);
     expect(synced.tickets[1]).toMatchObject({
       status: 'pending',
-      branch: 'codex/p2-02-movie-matcher-allows-missing-codec',
-      baseBranch: 'codex/p2-01-enclosure-first-feed-parsing',
+      branch: 'agents/p2-02-movie-matcher-allows-missing-codec',
+      baseBranch: 'agents/p2-01-enclosure-first-feed-parsing',
     });
   });
 
@@ -168,9 +168,9 @@ describe('delivery orchestrator', () => {
       {
         planKey: 'phase-02',
         planPath: 'docs/02-delivery/phase-02/implementation-plan.md',
-        statePath: '.codex/delivery/phase-02/state.json',
-        reviewsDirPath: '.codex/delivery/phase-02/reviews',
-        handoffsDirPath: '.codex/delivery/phase-02/handoffs',
+        statePath: '.agents/delivery/phase-02/state.json',
+        reviewsDirPath: '.agents/delivery/phase-02/reviews',
+        handoffsDirPath: '.agents/delivery/phase-02/handoffs',
         reviewPollIntervalMinutes: 2,
         reviewPollMaxWaitMinutes: 8,
         tickets: [
@@ -181,12 +181,12 @@ describe('delivery orchestrator', () => {
             ticketFile:
               'docs/02-delivery/phase-02/ticket-01-enclosure-first-feed-parsing.md',
             status: 'done',
-            branch: 'codex/p2-01-enclosure-first-feed-parsing',
+            branch: 'agents/p2-01-enclosure-first-feed-parsing',
             baseBranch: 'main',
             worktreePath: '/tmp/p2_01',
             prUrl: 'https://example.test/pull/14',
             reviewArtifactPath:
-              '.codex/delivery/phase-02/reviews/P2.01-ai-review.txt',
+              '.agents/delivery/phase-02/reviews/P2.01-ai-review.txt',
             reviewOutcome: 'patched',
             reviewNote: 'patched the two actionable correctness issues',
           },
@@ -197,8 +197,8 @@ describe('delivery orchestrator', () => {
             ticketFile:
               'docs/02-delivery/phase-02/ticket-02-movie-matcher-allows-missing-codec.md',
             status: 'pending',
-            branch: 'codex/p2-02-movie-matcher-allows-missing-codec',
-            baseBranch: 'codex/p2-01-enclosure-first-feed-parsing',
+            branch: 'agents/p2-02-movie-matcher-allows-missing-codec',
+            baseBranch: 'agents/p2-01-enclosure-first-feed-parsing',
             worktreePath: '/tmp/p2_02',
           },
         ],
@@ -208,8 +208,8 @@ describe('delivery orchestrator', () => {
         title: 'Movie Matcher Allows Missing Codec',
         ticketFile:
           'docs/02-delivery/phase-02/ticket-02-movie-matcher-allows-missing-codec.md',
-        branch: 'codex/p2-02-movie-matcher-allows-missing-codec',
-        baseBranch: 'codex/p2-01-enclosure-first-feed-parsing',
+        branch: 'agents/p2-02-movie-matcher-allows-missing-codec',
+        baseBranch: 'agents/p2-01-enclosure-first-feed-parsing',
         worktreePath: '/tmp/p2_02',
       },
     );
@@ -221,7 +221,7 @@ describe('delivery orchestrator', () => {
     expect(handoff).toContain('Previous PR: https://example.test/pull/14');
     expect(handoff).toContain('Review outcome: `patched`');
     expect(handoff).toContain(
-      'Review artifact: `.codex/delivery/phase-02/reviews/P2.01-ai-review.txt`',
+      'Review artifact: `.agents/delivery/phase-02/reviews/P2.01-ai-review.txt`',
     );
   });
 
@@ -231,7 +231,7 @@ describe('delivery orchestrator', () => {
         id: 'P2.03',
         slug: 'readme-and-real-world-config-example',
       }),
-    ).toBe('codex/p2-03-readme-and-real-world-config-example');
+    ).toBe('agents/p2-03-readme-and-real-world-config-example');
     expect(deriveWorktreePath('/tmp/pirate_claw', 'P2.03')).toBe(
       '/tmp/pirate_claw_p2_03',
     );
@@ -254,9 +254,9 @@ describe('delivery orchestrator', () => {
           'HEAD abc123',
           'branch refs/heads/main',
           '',
-          'worktree /Users/cesar/.codex/worktrees/3cc9/pirate_claw',
+          'worktree /tmp/worktrees/3cc9/pirate_claw',
           'HEAD def456',
-          'branch refs/heads/codex/ai-code-review-template-boundary',
+          'branch refs/heads/agents/ai-code-review-template-boundary',
           '',
         ].join('\n'),
       ),
@@ -266,8 +266,8 @@ describe('delivery orchestrator', () => {
         branch: 'refs/heads/main',
       },
       {
-        path: '/Users/cesar/.codex/worktrees/3cc9/pirate_claw',
-        branch: 'refs/heads/codex/ai-code-review-template-boundary',
+        path: '/tmp/worktrees/3cc9/pirate_claw',
+        branch: 'refs/heads/agents/ai-code-review-template-boundary',
       },
     ]);
   });
@@ -292,9 +292,9 @@ describe('delivery orchestrator', () => {
     expect(
       findExistingBranch(
         [
-          'codex/p2-02-movie-matcher-missing-codec',
-          'codex/p2-03-readme-config-live-verification',
-          'codex/p2-04-rename-cli-config',
+          'agents/p2-02-movie-matcher-missing-codec',
+          'agents/p2-03-readme-config-live-verification',
+          'agents/p2-04-rename-cli-config',
         ],
         {
           id: 'P2.02',
@@ -302,7 +302,7 @@ describe('delivery orchestrator', () => {
         },
       ),
     ).toEqual({
-      branch: 'codex/p2-02-movie-matcher-missing-codec',
+      branch: 'agents/p2-02-movie-matcher-missing-codec',
       source: 'ticket-id',
     });
   });
@@ -313,9 +313,9 @@ describe('delivery orchestrator', () => {
         {
           planKey: 'phase-03',
           planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-          statePath: '.codex/delivery/phase-03/state.json',
-          reviewsDirPath: '.codex/delivery/phase-03/reviews',
-          handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+          statePath: '.agents/delivery/phase-03/state.json',
+          reviewsDirPath: '.agents/delivery/phase-03/reviews',
+          handoffsDirPath: '.agents/delivery/phase-03/handoffs',
           reviewPollIntervalMinutes: 2,
           reviewPollMaxWaitMinutes: 8,
           tickets: [
@@ -327,7 +327,7 @@ describe('delivery orchestrator', () => {
                 'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
               status: 'done',
               branch:
-                'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+                'agents/p3-01-persist-transmission-identity-for-queued-torrents',
               baseBranch: 'main',
               worktreePath: '/tmp/p3_01',
             },
@@ -339,14 +339,14 @@ describe('delivery orchestrator', () => {
                 'docs/02-delivery/phase-03/ticket-02-reconcile-torrent-lifecycle-from-transmission.md',
               status: 'in_review',
               branch:
-                'codex/p3-02-reconcile-torrent-lifecycle-from-transmission',
+                'agents/p3-02-reconcile-torrent-lifecycle-from-transmission',
               baseBranch:
-                'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+                'agents/p3-01-persist-transmission-identity-for-queued-torrents',
               worktreePath: '/tmp/p3_02',
             },
           ],
         },
-        'codex/p3-02-reconcile-torrent-lifecycle-from-transmission',
+        'agents/p3-02-reconcile-torrent-lifecycle-from-transmission',
       )?.id,
     ).toBe('P3.02');
   });
@@ -380,7 +380,7 @@ describe('delivery orchestrator', () => {
             ],
           },
         ],
-        'codex/p3-02-reconcile-torrent-lifecycle-from-transmission',
+        'agents/p3-02-reconcile-torrent-lifecycle-from-transmission',
       ),
     ).toBe('docs/02-delivery/phase-03/implementation-plan.md');
   });
@@ -402,10 +402,10 @@ describe('delivery orchestrator', () => {
             ],
           },
         ],
-        'codex/not-a-ticket-branch',
+        'agents/not-a-ticket-branch',
       ),
     ).toThrow(
-      'Could not infer a delivery plan for codex/not-a-ticket-branch. Pass --plan <plan-path>.',
+      'Could not infer a delivery plan for agents/not-a-ticket-branch. Pass --plan <plan-path>.',
     );
   });
 
@@ -418,8 +418,8 @@ describe('delivery orchestrator', () => {
         ticketFile:
           'docs/02-delivery/phase-02/ticket-02-movie-matcher-allows-missing-codec.md',
         status: 'reviewed',
-        branch: 'codex/p2-02-movie-matcher-missing-codec',
-        baseBranch: 'codex/p2-01-enclosure-first-feed-parsing',
+        branch: 'agents/p2-02-movie-matcher-missing-codec',
+        baseBranch: 'agents/p2-01-enclosure-first-feed-parsing',
         worktreePath: '/tmp/p2_02',
         reviewOutcome: 'clean',
       }),
@@ -433,8 +433,8 @@ describe('delivery orchestrator', () => {
         ticketFile:
           'docs/02-delivery/phase-02/ticket-02-movie-matcher-allows-missing-codec.md',
         status: 'reviewed',
-        branch: 'codex/p2-02-movie-matcher-missing-codec',
-        baseBranch: 'codex/p2-01-enclosure-first-feed-parsing',
+        branch: 'agents/p2-02-movie-matcher-missing-codec',
+        baseBranch: 'agents/p2-01-enclosure-first-feed-parsing',
         worktreePath: '/tmp/p2_02',
         reviewOutcome: undefined,
       }),
@@ -494,7 +494,7 @@ describe('delivery orchestrator', () => {
         planKey: 'phase-03',
         ticketId: 'P3.01',
         ticketTitle: 'Persist Transmission Identity For Queued Torrents',
-        branch: 'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+        branch: 'agents/p3-01-persist-transmission-identity-for-queued-torrents',
       }),
     ).toContain('Son of Anton\nP3.01 underway for phase-03.');
     expect(
@@ -532,8 +532,8 @@ describe('delivery orchestrator', () => {
       vendors: ['coderabbit', 'qodo'],
       actionSummary: 'Flagged 2 finding comments for follow-up.',
       nonActionSummary: 'Ignored 1 summary comment.',
-      artifactJsonPath: '.codex/ai-review/pr-32/review.json',
-      artifactTextPath: '.codex/ai-review/pr-32/review.txt',
+      artifactJsonPath: '.agents/ai-review/pr-32/review.json',
+      artifactTextPath: '.agents/ai-review/pr-32/review.txt',
     });
 
     expect(
@@ -609,8 +609,8 @@ describe('delivery orchestrator', () => {
     const body = buildStandaloneAiReviewSection({
       outcome: 'patched',
       note: 'Patched the prudent AI review follow-up.',
-      artifactJsonPath: '.codex/ai-review/pr-32/review.json',
-      artifactTextPath: '.codex/ai-review/pr-32/review.txt',
+      artifactJsonPath: '.agents/ai-review/pr-32/review.json',
+      artifactTextPath: '.agents/ai-review/pr-32/review.txt',
       vendors: ['coderabbit'],
     });
 
@@ -868,9 +868,9 @@ describe('delivery orchestrator', () => {
       {
         planKey: 'phase-03',
         planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-        statePath: '.codex/delivery/phase-03/state.json',
-        reviewsDirPath: '.codex/delivery/phase-03/reviews',
-        handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
         reviewPollIntervalMinutes: 2,
         reviewPollMaxWaitMinutes: 8,
         tickets: [
@@ -882,7 +882,7 @@ describe('delivery orchestrator', () => {
               'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
             status: 'in_review',
             branch:
-              'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+              'agents/p3-01-persist-transmission-identity-for-queued-torrents',
             baseBranch: 'main',
             worktreePath: '/tmp/p3_01',
             prUrl: 'https://example.test/pull/20',
@@ -908,9 +908,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -922,7 +922,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -937,9 +937,9 @@ describe('delivery orchestrator', () => {
           ticketFile:
             'docs/02-delivery/phase-03/ticket-02-reconcile-torrent-lifecycle-from-transmission.md',
           status: 'pending',
-          branch: 'codex/p3-02-reconcile-torrent-lifecycle-from-transmission',
+          branch: 'agents/p3-02-reconcile-torrent-lifecycle-from-transmission',
           baseBranch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           worktreePath: '/tmp/p3_02',
         },
       ],
@@ -1023,9 +1023,9 @@ describe('delivery orchestrator', () => {
       {
         planKey: 'phase-03',
         planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-        statePath: '.codex/delivery/phase-03/state.json',
-        reviewsDirPath: '.codex/delivery/phase-03/reviews',
-        handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
         reviewPollIntervalMinutes: 2,
         reviewPollMaxWaitMinutes: 8,
         tickets: [
@@ -1037,7 +1037,7 @@ describe('delivery orchestrator', () => {
               'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
             status: 'in_review',
             branch:
-              'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+              'agents/p3-01-persist-transmission-identity-for-queued-torrents',
             baseBranch: 'main',
             worktreePath: '/tmp/old_p3_01',
             prUrl: 'https://example.test/pull/20',
@@ -1047,9 +1047,9 @@ describe('delivery orchestrator', () => {
       {
         planKey: 'phase-03',
         planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-        statePath: '.codex/delivery/phase-03/state.json',
-        reviewsDirPath: '.codex/delivery/phase-03/reviews',
-        handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
         reviewPollIntervalMinutes: 2,
         reviewPollMaxWaitMinutes: 8,
         tickets: [
@@ -1061,7 +1061,7 @@ describe('delivery orchestrator', () => {
               'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
             status: 'pending',
             branch:
-              'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+              'agents/p3-01-persist-transmission-identity-for-queued-torrents',
             baseBranch: 'main',
             worktreePath: '/tmp/new_p3_01',
           },
@@ -1257,7 +1257,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_progress',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
         },
@@ -1358,7 +1358,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_progress',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
         },
@@ -1404,9 +1404,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1418,7 +1418,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1512,10 +1512,10 @@ describe('delivery orchestrator', () => {
       expect(fetchCount).toBe(2);
       expect(nextState.tickets[0]?.status).toBe('needs_patch');
       expect(nextState.tickets[0]?.reviewArtifactJsonPath).toBe(
-        '.codex/delivery/phase-03/reviews/P3.01-ai-review.json',
+        '.agents/delivery/phase-03/reviews/P3.01-ai-review.json',
       );
       expect(nextState.tickets[0]?.reviewArtifactPath).toBe(
-        '.codex/delivery/phase-03/reviews/P3.01-ai-review.txt',
+        '.agents/delivery/phase-03/reviews/P3.01-ai-review.txt',
       );
       expect(nextState.tickets[0]?.reviewVendors).toEqual([
         'coderabbit',
@@ -1527,14 +1527,14 @@ describe('delivery orchestrator', () => {
       );
       expect(
         await readFile(
-          join(cwd, '.codex/delivery/phase-03/reviews/P3.01-ai-review.txt'),
+          join(cwd, '.agents/delivery/phase-03/reviews/P3.01-ai-review.txt'),
           'utf8',
         ),
       ).toBe('normalized ai review artifact');
       expect(
         JSON.parse(
           await readFile(
-            join(cwd, '.codex/delivery/phase-03/reviews/P3.01-ai-review.json'),
+            join(cwd, '.agents/delivery/phase-03/reviews/P3.01-ai-review.json'),
             'utf8',
           ),
         ),
@@ -1563,9 +1563,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1577,7 +1577,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1662,9 +1662,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1676,7 +1676,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1722,9 +1722,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1736,7 +1736,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1783,9 +1783,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1797,7 +1797,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1846,9 +1846,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1860,7 +1860,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1897,9 +1897,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1911,7 +1911,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'in_review',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           prUrl: 'https://example.test/pull/20',
@@ -1967,9 +1967,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -1981,7 +1981,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'needs_patch',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           reviewComments: [
@@ -2041,9 +2041,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -2055,7 +2055,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'operator_input_needed',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           reviewOutcome: 'patched',
@@ -2087,9 +2087,9 @@ describe('delivery orchestrator', () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
-      statePath: '.codex/delivery/phase-03/state.json',
-      reviewsDirPath: '.codex/delivery/phase-03/reviews',
-      handoffsDirPath: '.codex/delivery/phase-03/handoffs',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
       reviewPollIntervalMinutes: 2,
       reviewPollMaxWaitMinutes: 8,
       tickets: [
@@ -2101,7 +2101,7 @@ describe('delivery orchestrator', () => {
             'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
           status: 'needs_patch',
           branch:
-            'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
           baseBranch: 'main',
           worktreePath: '/tmp/p3_01',
           reviewComments: [
@@ -2173,7 +2173,7 @@ describe('delivery orchestrator', () => {
         planKey: 'phase-03',
         ticketId: 'P3.01',
         ticketTitle: 'Persist Transmission Identity For Queued Torrents',
-        branch: 'codex/p3-01-persist-transmission-identity-for-queued-torrents',
+        branch: 'agents/p3-01-persist-transmission-identity-for-queued-torrents',
       },
     );
 
