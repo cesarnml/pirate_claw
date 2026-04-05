@@ -191,6 +191,7 @@ type NotificationPayload = {
 
 const DEFAULT_REVIEW_POLL_INTERVAL_MINUTES = 2;
 const DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES = 8;
+const MAX_ACTION_COMMITS = 20;
 const STANDALONE_AI_REVIEW_SECTION_START = '<!-- ai-review:start -->';
 const STANDALONE_AI_REVIEW_SECTION_END = '<!-- ai-review:end -->';
 
@@ -2934,7 +2935,7 @@ function runGitLines(cwd: string, cmd: string[]): string[] {
 function parseMarkdownHeading(
   line: string,
 ): { level: number; title: string } | undefined {
-  const match = line.trim().match(/^(#{1,6})\s+(.+?)\s*$/);
+  const match = line.trim().match(/^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/);
   if (!match) {
     return undefined;
   }
@@ -2942,11 +2943,15 @@ function parseMarkdownHeading(
 }
 
 function isBannedPrBodyHeadingTitle(title: string): boolean {
-  const normalized = title.toLowerCase();
+  const normalized = title
+    .toLowerCase()
+    .replace(/[#:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return (
-    normalized === 'validation' ||
-    normalized === 'verification' ||
-    normalized.startsWith('summary by ')
+    /^validation\b/.test(normalized) ||
+    /^verification\b/.test(normalized) ||
+    /^summary by\b/.test(normalized)
   );
 }
 
@@ -2954,8 +2959,22 @@ function stripBannedPrBodySections(body: string): string {
   const lines = body.split('\n');
   const kept: string[] = [];
   let index = 0;
+  let inFencedCodeBlock = false;
 
   while (index < lines.length) {
+    const line = lines[index]!;
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      kept.push(line);
+      index += 1;
+      continue;
+    }
+    if (inFencedCodeBlock) {
+      kept.push(line);
+      index += 1;
+      continue;
+    }
+
     const heading = parseMarkdownHeading(lines[index]!);
     if (!heading || !isBannedPrBodyHeadingTitle(heading.title)) {
       kept.push(lines[index]!);
@@ -2965,6 +2984,16 @@ function stripBannedPrBodySections(body: string): string {
 
     index += 1;
     while (index < lines.length) {
+      const nextLine = lines[index]!;
+      if (/^\s*(```|~~~)/.test(nextLine)) {
+        inFencedCodeBlock = !inFencedCodeBlock;
+        index += 1;
+        continue;
+      }
+      if (inFencedCodeBlock) {
+        index += 1;
+        continue;
+      }
       const nextHeading = parseMarkdownHeading(lines[index]!);
       if (nextHeading && nextHeading.level <= heading.level) {
         break;
@@ -3010,7 +3039,9 @@ function listReviewActionCommits(
     return runGitLines(cwd, [
       'git',
       'log',
+      '--no-merges',
       '--reverse',
+      `--max-count=${MAX_ACTION_COMMITS}`,
       '--format=%H%x09%s',
       `${reviewedHeadSha}..${currentHeadSha}`,
     ])
@@ -3942,18 +3973,16 @@ export function mergeStandaloneAiReviewSection(
   body: string,
   section: string,
 ): string {
-  const sanitizedBody = stripBannedPrBodySections(body);
   const pattern = new RegExp(
     `${STANDALONE_AI_REVIEW_SECTION_START}[\\s\\S]*?${STANDALONE_AI_REVIEW_SECTION_END}`,
   );
+  const mergedBody = pattern.test(body)
+    ? body.replace(pattern, section)
+    : body.trimEnd().length > 0
+      ? `${body.trimEnd()}\n\n${section}\n`
+      : `${section}\n`;
 
-  if (pattern.test(sanitizedBody)) {
-    return sanitizedBody.replace(pattern, section);
-  }
-
-  return sanitizedBody.trimEnd().length > 0
-    ? `${sanitizedBody.trimEnd()}\n\n${section}\n`
-    : `${section}\n`;
+  return `${stripBannedPrBodySections(mergedBody).trimEnd()}\n`;
 }
 
 function updateStandalonePullRequestBody(

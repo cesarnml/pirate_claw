@@ -551,6 +551,12 @@ describe('delivery orchestrator', () => {
     );
     expect(sanitized).not.toContain('Summary by CodeRabbit');
     expect(sanitized).not.toContain('## Verification');
+    const replaced = mergeStandaloneAiReviewSection(
+      '## Summary\n- existing body\n\n<!-- ai-review:start -->\n## External AI Review\n\n## Verification\n- stale\n<!-- ai-review:end -->\n',
+      section,
+    );
+    expect(replaced.match(/<!-- ai-review:start -->/g)?.length ?? 0).toBe(1);
+    expect(replaced).not.toContain('- stale');
   });
 
   it('renders final standalone ai review outcomes accurately', () => {
@@ -1296,6 +1302,26 @@ describe('delivery orchestrator', () => {
     expect(() =>
       assertReviewerFacingMarkdown('## Verification\n\n- bun run verify'),
     ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('## Verification ##\n\n- bun run verify'),
+    ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('## Summary by: Qodo\n\n- noisy recap'),
+    ).toThrow('PR body guard failed: banned section heading');
+  });
+
+  it('does not strip banned-looking headings inside fenced code blocks', () => {
+    const merged = mergeStandaloneAiReviewSection(
+      '## Summary\n\n```md\n## Verification\n- example snippet\n```\n',
+      buildStandaloneAiReviewSection({
+        outcome: 'clean',
+        note: 'External AI review completed without prudent follow-up changes.',
+        vendors: ['coderabbit'],
+      }),
+    );
+    expect(merged).toContain('```md');
+    expect(merged).toContain('## Verification');
+    expect(merged).toContain('- example snippet');
   });
 
   it('requires internal review before opening a ticket-linked PR', async () => {
