@@ -831,7 +831,7 @@ export function canAdvanceTicket(ticket: TicketState): boolean {
 export function deriveBranchName(
   definition: Pick<TicketDefinition, 'id' | 'slug'>,
 ): string {
-  return `codex/${definition.id.toLowerCase().replace('.', '-')}-${definition.slug}`;
+  return `agents/${definition.id.toLowerCase().replace('.', '-')}-${definition.slug}`;
 }
 
 export function deriveWorktreePath(cwd: string, ticketId: string): string {
@@ -1300,7 +1300,7 @@ export function findExistingBranch(
 
   if (ticketIdMatches.length > 0) {
     return {
-      branch: preferCodexBranch(ticketIdMatches),
+      branch: preferDeliveryBranch(ticketIdMatches),
       source: 'ticket-id',
     };
   }
@@ -3125,8 +3125,10 @@ function listReviewActionCommits(
   }
 }
 
-function preferCodexBranch(branches: string[]): string {
-  return branches.find((branch) => branch.startsWith('codex/')) ?? branches[0]!;
+function preferDeliveryBranch(branches: string[]): string {
+  return (
+    branches.find((branch) => branch.startsWith('agents/')) ?? branches[0]!
+  );
 }
 
 function shortenSha(sha: string | undefined): string | undefined {

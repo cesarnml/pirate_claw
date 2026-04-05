@@ -25,7 +25,7 @@ These are candidate workflow improvements to review before phase 02 planning. Th
 - Keep a lightweight review standard for AI-generated comments: accept high-signal findings, push back on low-signal or mis-scoped suggestions.
 - Introduce durable ticket tracking outside chat so the next ticket, blocked work, review state, and deferred items are explicit.
 - Evaluate an issue tracker such as Linear only if it reduces coordination overhead instead of adding workflow ceremony.
-- Prefer an MCP-readable project management surface so Codex can read ticket context, status, and deferred work without inferring it from branches and docs.
+- Prefer an MCP-readable project management surface so the AI agent can read ticket context, status, and deferred work without inferring it from branches and docs.
 
 ## Desired Outcome For Ticket Tracking
 
