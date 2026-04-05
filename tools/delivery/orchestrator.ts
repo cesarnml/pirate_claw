@@ -241,6 +241,12 @@ type AiReviewThreadResolution = {
   vendor: string;
 };
 
+type ReviewActionCommit = {
+  sha: string;
+  subject: string;
+  vendors: string[];
+};
+
 type AiReviewFetcherResult = {
   agents: AiReviewAgentResult[];
   artifactText: string;
@@ -1652,8 +1658,16 @@ export async function openPullRequest(
     target,
     readLatestCommitSubject(target.worktreePath),
   );
+  const currentHeadSha = readHeadSha(target.worktreePath);
   const body = buildPullRequestBody(state, target, {
-    currentHeadSha: readHeadSha(target.worktreePath),
+    actionCommits: listReviewActionCommits(
+      target.worktreePath,
+      target.reviewHeadSha,
+      currentHeadSha,
+      target.reviewComments,
+      target.reviewVendors,
+    ),
+    currentHeadSha,
   });
   assertReviewerFacingMarkdown(body);
   const existingPullRequest = findOpenPullRequest(
@@ -2885,6 +2899,7 @@ async function restackTicket(
   const pullRequest = findOpenPullRequest(cwd, target.branch);
 
   if (pullRequest) {
+    const currentHeadSha = readHeadSha(updatedTarget.worktreePath);
     runProcess(cwd, [
       'gh',
       'pr',
@@ -2894,7 +2909,14 @@ async function restackTicket(
       nextBaseBranch,
       '--body',
       buildPullRequestBody(nextState, updatedTarget, {
-        currentHeadSha: readHeadSha(updatedTarget.worktreePath),
+        actionCommits: listReviewActionCommits(
+          updatedTarget.worktreePath,
+          updatedTarget.reviewHeadSha,
+          currentHeadSha,
+          updatedTarget.reviewComments,
+          updatedTarget.reviewVendors,
+        ),
+        currentHeadSha,
       }),
     ]);
   }
@@ -2907,6 +2929,106 @@ function runGitLines(cwd: string, cmd: string[]): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+}
+
+function parseMarkdownHeading(
+  line: string,
+): { level: number; title: string } | undefined {
+  const match = line.trim().match(/^(#{1,6})\s+(.+?)\s*$/);
+  if (!match) {
+    return undefined;
+  }
+  return { level: match[1].length, title: match[2].trim() };
+}
+
+function isBannedPrBodyHeadingTitle(title: string): boolean {
+  const normalized = title.toLowerCase();
+  return (
+    normalized === 'validation' ||
+    normalized === 'verification' ||
+    normalized.startsWith('summary by ')
+  );
+}
+
+function stripBannedPrBodySections(body: string): string {
+  const lines = body.split('\n');
+  const kept: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const heading = parseMarkdownHeading(lines[index]!);
+    if (!heading || !isBannedPrBodyHeadingTitle(heading.title)) {
+      kept.push(lines[index]!);
+      index += 1;
+      continue;
+    }
+
+    index += 1;
+    while (index < lines.length) {
+      const nextHeading = parseMarkdownHeading(lines[index]!);
+      if (nextHeading && nextHeading.level <= heading.level) {
+        break;
+      }
+      index += 1;
+    }
+  }
+
+  return kept
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+function collectActionVendors(
+  comments: AiReviewComment[] | undefined,
+  vendors: string[] | undefined,
+): string[] {
+  const fromFindings = (comments ?? [])
+    .filter((comment) => comment.kind === 'finding')
+    .map((comment) => comment.vendor);
+  const merged = fromFindings.length > 0 ? fromFindings : (vendors ?? []);
+  return [...new Set(merged)];
+}
+
+function listReviewActionCommits(
+  cwd: string,
+  reviewedHeadSha: string | undefined,
+  currentHeadSha: string | undefined,
+  comments: AiReviewComment[] | undefined,
+  vendors: string[] | undefined,
+): ReviewActionCommit[] {
+  if (
+    !reviewedHeadSha ||
+    !currentHeadSha ||
+    reviewedHeadSha === currentHeadSha
+  ) {
+    return [];
+  }
+
+  const actionVendors = collectActionVendors(comments, vendors);
+  try {
+    return runGitLines(cwd, [
+      'git',
+      'log',
+      '--reverse',
+      '--format=%H%x09%s',
+      `${reviewedHeadSha}..${currentHeadSha}`,
+    ])
+      .map((line) => {
+        const [sha, subject] = line.split('\t', 2);
+        if (!sha || !subject) {
+          return undefined;
+        }
+        return {
+          sha,
+          subject: summarizeReviewMessage(subject),
+          vendors: actionVendors,
+        } satisfies ReviewActionCommit;
+      })
+      .filter((commit): commit is ReviewActionCommit => commit !== undefined);
+  } catch {
+    return [];
+  }
 }
 
 function preferCodexBranch(branches: string[]): string {
@@ -3112,9 +3234,20 @@ export function assertReviewerFacingMarkdown(body: string): void {
       `PR body guard failed: malformed markdown heading "${malformedHeading.trim()}".`,
     );
   }
+
+  const bannedHeading = sanitizedLines.find((line) => {
+    const heading = parseMarkdownHeading(line);
+    return heading ? isBannedPrBodyHeadingTitle(heading.title) : false;
+  });
+  if (bannedHeading) {
+    throw new Error(
+      `PR body guard failed: banned section heading "${bannedHeading.trim()}".`,
+    );
+  }
 }
 
 function buildAiReviewDetailLines(input: {
+  actionCommits?: ReviewActionCommit[];
   actionSummary?: string;
   comments?: AiReviewComment[];
   currentHeadSha?: string;
@@ -3139,6 +3272,8 @@ function buildAiReviewDetailLines(input: {
   ) {
     return lines;
   }
+
+  lines.push(`- outcome: \`${reviewStatus}\``);
 
   const appliesToCurrentHead =
     !!input.reviewedHeadSha &&
@@ -3227,7 +3362,15 @@ function buildAiReviewDetailLines(input: {
     return buildReviewCommentBullet(comment, detail);
   });
 
-  if (resolvedFindingBullets.length > 0) {
+  const actionCommitBullets = (input.actionCommits ?? []).map((commit) => {
+    const vendorTag =
+      commit.vendors.length > 0 ? ` [${commit.vendors.join(',')}]` : '';
+    return `- \`${shortenSha(commit.sha)}\`${vendorTag} ${commit.subject}`;
+  });
+
+  if (actionCommitBullets.length > 0) {
+    lines.push('', '### Actions Taken', '', ...actionCommitBullets);
+  } else if (resolvedFindingBullets.length > 0) {
     lines.push(
       '',
       '### Resolved Review Findings',
@@ -3291,6 +3434,7 @@ export function buildPullRequestBody(
     | 'reviewVendors'
   >,
   options: {
+    actionCommits?: ReviewActionCommit[];
     currentHeadSha?: string;
   } = {},
 ): string {
@@ -3317,6 +3461,7 @@ export function buildPullRequestBody(
     lines.push(
       ...buildAiReviewDetailLines({
         actionSummary: ticket.reviewActionSummary,
+        actionCommits: options.actionCommits,
         comments: ticket.reviewComments,
         currentHeadSha: options.currentHeadSha,
         maxWaitMinutes: state.reviewPollMaxWaitMinutes,
@@ -3337,9 +3482,7 @@ export function buildPullRequestBody(
     }
   }
 
-  lines.push('', '## Verification', '', '- `bun run ci`');
-
-  return lines.join('\n');
+  return stripBannedPrBodySections(lines.join('\n'));
 }
 
 export function buildPullRequestTitle(
@@ -3728,8 +3871,16 @@ function updatePullRequestBody(
     return;
   }
 
+  const currentHeadSha = readHeadSha(ticket.worktreePath);
   const body = buildPullRequestBody(state, ticket, {
-    currentHeadSha: readHeadSha(ticket.worktreePath),
+    actionCommits: listReviewActionCommits(
+      ticket.worktreePath,
+      ticket.reviewHeadSha,
+      currentHeadSha,
+      ticket.reviewComments,
+      ticket.reviewVendors,
+    ),
+    currentHeadSha,
   });
   assertReviewerFacingMarkdown(body);
 
@@ -3758,6 +3909,7 @@ export function buildStandaloneAiReviewSection(
     | 'vendors'
   >,
   options: {
+    actionCommits?: ReviewActionCommit[];
     currentHeadSha?: string;
   } = {},
 ): string {
@@ -3769,6 +3921,7 @@ export function buildStandaloneAiReviewSection(
   lines.push(
     ...buildAiReviewDetailLines({
       actionSummary: result.actionSummary,
+      actionCommits: options.actionCommits,
       comments: result.comments,
       currentHeadSha: options.currentHeadSha,
       maxWaitMinutes: DEFAULT_REVIEW_POLL_MAX_WAIT_MINUTES,
@@ -3782,23 +3935,24 @@ export function buildStandaloneAiReviewSection(
   );
 
   lines.push(STANDALONE_AI_REVIEW_SECTION_END);
-  return lines.join('\n');
+  return stripBannedPrBodySections(lines.join('\n'));
 }
 
 export function mergeStandaloneAiReviewSection(
   body: string,
   section: string,
 ): string {
+  const sanitizedBody = stripBannedPrBodySections(body);
   const pattern = new RegExp(
     `${STANDALONE_AI_REVIEW_SECTION_START}[\\s\\S]*?${STANDALONE_AI_REVIEW_SECTION_END}`,
   );
 
-  if (pattern.test(body)) {
-    return body.replace(pattern, section);
+  if (pattern.test(sanitizedBody)) {
+    return sanitizedBody.replace(pattern, section);
   }
 
-  return body.trimEnd().length > 0
-    ? `${body.trimEnd()}\n\n${section}\n`
+  return sanitizedBody.trimEnd().length > 0
+    ? `${sanitizedBody.trimEnd()}\n\n${section}\n`
     : `${section}\n`;
 }
 
@@ -3810,6 +3964,13 @@ function updateStandalonePullRequestBody(
   const nextBody = mergeStandaloneAiReviewSection(
     pullRequest.body,
     buildStandaloneAiReviewSection(result, {
+      actionCommits: listReviewActionCommits(
+        cwd,
+        result.reviewedHeadSha,
+        pullRequest.headRefOid,
+        result.comments,
+        result.vendors,
+      ),
       currentHeadSha: pullRequest.headRefOid,
     }),
   );
