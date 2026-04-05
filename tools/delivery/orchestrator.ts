@@ -3126,7 +3126,9 @@ function listReviewActionCommits(
 }
 
 function preferDeliveryBranch(branches: string[]): string {
-  return branches.find((branch) => branch.startsWith('agents/')) ?? branches[0]!;
+  return (
+    branches.find((branch) => branch.startsWith('agents/')) ?? branches[0]!
+  );
 }
 
 function shortenSha(sha: string | undefined): string | undefined {

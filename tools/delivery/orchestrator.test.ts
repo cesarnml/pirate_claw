@@ -494,7 +494,8 @@ describe('delivery orchestrator', () => {
         planKey: 'phase-03',
         ticketId: 'P3.01',
         ticketTitle: 'Persist Transmission Identity For Queued Torrents',
-        branch: 'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+        branch:
+          'agents/p3-01-persist-transmission-identity-for-queued-torrents',
       }),
     ).toContain('Son of Anton\nP3.01 underway for phase-03.');
     expect(
@@ -2173,7 +2174,8 @@ describe('delivery orchestrator', () => {
         planKey: 'phase-03',
         ticketId: 'P3.01',
         ticketTitle: 'Persist Transmission Identity For Queued Torrents',
-        branch: 'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+        branch:
+          'agents/p3-01-persist-transmission-identity-for-queued-torrents',
       },
     );
 

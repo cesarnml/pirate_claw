@@ -15,7 +15,7 @@ The docs are organized by purpose so later phases can be added without flattenin
 
 ### `00-overview`
 
-Entry-point docs for new contributors or new Codex threads.
+Entry-point docs for new contributors or new AI-agent threads.
 
 - `start-here.md`: onboarding and immediate next action
 - `roadmap.md`: phase-level view of what comes next
