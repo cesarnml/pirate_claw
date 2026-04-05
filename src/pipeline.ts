@@ -1,6 +1,6 @@
 import type { AppConfig, FeedConfig } from './config';
 import { fetchFeed, type RawFeedItem } from './feed';
-import { matchMovieItem } from './movie-match';
+import { getMovieNoMatchReason, matchMovieItem } from './movie-match';
 import { normalizeFeedItem } from './normalize';
 import {
   createPipelineCoordinator,
@@ -53,7 +53,10 @@ export async function runPipeline(input: {
         const match = matchFeedItem(feedItem, input.config, feed);
 
         if (!match) {
-          coordinator.recordNoMatch(feedItem.id);
+          coordinator.recordNoMatch(
+            feedItem.id,
+            getFeedItemNoMatchReason(feedItem, input.config, feed),
+          );
           continue;
         }
 
@@ -182,6 +185,23 @@ function matchFeedItem(
   }
 
   return matchMovieItem(normalized, config.movies);
+}
+
+function getFeedItemNoMatchReason(
+  feedItem: FeedItemRecord,
+  config: AppConfig,
+  feed: FeedConfig,
+): string | undefined {
+  const normalized = normalizeFeedItem({
+    mediaType: feed.mediaType,
+    rawTitle: feedItem.rawTitle,
+  });
+
+  if (normalized.mediaType === 'movie') {
+    return getMovieNoMatchReason(normalized, config.movies);
+  }
+
+  return undefined;
 }
 
 function createEmptyReconcileCounts(): Record<
