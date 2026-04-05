@@ -47,11 +47,17 @@ Working notes:
 
 ## Phase 03: Post-Queue Lifecycle
 
-Direction:
+Goal:
 
-- download completion tracking
-- Transmission lifecycle reconciliation for Pirate Claw-queued torrents
-- richer local status visibility after queueing
+- add post-queue lifecycle tracking for torrents queued by Pirate Claw
+- reconcile lifecycle state from Transmission through a dedicated command path
+- expose reconciled lifecycle state in local status output
+
+Current status:
+
+- implemented via `pirate-claw reconcile` and lifecycle-aware `pirate-claw status`
+- completion and `missing_from_transmission` semantics are persisted locally
+- no always-on reconciliation loop has been introduced
 
 Explicitly deferred:
 
@@ -60,12 +66,6 @@ Explicitly deferred:
 - Plex, Jellyfin, or Synology-specific integrations
 - media-server or library/archive integrations
 - UI work or third-party media metadata integrations
-
-Not committed yet:
-
-- how much raw downloader state should be retained locally
-- long-term service model for NAS deployment
-- final storage and organization strategy after download completion
 
 Future pressure and ideation:
 
@@ -79,3 +79,5 @@ Future pressure and ideation:
 - keep phase docs outcome-focused
 - keep tickets implementation-focused
 - promote durable technical choices into ADRs
+
+Last verified against `README.md` and active delivery plans: 2026-04-05.

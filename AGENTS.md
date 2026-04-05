@@ -18,4 +18,5 @@ Before calling a delivery ticket complete:
 
 - update or add the ticket rationale note when the ticket introduces or changes behavior
 - update `README.md` when user-visible behavior, command surface, or project status changed
+- update `docs/00-overview/start-here.md` and `docs/00-overview/roadmap.md` when a phase/ticket changes delivered scope, current commands, or deferrals
 - verify the relevant tests or checks for the completed work

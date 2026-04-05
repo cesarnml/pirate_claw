@@ -1195,9 +1195,15 @@ function inferStateFromRepo(
     'branch',
     '--format=%(refname:short)',
   ]);
-  const pullRequests = listPullRequests(cwd);
+  const openPullRequests = listOpenPullRequests(cwd);
+  const mergedPullRequests = listMergedPullRequests(cwd);
   const branchCatalog = [
-    ...new Set([...localBranches, ...remoteBranches, ...pullRequests.keys()]),
+    ...new Set([
+      ...localBranches,
+      ...remoteBranches,
+      ...openPullRequests.keys(),
+      ...mergedPullRequests.keys(),
+    ]),
   ];
 
   const tickets = ticketDefinitions.map((definition, index) => {
@@ -1210,9 +1216,13 @@ function inferStateFromRepo(
         : (findExistingBranch(branchCatalog, ticketDefinitions[index - 1]!)
             ?.branch ?? deriveBranchName(ticketDefinitions[index - 1]!));
     const branchExists = branchCatalog.includes(branch);
-    const pr =
-      pullRequests.get(branch) ??
-      findPullRequestForTicket(pullRequests, definition);
+    const openPr =
+      openPullRequests.get(branch) ??
+      findPullRequestForTicket(openPullRequests, definition);
+    const mergedPr =
+      mergedPullRequests.get(branch) ??
+      findPullRequestForTicket(mergedPullRequests, definition);
+    const pr = openPr ?? mergedPr;
     const nextBranch = ticketDefinitions[index + 1]
       ? (findExistingBranch(branchCatalog, ticketDefinitions[index + 1]!)
           ?.branch ?? deriveBranchName(ticketDefinitions[index + 1]!))
@@ -1222,9 +1232,9 @@ function inferStateFromRepo(
 
     let status: TicketStatus = 'pending';
 
-    if (branchExists && nextBranchExists) {
+    if (mergedPr || (branchExists && nextBranchExists)) {
       status = 'done';
-    } else if (pr) {
+    } else if (openPr) {
       status = 'in_review';
     } else if (branchExists) {
       status = 'in_progress';
@@ -1368,13 +1378,45 @@ export function summarizeStateDifferences(
   return changes;
 }
 
-function listPullRequests(cwd: string): Map<string, PullRequestSummary> {
+function listOpenPullRequests(cwd: string): Map<string, PullRequestSummary> {
   const stdout = runProcess(cwd, [
     'gh',
     'pr',
     'list',
     '--state',
     'open',
+    '--limit',
+    '100',
+    '--json',
+    'number,url,headRefName,state',
+  ]);
+  const parsed = JSON.parse(stdout) as Array<{
+    number: number;
+    url: string;
+    headRefName: string;
+    state: string;
+  }>;
+
+  return new Map(
+    parsed.map((pr) => [
+      pr.headRefName,
+      {
+        headRefName: pr.headRefName,
+        number: pr.number,
+        url: pr.url,
+        state: pr.state,
+      } satisfies PullRequestSummary,
+    ]),
+  );
+}
+
+function listMergedPullRequests(cwd: string): Map<string, PullRequestSummary> {
+  const stdout = runProcess(cwd, [
+    'gh',
+    'pr',
+    'list',
+    '--state',
+    'merged',
     '--limit',
     '100',
     '--json',
