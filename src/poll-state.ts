@@ -1,5 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
 
 import type { FeedConfig, RuntimeConfig } from './config';
 
@@ -20,11 +26,14 @@ export function loadPollState(path: string): PollState {
     const raw = readFileSync(path, 'utf-8');
     const parsed = JSON.parse(raw) as unknown;
 
+    const feeds = (parsed as Record<string, unknown>)?.feeds;
+
     if (
       typeof parsed === 'object' &&
       parsed !== null &&
-      'feeds' in parsed &&
-      typeof (parsed as Record<string, unknown>).feeds === 'object'
+      typeof feeds === 'object' &&
+      feeds !== null &&
+      !Array.isArray(feeds)
     ) {
       return parsed as PollState;
     }
@@ -42,7 +51,9 @@ export function savePollState(path: string, state: PollState): void {
     mkdirSync(dir, { recursive: true });
   }
 
-  writeFileSync(path, JSON.stringify(state, null, 2) + '\n');
+  const tmpPath = join(dir, `.poll-state.${process.pid}.tmp`);
+  writeFileSync(tmpPath, JSON.stringify(state, null, 2) + '\n');
+  renameSync(tmpPath, path);
 }
 
 export function isDueFeed(

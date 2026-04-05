@@ -139,6 +139,15 @@ describe('poll state', () => {
     expect(due.map((f) => f.name)).toEqual(['EZTV', 'Atlas Movies']);
   });
 
+  it('handles null feeds in poll state file gracefully', async () => {
+    const dir = await mkdtemp();
+    const path = join(dir, 'poll-state.json');
+    await Bun.write(path, JSON.stringify({ feeds: null }));
+
+    const state = loadPollState(path);
+    expect(state).toEqual({ feeds: {} });
+  });
+
   it('handles corrupt poll state file gracefully', async () => {
     const dir = await mkdtemp();
     const path = join(dir, 'poll-state.json');
