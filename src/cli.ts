@@ -15,6 +15,7 @@ import {
   recordFeedPolled,
   savePollState,
 } from './poll-state';
+import { pruneArtifacts, writeCycleArtifact } from './runtime-artifacts';
 import {
   type CandidateLifecycleStatus,
   createRepository,
@@ -115,6 +116,8 @@ export async function runCli(argv: string[]): Promise<number> {
           'poll-state.json',
         );
 
+        const { artifactDir, artifactRetentionDays } = config.runtime;
+
         await runDaemonLoop({
           runCycle: async () => {
             let pollState = loadPollState(pollStatePath);
@@ -154,6 +157,10 @@ export async function runCli(argv: string[]): Promise<number> {
           },
           options: daemonOptionsFromConfig(config.runtime),
           signal: controller.signal,
+          onCycleResult: (result) => {
+            writeCycleArtifact(artifactDir, result);
+            pruneArtifacts(artifactDir, artifactRetentionDays);
+          },
         });
       } finally {
         database.close();

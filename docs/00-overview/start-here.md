@@ -10,7 +10,7 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through Phase 04, with Phase 04 delivery in progress.
+Pirate Claw is implemented through Phase 04.
 
 Current delivered surface:
 
@@ -21,6 +21,7 @@ Current delivered surface:
 - `pirate-claw reconcile`
 - local config via `pirate-claw.config.json`
 - local runtime persistence via `pirate-claw.db`
+- runtime artifacts under `.pirate-claw/runtime/cycles/` with 7-day retention
 
 Current product boundary:
 
@@ -30,6 +31,9 @@ Current product boundary:
 - real-world feed compatibility for EZTV and Atlas is implemented
 - post-queue lifecycle reconciliation and status visibility are implemented for Pirate Claw-queued torrents
 - foreground daemon mode with scheduled run and reconcile cycles
+- per-feed polling cadence with persistent poll state
+- shared runtime lock prevents overlapping cycles
+- machine-readable and human-readable cycle artifacts with bounded retention
 
 Still deferred:
 

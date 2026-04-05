@@ -1,4 +1,5 @@
 import type { RuntimeConfig } from './config';
+import type { CycleResult } from './runtime-artifacts';
 
 export type DaemonOptions = {
   runIntervalMs: number;
@@ -18,10 +19,22 @@ export async function runDaemonLoop(input: {
   options: DaemonOptions;
   signal: AbortSignal;
   log?: (message: string) => void;
+  onCycleResult?: (result: CycleResult) => void;
 }): Promise<void> {
   const { runCycle, reconcileCycle, options, signal } = input;
   const log = input.log ?? console.log;
   let busy = false;
+
+  const emitCycleResult = (result: CycleResult): void => {
+    if (!input.onCycleResult) return;
+
+    try {
+      input.onCycleResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`cycle result callback failed: ${message}`);
+    }
+  };
   let inFlight: Promise<void> | undefined;
 
   async function guardedCycle(
@@ -29,14 +42,23 @@ export async function runDaemonLoop(input: {
     cycle: () => Promise<void>,
   ): Promise<void> {
     if (busy) {
+      const now = new Date().toISOString();
       log(`${type} cycle skipped: already_running`);
+      emitCycleResult({
+        type,
+        status: 'skipped',
+        startedAt: now,
+        completedAt: now,
+        durationMs: 0,
+        skipReason: 'already_running',
+      });
       return;
     }
 
     busy = true;
 
     try {
-      const promise = executeCycle(type, cycle, log);
+      const promise = executeCycle(type, cycle, log, emitCycleResult);
       inFlight = promise;
       await promise;
     } finally {
@@ -85,12 +107,31 @@ async function executeCycle(
   type: string,
   cycle: () => Promise<void>,
   log: (message: string) => void,
+  emitCycleResult: (result: CycleResult) => void,
 ): Promise<void> {
+  const startedAt = new Date().toISOString();
+  const startMs = Date.now();
+
   try {
     await cycle();
     log(`${type} cycle completed`);
+    emitCycleResult({
+      type,
+      status: 'completed',
+      startedAt,
+      completedAt: new Date().toISOString(),
+      durationMs: Date.now() - startMs,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log(`${type} cycle failed: ${message}`);
+    emitCycleResult({
+      type,
+      status: 'failed',
+      startedAt,
+      completedAt: new Date().toISOString(),
+      durationMs: Date.now() - startMs,
+      error: message,
+    });
   }
 }
