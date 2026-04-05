@@ -82,6 +82,10 @@ Goal:
 - schedule queue-intake and reconcile cycles with clear defaults
 - make runtime activity machine-readable through JSON/Markdown artifacts
 
+Current status:
+
+- implemented via `pirate-claw daemon` with configurable cadences, per-feed due scheduling, shared runtime lock, and bounded-retention artifacts
+
 Committed scope:
 
 - `pirate-claw daemon` as a long-running local command

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { daemonOptionsFromConfig, runDaemonLoop } from '../src/daemon';
+import type { CycleResult } from '../src/runtime-artifacts';
 
 describe('daemon', () => {
   it('runs initial run and reconcile cycles on startup', async () => {
@@ -246,6 +247,59 @@ describe('daemon', () => {
     expect(recurringRunCompleted).toBe(true);
     expect(log).toContain('run cycle skipped: already_running');
     expect(log).toContain('daemon stopped');
+  });
+
+  it('fires onCycleResult for completed, failed, and skipped cycles', async () => {
+    const results: CycleResult[] = [];
+    const controller = new AbortController();
+
+    await runDaemonLoop({
+      runCycle: async () => {},
+      reconcileCycle: async () => {
+        throw new Error('boom');
+      },
+      options: { runIntervalMs: 600_000, reconcileIntervalMs: 600_000 },
+      signal: controller.signal,
+      log: () => {
+        controller.abort();
+      },
+      onCycleResult: (result) => results.push(result),
+    });
+
+    expect(results.length).toBe(2);
+
+    expect(results[0].type).toBe('run');
+    expect(results[0].status).toBe('completed');
+    expect(results[0].durationMs).toBeGreaterThanOrEqual(0);
+
+    expect(results[1].type).toBe('reconcile');
+    expect(results[1].status).toBe('failed');
+    expect(results[1].error).toBe('boom');
+  });
+
+  it('fires onCycleResult for skipped cycles', async () => {
+    const results: CycleResult[] = [];
+    const controller = new AbortController();
+
+    await runDaemonLoop({
+      runCycle: async () => {
+        await Bun.sleep(60);
+      },
+      reconcileCycle: async () => {},
+      options: { runIntervalMs: 20, reconcileIntervalMs: 20 },
+      signal: controller.signal,
+      log: (msg) => {
+        if (msg.includes('skipped: already_running')) {
+          controller.abort();
+        }
+      },
+      onCycleResult: (result) => results.push(result),
+    });
+
+    const skippedResults = results.filter((r) => r.status === 'skipped');
+    expect(skippedResults.length).toBeGreaterThanOrEqual(1);
+    expect(skippedResults[0].skipReason).toBe('already_running');
+    expect(skippedResults[0].durationMs).toBe(0);
   });
 
   it('derives daemon options from runtime config', () => {
