@@ -249,7 +249,7 @@ describe('daemon', () => {
     expect(log).toContain('daemon stopped');
   });
 
-  it('fires onCycleResult for completed, failed, and skipped cycles', async () => {
+  it('fires onCycleResult for completed and failed cycles', async () => {
     const results: CycleResult[] = [];
     const controller = new AbortController();
 

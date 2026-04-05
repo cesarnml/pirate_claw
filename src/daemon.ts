@@ -23,8 +23,18 @@ export async function runDaemonLoop(input: {
 }): Promise<void> {
   const { runCycle, reconcileCycle, options, signal } = input;
   const log = input.log ?? console.log;
-  const onCycleResult = input.onCycleResult;
   let busy = false;
+
+  const emitCycleResult = (result: CycleResult): void => {
+    if (!input.onCycleResult) return;
+
+    try {
+      input.onCycleResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`cycle result callback failed: ${message}`);
+    }
+  };
   let inFlight: Promise<void> | undefined;
 
   async function guardedCycle(
@@ -34,7 +44,7 @@ export async function runDaemonLoop(input: {
     if (busy) {
       const now = new Date().toISOString();
       log(`${type} cycle skipped: already_running`);
-      onCycleResult?.({
+      emitCycleResult({
         type,
         status: 'skipped',
         startedAt: now,
@@ -48,7 +58,7 @@ export async function runDaemonLoop(input: {
     busy = true;
 
     try {
-      const promise = executeCycle(type, cycle, log, onCycleResult);
+      const promise = executeCycle(type, cycle, log, emitCycleResult);
       inFlight = promise;
       await promise;
     } finally {
@@ -97,7 +107,7 @@ async function executeCycle(
   type: string,
   cycle: () => Promise<void>,
   log: (message: string) => void,
-  onCycleResult?: (result: CycleResult) => void,
+  emitCycleResult: (result: CycleResult) => void,
 ): Promise<void> {
   const startedAt = new Date().toISOString();
   const startMs = Date.now();
@@ -105,7 +115,7 @@ async function executeCycle(
   try {
     await cycle();
     log(`${type} cycle completed`);
-    onCycleResult?.({
+    emitCycleResult({
       type,
       status: 'completed',
       startedAt,
@@ -115,7 +125,7 @@ async function executeCycle(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log(`${type} cycle failed: ${message}`);
-    onCycleResult?.({
+    emitCycleResult({
       type,
       status: 'failed',
       startedAt,

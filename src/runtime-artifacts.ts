@@ -50,14 +50,22 @@ export function pruneArtifacts(
   }
 
   const cutoffMs = (now ?? Date.now()) - retentionDays * 24 * 60 * 60 * 1000;
-  const files = readdirSync(cyclesDir);
+  const entries = readdirSync(cyclesDir, { withFileTypes: true });
 
-  for (const file of files) {
-    const filePath = join(cyclesDir, file);
-    const stat = statSync(filePath);
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
 
-    if (stat.mtimeMs < cutoffMs) {
-      unlinkSync(filePath);
+    try {
+      const filePath = join(cyclesDir, entry.name);
+      const stat = statSync(filePath);
+
+      if (stat.mtimeMs < cutoffMs) {
+        unlinkSync(filePath);
+      }
+    } catch {
+      // best-effort: skip entries that can't be removed
     }
   }
 }

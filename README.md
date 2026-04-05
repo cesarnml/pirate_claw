@@ -142,7 +142,7 @@ Pirate Claw keeps local operator state out of git:
 - `pirate-claw.config.json`
 - `pirate-claw.db`
 - `.pirate-claw/runtime/poll-state.json` -- persisted feed poll timestamps used by the daemon to resume due-feed scheduling across restarts
-- `.pirate-claw/runtime/cycles/` -- JSON and Markdown artifacts for each daemon cycle (run, reconcile, skipped), pruned to 7 days by default
+- `.pirate-claw/runtime/cycles/` -- JSON and Markdown artifacts for daemon cycle results (completed, failed, or skipped for run/reconcile), pruned to 7 days by default
 
 Run the daemon for continuous scheduled operation:
 
