@@ -2934,12 +2934,54 @@ function runGitLines(cwd: string, cmd: string[]): string[] {
 
 function parseMarkdownHeading(
   line: string,
-): { level: number; title: string } | undefined {
+): { level: number; lineCount: number; title: string } | undefined {
   const match = line.trim().match(/^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/);
   if (!match) {
     return undefined;
   }
-  return { level: match[1].length, title: match[2].trim() };
+  return { level: match[1].length, lineCount: 1, title: match[2].trim() };
+}
+
+function parseUnderlineHeading(
+  lines: string[],
+  index: number,
+): { level: number; lineCount: number; title: string } | undefined {
+  const titleLine = lines[index]?.trim();
+  const underlineLine = lines[index + 1]?.trim();
+  if (!titleLine || !underlineLine) {
+    return undefined;
+  }
+
+  if (/^-{1,}\s*$/.test(underlineLine)) {
+    return { level: 2, lineCount: 2, title: titleLine };
+  }
+  if (/^={1,}\s*$/.test(underlineLine)) {
+    return { level: 1, lineCount: 2, title: titleLine };
+  }
+  return undefined;
+}
+
+function parseMarkdownHeadingAt(
+  lines: string[],
+  index: number,
+): { level: number; lineCount: number; title: string } | undefined {
+  return (
+    parseMarkdownHeading(lines[index]!) ?? parseUnderlineHeading(lines, index)
+  );
+}
+
+function parseFenceMarker(
+  line: string,
+): { char: '`' | '~'; length: number; trailing: string } | undefined {
+  const match = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
+  if (!match) {
+    return undefined;
+  }
+  return {
+    char: match[1]![0] as '`' | '~',
+    length: match[1]!.length,
+    trailing: match[2] ?? '',
+  };
 }
 
 function isBannedPrBodyHeadingTitle(title: string): boolean {
@@ -2959,42 +3001,63 @@ function stripBannedPrBodySections(body: string): string {
   const lines = body.split('\n');
   const kept: string[] = [];
   let index = 0;
-  let inFencedCodeBlock = false;
+  let activeFence: { char: '`' | '~'; length: number } | undefined;
 
   while (index < lines.length) {
     const line = lines[index]!;
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFencedCodeBlock = !inFencedCodeBlock;
+    const fenceMarker = parseFenceMarker(line);
+    if (fenceMarker) {
+      if (!activeFence) {
+        activeFence = { char: fenceMarker.char, length: fenceMarker.length };
+      } else if (
+        fenceMarker.char === activeFence.char &&
+        fenceMarker.length >= activeFence.length &&
+        fenceMarker.trailing.trim().length === 0
+      ) {
+        activeFence = undefined;
+      }
       kept.push(line);
       index += 1;
       continue;
     }
-    if (inFencedCodeBlock) {
+    if (activeFence) {
       kept.push(line);
       index += 1;
       continue;
     }
 
-    const heading = parseMarkdownHeading(lines[index]!);
+    const heading = parseMarkdownHeadingAt(lines, index);
     if (!heading || !isBannedPrBodyHeadingTitle(heading.title)) {
       kept.push(lines[index]!);
       index += 1;
       continue;
     }
 
-    index += 1;
+    index += heading.lineCount;
     while (index < lines.length) {
       const nextLine = lines[index]!;
-      if (/^\s*(```|~~~)/.test(nextLine)) {
-        inFencedCodeBlock = !inFencedCodeBlock;
+      const nextFenceMarker = parseFenceMarker(nextLine);
+      if (nextFenceMarker) {
+        if (!activeFence) {
+          activeFence = {
+            char: nextFenceMarker.char,
+            length: nextFenceMarker.length,
+          };
+        } else if (
+          nextFenceMarker.char === activeFence.char &&
+          nextFenceMarker.length >= activeFence.length &&
+          nextFenceMarker.trailing.trim().length === 0
+        ) {
+          activeFence = undefined;
+        }
         index += 1;
         continue;
       }
-      if (inFencedCodeBlock) {
+      if (activeFence) {
         index += 1;
         continue;
       }
-      const nextHeading = parseMarkdownHeading(lines[index]!);
+      const nextHeading = parseMarkdownHeadingAt(lines, index);
       if (nextHeading && nextHeading.level <= heading.level) {
         break;
       }
@@ -3226,17 +3289,26 @@ function buildReviewCommentBullets(
 
 export function assertReviewerFacingMarkdown(body: string): void {
   const lines = body.split('\n');
-  let inFencedCodeBlock = false;
+  let activeFence: { char: '`' | '~'; length: number } | undefined;
   const sanitizedLines: string[] = [];
 
   for (const line of lines) {
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFencedCodeBlock = !inFencedCodeBlock;
+    const fenceMarker = parseFenceMarker(line);
+    if (fenceMarker) {
+      if (!activeFence) {
+        activeFence = { char: fenceMarker.char, length: fenceMarker.length };
+      } else if (
+        fenceMarker.char === activeFence.char &&
+        fenceMarker.length >= activeFence.length &&
+        fenceMarker.trailing.trim().length === 0
+      ) {
+        activeFence = undefined;
+      }
       sanitizedLines.push('');
       continue;
     }
 
-    if (inFencedCodeBlock) {
+    if (activeFence) {
       sanitizedLines.push('');
       continue;
     }
@@ -3244,7 +3316,7 @@ export function assertReviewerFacingMarkdown(body: string): void {
     sanitizedLines.push(line.replace(/`[^`]*`/g, ''));
   }
 
-  if (inFencedCodeBlock) {
+  if (activeFence) {
     throw new Error(
       'PR body guard failed: markdown contains an unmatched fenced code block.',
     );
@@ -3266,8 +3338,8 @@ export function assertReviewerFacingMarkdown(body: string): void {
     );
   }
 
-  const bannedHeading = sanitizedLines.find((line) => {
-    const heading = parseMarkdownHeading(line);
+  const bannedHeading = sanitizedLines.find((line, index) => {
+    const heading = parseMarkdownHeadingAt(sanitizedLines, index);
     return heading ? isBannedPrBodyHeadingTitle(heading.title) : false;
   });
   if (bannedHeading) {

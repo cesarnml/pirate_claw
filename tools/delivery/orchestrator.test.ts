@@ -1315,23 +1315,27 @@ describe('delivery orchestrator', () => {
     expect(() =>
       assertReviewerFacingMarkdown('## Summary by: Qodo\n\n- noisy recap'),
     ).toThrow('PR body guard failed: banned section heading');
+    expect(() =>
+      assertReviewerFacingMarkdown('Verification\n---\n\n- bun run verify'),
+    ).toThrow('PR body guard failed: banned section heading');
   });
 
   it('does not strip banned-looking headings inside fenced code blocks', () => {
     const merged = mergeStandaloneAiReviewSection(
-      '## Summary\n\n```md\n## Verification\n- example snippet\n```\n',
+      '## Summary\n\n~~~md\n```ts\n## Verification\n```\n- example snippet\n~~~\n',
       buildStandaloneAiReviewSection({
         outcome: 'clean',
         note: 'External AI review completed without prudent follow-up changes.',
         vendors: ['coderabbit'],
       }),
     );
-    expect(merged).toContain('```md');
+    expect(merged).toContain('~~~md');
+    expect(merged).toContain('```ts');
     expect(merged).toContain('## Verification');
     expect(merged).toContain('- example snippet');
     expect(() =>
       assertReviewerFacingMarkdown(
-        '## Summary\n\n~~~md\n## Verification\n- example snippet\n~~~\n',
+        '## Summary\n\n~~~md\n```ts\n## Verification\n```\n- example snippet\n~~~\n',
       ),
     ).not.toThrow();
   });
