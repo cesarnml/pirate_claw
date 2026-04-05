@@ -1,7 +1,7 @@
 import type { AppConfig, FeedConfig } from './config';
 import { fetchFeed, type RawFeedItem } from './feed';
 import { getMovieNoMatchReason, matchMovieItem } from './movie-match';
-import { normalizeFeedItem } from './normalize';
+import { normalizeFeedItem, type NormalizedFeedItem } from './normalize';
 import {
   createPipelineCoordinator,
   type MatchedFeedItem,
@@ -11,7 +11,6 @@ import type {
   CandidateLifecycleStatus,
   CandidateMatchRecord,
   CandidateStateRecord,
-  FeedItemRecord,
   Repository,
 } from './repository';
 import type { Downloader, TorrentSnapshot } from './transmission';
@@ -50,12 +49,16 @@ export async function runPipeline(input: {
 
       for (const item of items) {
         const feedItem = input.repository.recordFeedItem(run.id, item);
-        const match = matchFeedItem(feedItem, input.config, feed);
+        const normalized = normalizeFeedItem({
+          mediaType: feed.mediaType,
+          rawTitle: feedItem.rawTitle,
+        });
+        const match = matchFeedItem(normalized, input.config);
 
         if (!match) {
           coordinator.recordNoMatch(
             feedItem.id,
-            getFeedItemNoMatchReason(feedItem, input.config, feed),
+            getFeedItemNoMatchReason(normalized, input.config),
           );
           continue;
         }
@@ -171,15 +174,9 @@ export async function reconcileCandidates(input: {
 }
 
 function matchFeedItem(
-  feedItem: FeedItemRecord,
+  normalized: NormalizedFeedItem,
   config: AppConfig,
-  feed: FeedConfig,
 ): CandidateMatchRecord | undefined {
-  const normalized = normalizeFeedItem({
-    mediaType: feed.mediaType,
-    rawTitle: feedItem.rawTitle,
-  });
-
   if (normalized.mediaType === 'tv') {
     return matchTvItem(normalized, config.tv)[0];
   }
@@ -188,15 +185,9 @@ function matchFeedItem(
 }
 
 function getFeedItemNoMatchReason(
-  feedItem: FeedItemRecord,
+  normalized: NormalizedFeedItem,
   config: AppConfig,
-  feed: FeedConfig,
 ): string | undefined {
-  const normalized = normalizeFeedItem({
-    mediaType: feed.mediaType,
-    rawTitle: feedItem.rawTitle,
-  });
-
   if (normalized.mediaType === 'movie') {
     return getMovieNoMatchReason(normalized, config.movies);
   }
