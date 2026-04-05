@@ -160,22 +160,30 @@ describe('validateConfig', () => {
         ...createMinimalConfig(),
         runtime: { runIntervalMinutes: 0 },
       }),
-    ).toThrow(
-      new ConfigError(
-        'Config file "config runtime runIntervalMinutes" must be a positive number.',
-      ),
-    );
+    ).toThrow(/must be a finite positive number/);
 
     expect(() =>
       validateConfig({
         ...createMinimalConfig(),
         runtime: { reconcileIntervalMinutes: -1 },
       }),
-    ).toThrow(
-      new ConfigError(
-        'Config file "config runtime reconcileIntervalMinutes" must be a positive number.',
-      ),
-    );
+    ).toThrow(/must be a finite positive number/);
+  });
+
+  it('fails when a runtime field exceeds the upper bound', () => {
+    expect(() =>
+      validateConfig({
+        ...createMinimalConfig(),
+        runtime: { runIntervalMinutes: 50_000 },
+      }),
+    ).toThrow(/must be a finite positive number/);
+
+    expect(() =>
+      validateConfig({
+        ...createMinimalConfig(),
+        runtime: { runIntervalMinutes: Infinity },
+      }),
+    ).toThrow(/must be a finite positive number/);
   });
 
   it('fails when runtime section is not an object', () => {
@@ -224,11 +232,7 @@ describe('validateConfig', () => {
           },
         ],
       }),
-    ).toThrow(
-      new ConfigError(
-        'Config file "config feeds[0] pollIntervalMinutes" must be a positive number.',
-      ),
-    );
+    ).toThrow(/must be a finite positive number/);
   });
 
   it('fails with a precise tv matchPattern path when regex syntax is invalid', () => {

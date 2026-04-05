@@ -386,6 +386,8 @@ function validateRuntime(input: unknown, path: string): RuntimeConfig {
   };
 }
 
+const MAX_INTERVAL_MINUTES = 44_640;
+
 function optionalPositiveNumber(
   input: unknown,
   path: string,
@@ -394,8 +396,15 @@ function optionalPositiveNumber(
     return undefined;
   }
 
-  if (typeof input !== 'number' || Number.isNaN(input) || input <= 0) {
-    throw new ConfigError(`Config file "${path}" must be a positive number.`);
+  if (
+    typeof input !== 'number' ||
+    !Number.isFinite(input) ||
+    input <= 0 ||
+    input > MAX_INTERVAL_MINUTES
+  ) {
+    throw new ConfigError(
+      `Config file "${path}" must be a finite positive number (max ${MAX_INTERVAL_MINUTES}).`,
+    );
   }
 
   return input;
