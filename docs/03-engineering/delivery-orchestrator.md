@@ -14,6 +14,30 @@ That means:
 
 This keeps the product boundary honest. `src/` remains the Pirate Claw application. The delivery tool is a maintainer workflow helper.
 
+## Configurable Core
+
+The orchestrator core now reads `orchestrator.config.json` at the repo root so branch, plan-root, runtime-internal, and bootstrap defaults are not hardcoded:
+
+```json
+{
+  "defaultBranch": "main",
+  "planRoot": "docs",
+  "runtime": "bun",
+  "packageManager": "bun"
+}
+```
+
+All fields are optional. When the file is absent, the orchestrator infers sensible defaults:
+
+- `defaultBranch`: `"main"`
+- `planRoot`: `"docs"` (plans live at `{planRoot}/02-delivery/<phase>/implementation-plan.md`)
+- `runtime`: `"bun"` (`"bun"` uses `Bun.spawnSync`, `"node"` uses `child_process.spawnSync` inside the orchestrator implementation)
+- `packageManager`: inferred from lockfile (`bun.lock` → `"bun"`, `pnpm-lock.yaml` → `"pnpm"`, `yarn.lock` → `"yarn"`, `package-lock.json` → `"npm"`, fallback `"npm"`) for worktree bootstrap behavior
+
+The internal convention below `planRoot` is fixed: `{planRoot}/02-delivery/<phase>/implementation-plan.md`. Only the top-level directory name is configurable.
+
+In Pirate Claw itself, the supported operator entrypoint remains `bun run deliver --plan ...`. This change makes the orchestrator core less repo-specific, but it does not turn this repository into a fully validated multi-runtime CLI package.
+
 ## Plan-Driven, Not Phase-Hardcoded
 
 The engine is generic. It does not fundamentally belong to Phase 02.
@@ -39,7 +63,7 @@ The orchestrator owns process mechanics:
 - per-ticket handoff artifacts under `.agents/delivery/<plan-key>/handoffs/`
 - deterministic branch and worktree naming
 - copying a local `.env` into fresh ticket work trees when the invoking worktree has one
-- bootstrapping fresh Bun ticket work trees before implementation starts
+- bootstrapping fresh ticket work trees using lockfile-aware package-manager defaults before implementation starts
 - stacked PR base chaining
 - idempotent PR open/update behavior for already-pushed ticket branches
 - a 2/4/6/8-minute ai-review polling loop after PR open
@@ -111,7 +135,7 @@ That inference is intentionally conservative. It reconstructs enough state to re
 
 ## Commands
 
-Use the generic command:
+Use the supported repo command:
 
 ```bash
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md status
