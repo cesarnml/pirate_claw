@@ -22,6 +22,14 @@ Phase 04 requires an always-on execution path. Without a daemon entrypoint, all 
 - lock/overlap semantics
 - runtime artifacts
 
+## Rationale
+
+The daemon uses an injectable `runDaemonLoop` that takes cycle callbacks and an `AbortSignal`. This keeps the scheduling loop testable without subprocess overhead or real timers. Initial cycles execute synchronously before interval timers start so the operator gets immediate feedback on startup. Per-cycle errors are caught and logged without crashing the daemon.
+
+Hardcoded defaults (30 min run, 1 min reconcile) are used in this ticket. Config-driven cadence lands in P4.02. Cross-cycle overlap prevention is explicitly deferred to P4.04.
+
+In-flight cycles are tracked and awaited on shutdown so the CLI can safely close the database after the daemon loop returns.
+
 ## Red First Prompt
 
 What user-visible behavior fails first when `pirate-claw daemon` is invoked but no long-running execution loop exists?

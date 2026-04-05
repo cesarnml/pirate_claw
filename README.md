@@ -15,6 +15,7 @@ It currently supports:
 ## Commands
 
 - `pirate-claw run`
+- `pirate-claw daemon`
 - `pirate-claw status`
 - `pirate-claw retry-failed`
 - `pirate-claw reconcile`
@@ -134,13 +135,20 @@ Pirate Claw keeps local operator state out of git:
 - `pirate-claw.config.json`
 - `pirate-claw.db`
 
+Run the daemon for continuous scheduled operation:
+
+```bash
+./bin/pirate-claw daemon --config ./pirate-claw.config.json
+```
+
+The daemon runs in the foreground, executing run cycles every 30 minutes and reconcile cycles every 1 minute. Stop with `Ctrl+C`.
+
 ## Current Scope
 
 Pirate Claw is intentionally still a local operator tool.
 
 Not in scope yet:
 
-- always-on scheduling or feed polling
 - remote feed capture
 - hosted persistence
 - automatic post-completion file handling

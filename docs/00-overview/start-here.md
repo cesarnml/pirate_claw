@@ -10,11 +10,12 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through Phase 03, with the final Phase 03 delivery ticket having landed.
+Pirate Claw is implemented through Phase 04, with Phase 04 delivery in progress.
 
 Current delivered surface:
 
 - `pirate-claw run`
+- `pirate-claw daemon`
 - `pirate-claw status`
 - `pirate-claw retry-failed`
 - `pirate-claw reconcile`
@@ -28,14 +29,13 @@ Current product boundary:
 - SQLite is the local persistence boundary
 - real-world feed compatibility for EZTV and Atlas is implemented
 - post-queue lifecycle reconciliation and status visibility are implemented for Pirate Claw-queued torrents
+- foreground daemon mode with scheduled run and reconcile cycles
 
 Still deferred:
 
 - web UI
-- always-on scheduling or polling
 - remote feed capture
 - hosted persistence
-- automatic reconciliation polling (manual `reconcile` exists)
 - download renaming or organization rules
 - Synology archiving
 - ingestion redesign beyond the local SQLite model
