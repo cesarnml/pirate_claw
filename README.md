@@ -111,9 +111,7 @@ Example:
     "codecPolicy": "prefer"
   },
   "transmission": {
-    "url": "http://localhost:9091/transmission/rpc",
-    "username": "your-user",
-    "password": "your-password"
+    "url": "http://localhost:9091/transmission/rpc"
   },
   "runtime": {
     "runIntervalMinutes": 30,
@@ -140,8 +138,14 @@ Before running:
 1. Open the Transmission app.
 2. Enable remote access in Transmission settings.
 3. Confirm the listening port matches your config. The default example uses `9091`.
-4. If authentication is enabled, copy the same username and password into `pirate-claw.config.json`.
+4. If authentication is enabled, either put the username/password inline in `pirate-claw.config.json` or set `PIRATE_CLAW_TRANSMISSION_USERNAME` / `PIRATE_CLAW_TRANSMISSION_PASSWORD` in a local `.env`.
 5. If Transmission restricts allowed addresses, keep `127.0.0.1` or `localhost` allowed.
+
+Transmission credential precedence is:
+
+- inline `transmission.username` / `transmission.password` win when present
+- otherwise Pirate Claw reads `PIRATE_CLAW_TRANSMISSION_USERNAME` / `PIRATE_CLAW_TRANSMISSION_PASSWORD`
+- Pirate Claw loads those env vars from the process environment and from a `.env` file next to your config file
 
 At queue time, Pirate Claw attempts to send Transmission labels based on media type:
 
