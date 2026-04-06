@@ -8,6 +8,7 @@ import {
   buildExternalAiReviewSection,
   buildStandaloneAiReviewSection,
   buildReviewPollCheckMinutes,
+  buildReviewMetadataRefreshBody,
   buildPullRequestBody,
   buildPullRequestTitle,
   buildTicketHandoff,
@@ -717,6 +718,116 @@ describe('delivery orchestrator', () => {
     expect(section).toContain(
       'the latest recorded external AI review applies to an older branch head',
     );
+  });
+
+  it('uses the shared refresh adapter while preserving ticketed and standalone body ownership', () => {
+    const reviewState = {
+      actionSummary: 'Patched the null-guard regression and tightened tests.',
+      comments: [
+        {
+          vendor: 'coderabbit',
+          channel: 'inline_review' as const,
+          authorLogin: 'coderabbitai',
+          authorType: 'Bot',
+          body: 'Guard the null return here.',
+          kind: 'finding' as const,
+          path: 'src/example.ts',
+          line: 42,
+          threadId: 'thread_example_1',
+          url: 'https://example.test/comment/1',
+        },
+      ],
+      note: 'Patched the prudent AI review follow-up.',
+      outcome: 'patched' as const,
+      reviewedHeadSha: 'abcdef1234567890',
+      threadResolutions: [
+        {
+          status: 'resolved' as const,
+          threadId: 'thread_example_1',
+          url: 'https://example.test/comment/1',
+          vendor: 'coderabbit',
+        },
+      ],
+      vendors: ['coderabbit'],
+    };
+    const refreshContext = {
+      actionCommits: [
+        {
+          sha: 'c87f955ca43a1234',
+          subject: 'resolve null-guard follow-up',
+          vendors: ['coderabbit'],
+        },
+      ],
+      currentHeadSha: 'fedcba0987654321',
+    };
+    const expectedReviewSection = buildExternalAiReviewSection(reviewState, {
+      ...refreshContext,
+      maxWaitMinutes: 8,
+    });
+
+    const ticketBody = buildReviewMetadataRefreshBody(
+      {
+        mode: 'ticketed',
+        state: {
+          planKey: 'engineering-epic-02',
+          planPath:
+            'docs/02-delivery/engineering-epic-02/implementation-plan.md',
+          statePath: '.agents/delivery/engineering-epic-02/state.json',
+          reviewsDirPath: '.agents/delivery/engineering-epic-02/reviews',
+          handoffsDirPath: '.agents/delivery/engineering-epic-02/handoffs',
+          reviewPollIntervalMinutes: 2,
+          reviewPollMaxWaitMinutes: 8,
+          tickets: [],
+        },
+        ticket: {
+          id: 'E2.05',
+          title: 'Shared Review Metadata Refresh Adapter',
+          ticketFile:
+            'docs/02-delivery/engineering-epic-02/ticket-05-shared-review-metadata-refresh-adapter.md',
+          baseBranch: 'agents/e2-04-shared-clean-and-timeout-recording-core',
+          internalReviewCompletedAt: '2026-04-07T00:00:00.000Z',
+          reviewActionSummary: reviewState.actionSummary,
+          reviewIncompleteAgents: undefined,
+          reviewComments: reviewState.comments,
+          reviewHeadSha: reviewState.reviewedHeadSha,
+          reviewNonActionSummary: undefined,
+          reviewNote: reviewState.note,
+          reviewOutcome: reviewState.outcome,
+          reviewThreadResolutions: reviewState.threadResolutions,
+          reviewVendors: reviewState.vendors,
+          status: 'reviewed',
+        },
+      },
+      refreshContext,
+    );
+
+    const standaloneBody = buildReviewMetadataRefreshBody(
+      {
+        mode: 'standalone',
+        body: [
+          '## Summary',
+          '- preserve this author-owned context',
+          '',
+          '## Notes',
+          '- keep this section too',
+        ].join('\n'),
+        result: {
+          ...reviewState,
+          prNumber: 32,
+          prUrl: 'https://example.test/pull/32',
+        },
+      },
+      refreshContext,
+    );
+
+    expect(ticketBody).toContain(
+      '- delivery ticket: `E2.05 Shared Review Metadata Refresh Adapter`',
+    );
+    expect(ticketBody).toContain(expectedReviewSection);
+    expect(standaloneBody).toContain('- preserve this author-owned context');
+    expect(standaloneBody).toContain('- keep this section too');
+    expect(standaloneBody).toContain(expectedReviewSection);
+    expect(standaloneBody).toContain('<!-- ai-review:start -->');
   });
 
   it('keeps standalone pr bodies free of artifact paths', () => {
