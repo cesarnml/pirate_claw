@@ -457,12 +457,16 @@ describe('validateConfig', () => {
 
   it('fails when transmission credentials are missing inline and in env', () => {
     expect(() =>
-      validateConfig({
-        ...createMinimalConfig(),
-        transmission: {
-          url: 'http://localhost:9091/transmission/rpc',
+      validateConfig(
+        {
+          ...createMinimalConfig(),
+          transmission: {
+            url: 'http://localhost:9091/transmission/rpc',
+          },
         },
-      }),
+        'config',
+        {},
+      ),
     ).toThrow(
       new ConfigError(
         'Config file "config transmission username" must be a non-empty string or come from PIRATE_CLAW_TRANSMISSION_USERNAME.',
@@ -472,38 +476,40 @@ describe('validateConfig', () => {
 
   it('loads transmission credentials from a sibling .env file', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-config-'));
-    const configPath = join(directory, 'pirate-claw.config.json');
+    try {
+      const configPath = join(directory, 'pirate-claw.config.json');
 
-    await Bun.write(
-      join(directory, '.env'),
-      [
-        'PIRATE_CLAW_TRANSMISSION_USERNAME=dotenv-user',
-        'PIRATE_CLAW_TRANSMISSION_PASSWORD="dotenv-pass"',
-      ].join('\n'),
-    );
-    await Bun.write(
-      configPath,
-      JSON.stringify(
-        {
-          ...createMinimalConfig(),
-          transmission: {
-            url: 'http://localhost:9091/transmission/rpc',
+      await Bun.write(
+        join(directory, '.env'),
+        [
+          'PIRATE_CLAW_TRANSMISSION_USERNAME=dotenv-user',
+          'PIRATE_CLAW_TRANSMISSION_PASSWORD="dotenv-pass"',
+        ].join('\n'),
+      );
+      await Bun.write(
+        configPath,
+        JSON.stringify(
+          {
+            ...createMinimalConfig(),
+            transmission: {
+              url: 'http://localhost:9091/transmission/rpc',
+            },
           },
-        },
-        null,
-        2,
-      ),
-    );
+          null,
+          2,
+        ),
+      );
 
-    const config = await loadConfig(configPath);
+      const config = await loadConfig(configPath);
 
-    expect(config.transmission).toEqual({
-      url: 'http://localhost:9091/transmission/rpc',
-      username: 'dotenv-user',
-      password: 'dotenv-pass',
-    });
-
-    await Bun.$`rm -rf ${directory}`;
+      expect(config.transmission).toEqual({
+        url: 'http://localhost:9091/transmission/rpc',
+        username: 'dotenv-user',
+        password: 'dotenv-pass',
+      });
+    } finally {
+      await Bun.$`rm -rf ${directory}`;
+    }
   });
 });
 
