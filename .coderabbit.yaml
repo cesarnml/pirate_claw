@@ -2,6 +2,7 @@
 inheritance: true
 
 reviews:
+  high_level_summary: false
   auto_review:
     auto_incremental_review: false
     base_branches:
