@@ -251,6 +251,9 @@ jq -n \
     def body_text:
       (.body // "");
 
+    def current_head_sha:
+      ($pr.headRefOid // "" | ascii_downcase);
+
     def looks_like_supported_ai_identity:
       (author_login | ascii_downcase) as $login
       | ($login | test("qodo|coderabbit|greptile"));
@@ -261,7 +264,25 @@ jq -n \
 
     def looks_like_started_text:
       (body_text | normalize_text) as $body
-      | ($body | test("review started|review in progress|currently reviewing|i am reviewing|i'\''m reviewing|analyzing this pr|analysis in progress|starting review|check back in a few minutes|processing new changes in this pr|last reviewed commit|re-trigger greptile|retrigger greptile|reviews \\("));
+      | ($body | test("review started|review in progress|currently reviewing|i am reviewing|i'\''m reviewing|analyzing this pr|analysis in progress|starting review|check back in a few minutes|processing new changes in this pr"));
+
+    def greptile_reviewed_sha:
+      (body_text | capture("commit/(?<sha>[0-9a-fA-F]{7,40})")?.sha // "" | ascii_downcase);
+
+    def looks_like_current_greptile_started_text:
+      (body_text | normalize_text) as $body
+      | (vendor_name) as $vendor
+      | if $vendor != "greptile" then
+          false
+        elif ($body | test("last reviewed commit|re-trigger greptile|retrigger greptile|reviews \\(")) | not then
+          false
+        else
+          (greptile_reviewed_sha) as $reviewed
+          | (current_head_sha) as $current
+          | ($reviewed | length) > 0
+            and ($current | length) > 0
+            and ($current | startswith($reviewed))
+        end;
 
     def looks_like_summary_noise_text:
       (body_text | normalize_text) as $body
@@ -348,7 +369,7 @@ jq -n \
           "summary"
         elif $channel == "review_summary" and ($body | length) == 0 then
           "summary"
-        elif looks_like_started_text or looks_like_summary_noise_text then
+        elif looks_like_started_text or looks_like_current_greptile_started_text or looks_like_summary_noise_text then
           "summary"
         elif ($body | test("summary|overall|overview|high level|high-level|general feedback|looks good|no major issues|quick recap")) then
           "summary"
@@ -361,7 +382,7 @@ jq -n \
     def derived_agent_state($channel):
       if $channel == "inline_review" then
         if (comment_thread_state.is_outdated or comment_thread_state.is_resolved) then "completed" else "findings_detected" end
-      elif looks_like_started_text then "started"
+      elif looks_like_started_text or looks_like_current_greptile_started_text then "started"
       elif comment_kind($channel) == "finding" then "findings_detected"
       else "completed"
       end;
