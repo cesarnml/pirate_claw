@@ -1,3 +1,5 @@
+import { dirname, join } from 'node:path';
+
 export type FeedConfig = {
   name: string;
   url: string;
@@ -62,6 +64,8 @@ export type AppConfig = {
 };
 
 const DEFAULT_CONFIG_PATH = 'pirate-claw.config.json';
+const TRANSMISSION_USERNAME_ENV = 'PIRATE_CLAW_TRANSMISSION_USERNAME';
+const TRANSMISSION_PASSWORD_ENV = 'PIRATE_CLAW_TRANSMISSION_PASSWORD';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -91,10 +95,14 @@ export async function loadConfig(path: string): Promise<AppConfig> {
     throw new ConfigError(`Config file "${path}" contains invalid JSON.`);
   }
 
-  return validateConfig(parsed, path);
+  return validateConfig(parsed, path, await loadConfigEnv(path));
 }
 
-export function validateConfig(input: unknown, path = 'config'): AppConfig {
+export function validateConfig(
+  input: unknown,
+  path = 'config',
+  env: Record<string, string | undefined> = process.env,
+): AppConfig {
   if (!isRecord(input)) {
     throw new ConfigError(`Config file "${path}" must contain a JSON object.`);
   }
@@ -107,7 +115,7 @@ export function validateConfig(input: unknown, path = 'config'): AppConfig {
     feeds: feeds.map((entry, index) => validateFeed(entry, path, index)),
     tv: validateTvConfig(input.tv, path),
     movies: validateMoviePolicy(movies, path),
-    transmission: validateTransmission(transmission, path),
+    transmission: validateTransmission(transmission, path, env),
     runtime: validateRuntime(input.runtime, path),
   };
 }
@@ -306,16 +314,46 @@ function requireMovieCodecPolicy(
 function validateTransmission(
   input: Record<string, unknown>,
   path: string,
+  env: Record<string, string | undefined>,
 ): TransmissionConfig {
   return {
     url: requireString(input, 'url', `${path} transmission`),
-    username: requireString(input, 'username', `${path} transmission`),
-    password: requireString(input, 'password', `${path} transmission`),
+    username: resolveTransmissionSecret(
+      input.username,
+      env[TRANSMISSION_USERNAME_ENV],
+      `${path} transmission username`,
+      TRANSMISSION_USERNAME_ENV,
+    ),
+    password: resolveTransmissionSecret(
+      input.password,
+      env[TRANSMISSION_PASSWORD_ENV],
+      `${path} transmission password`,
+      TRANSMISSION_PASSWORD_ENV,
+    ),
     downloadDir:
       input.downloadDir === undefined
         ? undefined
         : expectString(input.downloadDir, `${path} transmission downloadDir`),
   };
+}
+
+function resolveTransmissionSecret(
+  inlineValue: unknown,
+  envValue: string | undefined,
+  path: string,
+  envKey: string,
+): string {
+  if (inlineValue !== undefined) {
+    return expectString(inlineValue, path);
+  }
+
+  if (typeof envValue === 'string' && envValue.length > 0) {
+    return envValue;
+  }
+
+  throw new ConfigError(
+    `Config file "${path}" must be a non-empty string or come from ${envKey}.`,
+  );
 }
 
 function requireArray(
@@ -550,4 +588,61 @@ function optionalPositiveNumber(
 
 function isRecord(input: unknown): input is Record<string, unknown> {
   return typeof input === 'object' && input !== null && !Array.isArray(input);
+}
+
+async function loadConfigEnv(
+  configPath: string,
+): Promise<Record<string, string | undefined>> {
+  const envPath = join(dirname(configPath), '.env');
+  const envFile = Bun.file(envPath);
+
+  if (!(await envFile.exists())) {
+    return process.env;
+  }
+
+  return {
+    ...parseDotEnv(await envFile.text()),
+    ...process.env,
+  };
+}
+
+function parseDotEnv(input: string): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  for (const rawLine of input.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+
+    if (line.length === 0 || line.startsWith('#')) {
+      continue;
+    }
+
+    const normalized = line.startsWith('export ') ? line.slice(7).trim() : line;
+    const separatorIndex = normalized.indexOf('=');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = normalized.slice(0, separatorIndex).trim();
+    const value = normalized.slice(separatorIndex + 1).trim();
+
+    if (key.length === 0) {
+      continue;
+    }
+
+    result[key] = stripDotEnvQuotes(value);
+  }
+
+  return result;
+}
+
+function stripDotEnvQuotes(input: string): string {
+  if (
+    (input.startsWith('"') && input.endsWith('"')) ||
+    (input.startsWith("'") && input.endsWith("'"))
+  ) {
+    return input.slice(1, -1);
+  }
+
+  return input;
 }

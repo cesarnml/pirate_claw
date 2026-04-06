@@ -29,3 +29,5 @@ The current config shape requires embedding Transmission credentials directly in
 - `Why this path:` env vars and `.env` are the smallest acceptable secret-separation mechanism because they fit the current local-CLI workflow without adding platform-specific secret integrations.
 - `Alternative considered:` introducing a generalized secret-provider abstraction was rejected because it widens the config model far beyond the Transmission-only pain this phase is addressing.
 - `Deferred:` non-Transmission secret providers, secret-manager integrations, and broader config-sourcing abstractions remain outside this ticket.
+- `Implementation note:` inline `transmission.username` / `transmission.password` still win when present, and env-backed values only fill missing fields; that preserved existing explicit-config behavior while still letting operators remove secrets from the JSON file.
+- `Validation note:` the loader now reads a sibling `.env` next to the config file and then overlays process env on top, which keeps local convenience and explicit shell overrides both available without widening into a general source hierarchy.

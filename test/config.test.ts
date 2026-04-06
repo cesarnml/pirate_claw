@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'bun:test';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   ConfigError,
   DEFAULT_RUNTIME_CONFIG,
+  loadConfig,
   validateConfig,
 } from '../src/config';
 
@@ -86,6 +90,38 @@ describe('validateConfig', () => {
         codecs: ['x265'],
       },
     ]);
+  });
+
+  it('fills missing transmission credentials from env values', () => {
+    const config = validateConfig(
+      {
+        ...createMinimalConfig(),
+        transmission: {
+          url: 'http://localhost:9091/transmission/rpc',
+        },
+      },
+      'config',
+      {
+        PIRATE_CLAW_TRANSMISSION_USERNAME: 'env-user',
+        PIRATE_CLAW_TRANSMISSION_PASSWORD: 'env-pass',
+      },
+    );
+
+    expect(config.transmission).toEqual({
+      url: 'http://localhost:9091/transmission/rpc',
+      username: 'env-user',
+      password: 'env-pass',
+    });
+  });
+
+  it('prefers inline transmission credentials over env values', () => {
+    const config = validateConfig(createMinimalConfig(), 'config', {
+      PIRATE_CLAW_TRANSMISSION_USERNAME: 'env-user',
+      PIRATE_CLAW_TRANSMISSION_PASSWORD: 'env-pass',
+    });
+
+    expect(config.transmission.username).toBe('user');
+    expect(config.transmission.password).toBe('pass');
   });
 
   it('normalizes tv and movie allowlists to lowercase', () => {
@@ -417,6 +453,63 @@ describe('validateConfig', () => {
         'Config file "config tv shows[0] name" must be a non-empty string.',
       ),
     );
+  });
+
+  it('fails when transmission credentials are missing inline and in env', () => {
+    expect(() =>
+      validateConfig(
+        {
+          ...createMinimalConfig(),
+          transmission: {
+            url: 'http://localhost:9091/transmission/rpc',
+          },
+        },
+        'config',
+        {},
+      ),
+    ).toThrow(
+      new ConfigError(
+        'Config file "config transmission username" must be a non-empty string or come from PIRATE_CLAW_TRANSMISSION_USERNAME.',
+      ),
+    );
+  });
+
+  it('loads transmission credentials from a sibling .env file', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-config-'));
+    try {
+      const configPath = join(directory, 'pirate-claw.config.json');
+
+      await Bun.write(
+        join(directory, '.env'),
+        [
+          'PIRATE_CLAW_TRANSMISSION_USERNAME=dotenv-user',
+          'PIRATE_CLAW_TRANSMISSION_PASSWORD="dotenv-pass"',
+        ].join('\n'),
+      );
+      await Bun.write(
+        configPath,
+        JSON.stringify(
+          {
+            ...createMinimalConfig(),
+            transmission: {
+              url: 'http://localhost:9091/transmission/rpc',
+            },
+          },
+          null,
+          2,
+        ),
+      );
+
+      const config = await loadConfig(configPath);
+
+      expect(config.transmission).toEqual({
+        url: 'http://localhost:9091/transmission/rpc',
+        username: 'dotenv-user',
+        password: 'dotenv-pass',
+      });
+    } finally {
+      await Bun.$`rm -rf ${directory}`;
+    }
   });
 });
 
