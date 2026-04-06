@@ -150,8 +150,11 @@ function resolvePullRequestForTicket(
   ticket: TicketState,
 ): PullRequestSnapshot {
   const byBranch = findPullRequestsForBranch(cwd, ticket.branch);
+  const tracked = byBranch.find((pr) => pr.number === ticket.prNumber);
   const matched =
-    byBranch.find((pr) => pr.number === ticket.prNumber) ?? byBranch[0];
+    tracked?.state === 'OPEN'
+      ? tracked
+      : (byBranch.find((pr) => pr.state === 'OPEN') ?? tracked ?? byBranch[0]);
 
   if (!matched) {
     throw new Error(
@@ -221,13 +224,17 @@ function deleteRemoteBranch(cwd: string, repo: string, branch: string): void {
   );
 }
 
-function fetchOriginMain(cwd: string): void {
-  runProcess(cwd, ['git', 'fetch', 'origin', 'main']);
+function fetchOriginDefaultBranch(cwd: string, defaultBranch: string): void {
+  runProcess(cwd, ['git', 'fetch', 'origin', defaultBranch]);
 }
 
-function rebaseChildOntoMain(child: TicketState, parent: TicketState): void {
+function rebaseChildOntoDefaultBranch(
+  child: TicketState,
+  parent: TicketState,
+  defaultBranch: string,
+): void {
   ensureCleanWorktree(child.worktreePath);
-  fetchOriginMain(child.worktreePath);
+  fetchOriginDefaultBranch(child.worktreePath, defaultBranch);
   const oldBase = runProcess(child.worktreePath, [
     'git',
     'merge-base',
@@ -245,7 +252,7 @@ function rebaseChildOntoMain(child: TicketState, parent: TicketState): void {
     'git',
     'rebase',
     '--onto',
-    'origin/main',
+    `origin/${defaultBranch}`,
     oldBase,
   ]);
 }
@@ -263,30 +270,32 @@ function forcePushBranch(ticket: TicketState): void {
 function buildReplacementPullRequestBody(
   ticket: TicketState,
   previousNumber: number,
+  defaultBranch: string,
 ): string {
   return [
     `Replacement for auto-closed stacked PR #${previousNumber} after parent branch merge.`,
     '',
-    `Content is the rebased ${ticket.id} branch against current main.`,
+    `Content is the rebased ${ticket.id} branch against current ${defaultBranch}.`,
   ].join('\n');
 }
 
 function createReplacementPullRequest(
   ticket: TicketState,
   previous: PullRequestSnapshot,
+  defaultBranch: string,
 ): PullRequestSnapshot {
   const url = runProcess(ticket.worktreePath, [
     'gh',
     'pr',
     'create',
     '--base',
-    'main',
+    defaultBranch,
     '--head',
     ticket.branch,
     '--title',
     previous.title,
     '--body',
-    buildReplacementPullRequestBody(ticket, previous.number),
+    buildReplacementPullRequestBody(ticket, previous.number, defaultBranch),
   ]);
   const number = Number(url.match(/\/pull\/(\d+)$/)?.[1]);
 
@@ -297,7 +306,7 @@ function createReplacementPullRequest(
   return {
     ...previous,
     number,
-    baseRefName: 'main',
+    baseRefName: defaultBranch,
     state: 'OPEN',
     url,
   };
@@ -306,6 +315,7 @@ function createReplacementPullRequest(
 function retargetChildPullRequest(
   child: TicketState,
   currentPr: PullRequestSnapshot,
+  defaultBranch: string,
 ): PullRequestSnapshot {
   const refreshed = resolvePullRequestForTicket(child.worktreePath, child);
 
@@ -316,21 +326,22 @@ function retargetChildPullRequest(
       'edit',
       String(refreshed.number),
       '--base',
-      'main',
+      defaultBranch,
     ]);
     return {
       ...refreshed,
-      baseRefName: 'main',
+      baseRefName: defaultBranch,
     };
   }
 
-  return createReplacementPullRequest(child, currentPr);
+  return createReplacementPullRequest(child, currentPr, defaultBranch);
 }
 
 function updateTicketPr(
   state: DeliveryState,
   ticketId: string,
   pr: PullRequestSnapshot,
+  defaultBranch: string,
 ): DeliveryState {
   return {
     ...state,
@@ -338,7 +349,7 @@ function updateTicketPr(
       ticket.id === ticketId
         ? {
             ...ticket,
-            baseBranch: ticket.id === ticketId ? 'main' : ticket.baseBranch,
+            baseBranch: defaultBranch,
             prNumber: pr.number,
             prUrl: pr.url,
           }
@@ -381,7 +392,8 @@ export async function runStackedCloseout(
   try {
     const parsed = parseStackedCloseoutArgs(argv);
     const rawConfig = await loadOrchestratorConfig(cwd);
-    initOrchestratorConfig(resolveOrchestratorConfig(rawConfig, cwd));
+    const config = resolveOrchestratorConfig(rawConfig, cwd);
+    initOrchestratorConfig(config);
     const options = createOptions({ planPath: parsed.planPath });
     let state = await loadState(cwd, options);
     const tickets = getCloseoutTicketChain(state);
@@ -424,16 +436,20 @@ export async function runStackedCloseout(
         });
       }
 
-      fetchOriginMain(current.worktreePath);
+      fetchOriginDefaultBranch(current.worktreePath, config.defaultBranch);
 
       if (next) {
-        rebaseChildOntoMain(next, current);
+        rebaseChildOntoDefaultBranch(next, current, config.defaultBranch);
         forcePushBranch(next);
         const replacementSource = resolvePullRequestForTicket(
           next.worktreePath,
           next,
         );
-        const childPr = retargetChildPullRequest(next, replacementSource);
+        const childPr = retargetChildPullRequest(
+          next,
+          replacementSource,
+          config.defaultBranch,
+        );
         if (childPr.number !== replacementSource.number) {
           summary.replaced.push({
             originalPrNumber: replacementSource.number,
@@ -442,7 +458,8 @@ export async function runStackedCloseout(
             url: childPr.url,
           });
         }
-        state = updateTicketPr(state, next.id, childPr);
+        state = updateTicketPr(state, next.id, childPr, config.defaultBranch);
+        await saveState(cwd, state);
       }
 
       deleteRemoteBranch(current.worktreePath, repo, current.branch);

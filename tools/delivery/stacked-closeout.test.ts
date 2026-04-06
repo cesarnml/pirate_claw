@@ -43,6 +43,12 @@ describe('stacked closeout', () => {
       );
     });
 
+    it('rejects a missing value for --plan', () => {
+      expect(() => parseStackedCloseoutArgs(['--plan'])).toThrow(
+        'Usage: bun run stacked-closeout --plan <plan-path>',
+      );
+    });
+
     it('parses the requested plan path', () => {
       expect(
         parseStackedCloseoutArgs([
