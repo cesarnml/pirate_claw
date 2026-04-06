@@ -47,9 +47,9 @@ Current product boundary:
 
 Last verified against `README.md` and CLI commands: 2026-04-06.
 
-Current planned next product phase:
+Current planning focus:
 
-- Phase 07 config ergonomics is now documented and is independent of the Synology runbook work in Phase 06 because it builds on the existing config and CLI surface rather than NAS validation
+- use the roadmap to identify the active phase or bounded ticket work; phase/epic requests should flow through the delivery orchestrator until blocked or explicitly narrowed
 
 ## Read These Docs By Task Type
 
@@ -89,6 +89,8 @@ If you are doing workflow or delivery-tooling work:
 
 ## Planning Workflow
 
+If the request names a phase or epic and the user says to implement, start, begin, run, or resume it, treat that as a full orchestrated delivery request: work the ticket stack in order and keep going until you hit a blocker or the user changes scope.
+
 When shaping a new phase or revising an existing one:
 
 - start in Plan Mode
@@ -115,7 +117,7 @@ When implementing a ticket:
 - during external waits such as AI-review windows, read ahead into the next ticket and nearby seams if it helps maintain momentum, but do not write ahead across ticket boundaries
 - avoid unrelated cleanup during the ticket unless required to land safely
 - update rationale and operator-facing docs when behavior changes
-- stop at the ticket boundary unless the user explicitly says to continue
+- stop at the ticket boundary for single-ticket work; for phase or epic requests, keep advancing through the stack until blocked or the user explicitly stops you
 
 Default technical constraints:
 
