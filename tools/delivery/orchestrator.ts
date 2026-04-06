@@ -455,6 +455,42 @@ export type StandaloneAiReviewResult = {
   vendors: string[];
 };
 
+type ReviewMetadataRefreshContext = {
+  actionCommits?: ReviewActionCommit[];
+  currentHeadSha?: string;
+};
+
+type TicketReviewMetadataRefreshTarget = Pick<
+  TicketState,
+  | 'id'
+  | 'title'
+  | 'ticketFile'
+  | 'baseBranch'
+  | 'internalReviewCompletedAt'
+  | 'reviewActionSummary'
+  | 'reviewIncompleteAgents'
+  | 'reviewComments'
+  | 'reviewHeadSha'
+  | 'status'
+  | 'reviewOutcome'
+  | 'reviewNote'
+  | 'reviewNonActionSummary'
+  | 'reviewThreadResolutions'
+  | 'reviewVendors'
+>;
+
+type ReviewMetadataRefreshBodyOptions =
+  | {
+      mode: 'standalone';
+      body: string;
+      result: StandaloneAiReviewResult;
+    }
+  | {
+      mode: 'ticketed';
+      state: DeliveryState;
+      ticket: TicketReviewMetadataRefreshTarget;
+    };
+
 type StandaloneAiReviewDependencies = Pick<
   PollReviewDependencies,
   'fetcher' | 'now' | 'resolveThreads' | 'sleep' | 'triager'
@@ -3933,27 +3969,7 @@ function buildAiReviewDetailLines(input: {
 
 export function buildPullRequestBody(
   state: DeliveryState,
-  ticket: Pick<
-    TicketState,
-    | 'id'
-    | 'title'
-    | 'ticketFile'
-    | 'baseBranch'
-    | 'internalReviewCompletedAt'
-    | 'reviewActionSummary'
-    | 'reviewIncompleteAgents'
-    | 'reviewComments'
-    | 'reviewHeadSha'
-    | 'reviewIncompleteAgents'
-    | 'reviewComments'
-    | 'reviewHeadSha'
-    | 'status'
-    | 'reviewOutcome'
-    | 'reviewNote'
-    | 'reviewNonActionSummary'
-    | 'reviewThreadResolutions'
-    | 'reviewVendors'
-  >,
+  ticket: TicketReviewMetadataRefreshTarget,
   options: {
     actionCommits?: ReviewActionCommit[];
     currentHeadSha?: string;
@@ -4003,6 +4019,20 @@ export function buildPullRequestBody(
   }
 
   return normalizeReviewerFacingPullRequestBody(lines.join('\n'));
+}
+
+export function buildReviewMetadataRefreshBody(
+  options: ReviewMetadataRefreshBodyOptions,
+  context: ReviewMetadataRefreshContext = {},
+): string {
+  if (options.mode === 'ticketed') {
+    return buildPullRequestBody(options.state, options.ticket, context);
+  }
+
+  return mergeStandaloneAiReviewSection(
+    options.body,
+    buildStandaloneAiReviewSection(options.result, context),
+  );
 }
 
 export function buildPullRequestTitle(
@@ -4392,16 +4422,23 @@ function updatePullRequestBody(
   }
 
   const currentHeadSha = readHeadSha(ticket.worktreePath);
-  const body = buildPullRequestBody(state, ticket, {
-    actionCommits: listReviewActionCommits(
-      ticket.worktreePath,
-      ticket.reviewHeadSha,
+  const body = buildReviewMetadataRefreshBody(
+    {
+      mode: 'ticketed',
+      state,
+      ticket,
+    },
+    {
+      actionCommits: listReviewActionCommits(
+        ticket.worktreePath,
+        ticket.reviewHeadSha,
+        currentHeadSha,
+        ticket.reviewComments,
+        ticket.reviewVendors,
+      ),
       currentHeadSha,
-      ticket.reviewComments,
-      ticket.reviewVendors,
-    ),
-    currentHeadSha,
-  });
+    },
+  );
   assertReviewerFacingMarkdown(body);
 
   runProcess(ticket.worktreePath, [
@@ -4522,9 +4559,13 @@ function updateStandalonePullRequestBody(
   pullRequest: StandalonePullRequest,
   result: StandaloneAiReviewResult,
 ): void {
-  const nextBody = mergeStandaloneAiReviewSection(
-    pullRequest.body,
-    buildStandaloneAiReviewSection(result, {
+  const nextBody = buildReviewMetadataRefreshBody(
+    {
+      body: pullRequest.body,
+      mode: 'standalone',
+      result,
+    },
+    {
       actionCommits: listReviewActionCommits(
         cwd,
         result.reviewedHeadSha,
@@ -4533,7 +4574,7 @@ function updateStandalonePullRequestBody(
         result.vendors,
       ),
       currentHeadSha: pullRequest.headRefOid,
-    }),
+    },
   );
   assertReviewerFacingMarkdown(nextBody);
 

@@ -39,3 +39,4 @@ This ticket does not change polling or review-state recording semantics. It only
 - `Why this path:` the adapter boundary is small and reviewable because the rendering primitives already exist; the work is mostly about centralizing composition without flattening the intentional differences.
 - `Alternative considered:` forcing one fully identical PR-body builder for both modes was rejected because standalone PRs must preserve author-owned content while ticket-linked PRs must keep delivery metadata.
 - `Deferred:` top-level command cleanup and final doc convergence remain for the last ticket.
+- `Implemented seam:` ticket-linked and standalone refresh paths now share one recorded-review metadata adapter that feeds the same reviewer-facing external review section context into each mode while preserving stacked summary fields for ticketed PRs and author-owned body content outside the managed AI-review block for standalone PRs.
