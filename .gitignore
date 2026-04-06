@@ -9,5 +9,6 @@ node_modules/
 .agents/ai-review/
 pirate-claw.config.json
 pirate-claw.db
+.pirate-claw/
 .env
 notes/private/
