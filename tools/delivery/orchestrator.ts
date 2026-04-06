@@ -2556,7 +2556,7 @@ async function processDetectedAiReview(options: {
     options.mapOutcome?.(triageResult.outcome) ?? triageResult.outcome;
   const threadResolutions = shouldResolveDetectedReviewThreads(
     options.mode,
-    triageResult.outcome,
+    latestOutcome,
   )
     ? options.resolveThreads(
         options.worktreePath,

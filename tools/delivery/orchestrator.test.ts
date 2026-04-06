@@ -2309,6 +2309,82 @@ describe('delivery orchestrator', () => {
     );
   });
 
+  it('does not resolve standalone review threads when outcome mapping changes needs-patch to operator input', async () => {
+    let resolveThreadsCalls = 0;
+    const fetcher = () => ({
+      agents: [
+        {
+          agent: 'coderabbit',
+          state: 'findings_detected' as const,
+          findingsCount: 1,
+          note: 'actionable findings captured',
+        },
+      ],
+      detected: true,
+      artifactText: 'normalized ai review artifact',
+      reviewedHeadSha: 'abcdef1234567890',
+      vendors: ['coderabbit'],
+      comments: [
+        {
+          vendor: 'coderabbit',
+          channel: 'inline_review' as const,
+          authorLogin: 'coderabbitai',
+          authorType: 'Bot' as const,
+          body: 'Guard the null return here.',
+          kind: 'finding' as const,
+          threadId: 'thread_example_1',
+          url: 'https://example.test/comment/1',
+        },
+      ],
+    });
+    const triager = () => ({
+      outcome: 'needs_patch' as const,
+      note: 'Actionable AI review findings were detected and still need follow-up.',
+      actionSummary: 'Flagged 1 finding comment for follow-up.',
+      vendors: ['coderabbit'],
+    });
+
+    const standaloneResult = await runStandaloneAiReview(
+      '/tmp/pirate_claw',
+      { kind: 'noop', enabled: false },
+      undefined,
+      {
+        now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+        sleep: async () => {},
+        fetcher,
+        triager,
+        pullRequest: {
+          body: 'existing body',
+          createdAt: '2026-04-01T10:00:00.000Z',
+          headRefName:
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+          headRefOid: 'fedcba0987654321',
+          number: 20,
+          title:
+            'feat: persist transmission identity for queued torrents [P3.01]',
+          url: 'https://example.test/pull/20',
+        },
+        resolveThreads: () => {
+          resolveThreadsCalls += 1;
+          return [
+            {
+              status: 'resolved' as const,
+              threadId: 'thread_example_1',
+              url: 'https://example.test/comment/1',
+              vendor: 'coderabbit',
+            },
+          ];
+        },
+        updatePullRequestBody: () => {},
+        writeNote: async () => {},
+      },
+    );
+
+    expect(standaloneResult.outcome).toBe('operator_input_needed');
+    expect(standaloneResult.threadResolutions).toBeUndefined();
+    expect(resolveThreadsCalls).toBe(0);
+  });
+
   it('uses the normal polling cadence when prOpenedAt is missing', async () => {
     const state: DeliveryState = {
       planKey: 'phase-03',
