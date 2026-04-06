@@ -1173,7 +1173,7 @@ function findTicketById(
         ));
 }
 
-async function loadState(
+export async function loadState(
   cwd: string,
   options: OrchestratorOptions,
 ): Promise<DeliveryState> {
@@ -1335,7 +1335,10 @@ async function repairState(
   };
 }
 
-async function saveState(cwd: string, state: DeliveryState): Promise<void> {
+export async function saveState(
+  cwd: string,
+  state: DeliveryState,
+): Promise<void> {
   const absoluteStatePath = resolve(cwd, state.statePath);
   await mkdir(dirname(absoluteStatePath), { recursive: true });
   await writeFile(
@@ -2264,8 +2267,7 @@ function resolveNativeReviewThreads(
   for (const comment of comments) {
     if (
       comment.channel !== 'inline_review' ||
-      comment.kind !== 'finding' ||
-      comment.isOutdated === true ||
+      (comment.kind !== 'finding' && comment.isOutdated !== true) ||
       comment.isResolved === true ||
       !comment.threadId ||
       seen.has(comment.threadId)
@@ -2703,7 +2705,7 @@ async function runStandaloneAiReview(
     );
     const triage = runAiReviewTriager(cwd, artifacts.artifactJsonPath);
     const threadResolutions =
-      triage.outcome === 'patched'
+      triage.outcome === 'patched' || triage.outcome === 'clean'
         ? resolveNativeReviewThreads(cwd, detectedReview.comments)
         : [];
     if (threadResolutions.length > 0) {
@@ -4597,7 +4599,7 @@ async function bootstrapWorktreeIfNeeded(worktreePath: string): Promise<void> {
   }
 }
 
-function formatStatus(state: DeliveryState): string {
+export function formatStatus(state: DeliveryState): string {
   return [
     'Delivery Orchestrator',
     `plan_key=${state.planKey}`,

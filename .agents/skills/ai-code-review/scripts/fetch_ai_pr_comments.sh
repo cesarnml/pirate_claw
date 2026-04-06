@@ -6,7 +6,7 @@ set -euo pipefail
 #     "agents": [{"agent":"coderabbit","state":"started|completed|findings_detected","findingsCount":1,"note":"..."}],
 #     "detected": true|false,
 #     "artifact_text": "normalized text artifact",
-#     "vendors": ["coderabbit", "qodo"],
+#     "vendors": ["coderabbit", "qodo", "greptile"],
 #     "comments": [...]
 #   }
 
@@ -251,13 +251,16 @@ jq -n \
     def body_text:
       (.body // "");
 
+    def current_head_sha:
+      ($pr.headRefOid // "" | ascii_downcase);
+
     def looks_like_supported_ai_identity:
       (author_login | ascii_downcase) as $login
-      | ($login | test("qodo|coderabbit"));
+      | ($login | test("qodo|coderabbit|greptile"));
 
     def looks_like_supported_ai_text:
       (body_text | normalize_text) as $body
-      | ($body | test("coderabbit|code rabbit|qodo"));
+      | ($body | test("coderabbit|code rabbit|qodo|greptile"));
 
     def looks_like_started_text:
       (body_text | normalize_text) as $body
@@ -272,7 +275,26 @@ jq -n \
       | (body_text | normalize_text) as $body
       | if ($login | test("coderabbit")) or ($body | test("coderabbit|code rabbit")) then "coderabbit"
         elif ($login | test("qodo")) or ($body | test("qodo")) then "qodo"
+        elif ($login | test("greptile")) or ($body | test("greptile")) then "greptile"
         else null
+        end;
+
+    def greptile_reviewed_sha:
+      (try (body_text | capture("commit/(?<sha>[0-9a-fA-F]{7,40})").sha) catch "" | ascii_downcase);
+
+    def looks_like_current_greptile_started_text:
+      (body_text | normalize_text) as $body
+      | (vendor_name) as $vendor
+      | if $vendor != "greptile" then
+          false
+        elif ($body | test("last reviewed commit|re-trigger greptile|retrigger greptile|reviews \\(")) | not then
+          false
+        else
+          (greptile_reviewed_sha) as $reviewed
+          | (current_head_sha) as $current
+          | ($reviewed | length) > 0
+            and ($current | length) > 0
+            and ($current | startswith($reviewed))
         end;
 
     def enrich_threads:
@@ -343,9 +365,11 @@ jq -n \
           end
         elif $vendor == "coderabbit" and ($channel == "issue_comment" or $channel == "review_summary") then
           "summary"
+        elif $vendor == "greptile" and $channel == "issue_comment" then
+          "summary"
         elif $channel == "review_summary" and ($body | length) == 0 then
           "summary"
-        elif looks_like_started_text or looks_like_summary_noise_text then
+        elif looks_like_started_text or looks_like_current_greptile_started_text or looks_like_summary_noise_text then
           "summary"
         elif ($body | test("summary|overall|overview|high level|high-level|general feedback|looks good|no major issues|quick recap")) then
           "summary"
@@ -358,7 +382,7 @@ jq -n \
     def derived_agent_state($channel):
       if $channel == "inline_review" then
         if (comment_thread_state.is_outdated or comment_thread_state.is_resolved) then "completed" else "findings_detected" end
-      elif looks_like_started_text then "started"
+      elif looks_like_started_text or looks_like_current_greptile_started_text then "started"
       elif comment_kind($channel) == "finding" then "findings_detected"
       else "completed"
       end;
