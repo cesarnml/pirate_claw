@@ -264,7 +264,7 @@ jq -n \
 
     def looks_like_started_text:
       (body_text | normalize_text) as $body
-      | ($body | test("review started|review in progress|currently reviewing|i am reviewing|i'\''m reviewing|analyzing this pr|analysis in progress|starting review|check back in a few minutes|processing new changes in this pr"));
+      | ($body | test("review started|review in progress|currently reviewing|i am reviewing|i'\''m reviewing|analyzing this pr|analysis in progress|starting review|check back in a few minutes|processing new changes in this pr|last reviewed commit|re-trigger greptile|retrigger greptile|reviews \\("));
 
     def looks_like_summary_noise_text:
       (body_text | normalize_text) as $body
