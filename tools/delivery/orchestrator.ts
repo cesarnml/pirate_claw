@@ -465,7 +465,7 @@ type StandaloneAiReviewDependencies = Pick<
     cwd: string,
     pullRequest: StandalonePullRequest,
     result: StandaloneAiReviewResult,
-  ) => void;
+  ) => void | Promise<void>;
   writeNote?: (
     cwd: string,
     prNumber: number,
@@ -2780,7 +2780,7 @@ export async function runStandaloneAiReview(
     };
     await writeNote(cwd, pullRequest.number, standaloneResult);
     try {
-      updatePullRequestBodyFn(cwd, pullRequest, standaloneResult);
+      await updatePullRequestBodyFn(cwd, pullRequest, standaloneResult);
     } catch (error) {
       console.warn(
         `Standalone AI review was recorded locally for PR #${pullRequest.number}, but PR body update failed: ${formatError(error)}`,
@@ -2808,7 +2808,7 @@ export async function runStandaloneAiReview(
   };
   await writeNote(cwd, pullRequest.number, standaloneResult);
   try {
-    updatePullRequestBodyFn(cwd, pullRequest, standaloneResult);
+    await updatePullRequestBodyFn(cwd, pullRequest, standaloneResult);
   } catch (error) {
     console.warn(
       `Standalone AI review was recorded locally for PR #${pullRequest.number}, but PR body update failed: ${formatError(error)}`,
