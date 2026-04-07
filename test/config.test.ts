@@ -641,6 +641,24 @@ describe('validateConfig', () => {
       ),
     );
   });
+
+  it('fails when transmission.downloadDirs tv value is not a string', () => {
+    expect(() =>
+      validateConfig({
+        ...createMinimalConfig(),
+        transmission: {
+          url: 'http://localhost:9091/transmission/rpc',
+          username: 'user',
+          password: 'pass',
+          downloadDirs: { tv: 42 },
+        },
+      }),
+    ).toThrow(
+      new ConfigError(
+        'Config file "config transmission downloadDirs tv" must be a non-empty string.',
+      ),
+    );
+  });
 });
 
 function createMinimalConfig() {

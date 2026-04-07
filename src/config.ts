@@ -374,8 +374,12 @@ function validateDownloadDirs(
   }
 
   return {
-    movie: optionalString(dirs.movie, `${path} movie`),
-    tv: optionalString(dirs.tv, `${path} tv`),
+    ...(dirs.movie !== undefined
+      ? { movie: optionalString(dirs.movie, `${path} movie`) }
+      : {}),
+    ...(dirs.tv !== undefined
+      ? { tv: optionalString(dirs.tv, `${path} tv`) }
+      : {}),
   };
 }
 
