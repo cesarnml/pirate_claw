@@ -73,11 +73,95 @@ Verification cues to keep here:
 Purpose:
 Create and verify the durable Synology folder layout and bind-mount targets required by both containers.
 
-Verification cues to keep here:
+Validation status:
+This section is drafted for `P6.02` and must be validated on the target `DS918+ / DSM 7.1.1-42962 Update 9` NAS before later container tickets rely on it.
 
-- target shared folders and subdirectories exist
-- intended mount targets are writable by the runtime users the containers will use
-- operator can prove the expected path layout before creating containers
+Target shared folders on `volume1`:
+
+- `/volume1/pirate-claw`
+- `/volume1/transmission`
+- `/volume1/media`
+
+Target directory tree:
+
+- `/volume1/pirate-claw/config`
+- `/volume1/pirate-claw/runtime`
+- `/volume1/pirate-claw/logs`
+- `/volume1/transmission/config`
+- `/volume1/transmission/watch`
+- `/volume1/media/downloads`
+- `/volume1/media/downloads/incomplete`
+
+Planned bind-mount map for later tickets:
+
+- Pirate Claw config: `/volume1/pirate-claw/config`
+- Pirate Claw runtime: `/volume1/pirate-claw/runtime`
+- Pirate Claw logs: `/volume1/pirate-claw/logs`
+- Transmission config: `/volume1/transmission/config`
+- Transmission watch directory: `/volume1/transmission/watch`
+- Shared downloads path for both containers: `/volume1/media/downloads`
+
+Permission baseline for this phase:
+
+- create the shared folders and subdirectories with the DSM operator account that will manage Container Manager
+- confirm that account has read and write access to all three shared folders
+- do not continue if any share or subdirectory is read-only, missing, or placed outside `volume1`
+- container-specific runtime-user proof is deferred to the later container tickets, but this ticket must prove the paths exist, are durable, and are writable from the NAS baseline
+
+DSM steps:
+
+1. Open `Control Panel -> Shared Folder`.
+2. Create these shared folders on `Volume 1` if they do not already exist:
+   - `pirate-claw`
+   - `transmission`
+   - `media`
+3. Open `File Station` and create these subdirectories exactly:
+   - `pirate-claw/config`
+   - `pirate-claw/runtime`
+   - `pirate-claw/logs`
+   - `transmission/config`
+   - `transmission/watch`
+   - `media/downloads`
+   - `media/downloads/incomplete`
+4. In each shared folder's permissions view, confirm the DSM account you will use for setup has `Read/Write` access.
+5. Do not create container tasks yet. This ticket stops after the storage baseline is proven.
+
+Shell validation:
+
+Run these commands on the NAS shell after the folders exist:
+
+```sh
+mount | grep '/volume1 '
+df -h /volume1/pirate-claw /volume1/transmission /volume1/media
+find /volume1/pirate-claw /volume1/transmission /volume1/media -maxdepth 2 -type d | sort
+ls -ld /volume1/pirate-claw \
+  /volume1/pirate-claw/config \
+  /volume1/pirate-claw/runtime \
+  /volume1/pirate-claw/logs \
+  /volume1/transmission \
+  /volume1/transmission/config \
+  /volume1/transmission/watch \
+  /volume1/media \
+  /volume1/media/downloads \
+  /volume1/media/downloads/incomplete
+touch /volume1/pirate-claw/runtime/.p6-02-write-check
+touch /volume1/transmission/config/.p6-02-write-check
+touch /volume1/media/downloads/.p6-02-write-check
+ls -l /volume1/pirate-claw/runtime/.p6-02-write-check \
+  /volume1/transmission/config/.p6-02-write-check \
+  /volume1/media/downloads/.p6-02-write-check
+rm /volume1/pirate-claw/runtime/.p6-02-write-check \
+  /volume1/transmission/config/.p6-02-write-check \
+  /volume1/media/downloads/.p6-02-write-check
+```
+
+Operator verification cues:
+
+- the three shared folders are visible in DSM and all live on `Volume 1`
+- the directory tree exactly matches the target layout above
+- the shell commands show the paths exist and are reachable under `/volume1`
+- the write-check files can be created and removed without permission errors
+- no container is created yet; this ticket validates storage only
 
 ## 3. Transmission Container Baseline
 

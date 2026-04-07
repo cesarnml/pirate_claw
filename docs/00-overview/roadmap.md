@@ -144,7 +144,8 @@ Goal:
 Current status:
 
 - `P6.01` is on `main`: the canonical runbook skeleton and acceptance checklist are established
-- `P6.02+` remain validation-driven and must stay anchored to the `DS918+ / DSM 7.1.1-42962 Update 9` baseline
+- `P6.02` draft instructions are on `main` and await hands-on NAS validation evidence
+- `P6.03+` remain validation-driven and must stay anchored to the `DS918+ / DSM 7.1.1-42962 Update 9` baseline
 
 Committed scope:
 
