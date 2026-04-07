@@ -163,6 +163,33 @@ Operator verification cues:
 - the write-check files can be created and removed without permission errors
 - no container is created yet; this ticket validates storage only
 
+Evidence capture guidance for `P6.02`:
+
+- treat DSM screenshots as proof of the UI steps only; do not mark this section fully validated until the shell validation block above has also been run on the NAS
+- you only need a way to reach the NAS shell; direct LAN SSH, VPN plus SSH, or another approved remote shell path are acceptable. SSH tunneling is optional and only needed if your network setup requires it
+- prefer a small redacted evidence set instead of a full click-by-click gallery
+
+Recommended screenshot set:
+
+- `Control Panel -> Shared Folder` showing `pirate-claw`, `transmission`, and `media` on `Volume 1`
+- a shared-folder permissions view showing the DSM operator account for setup has `Read/Write`
+- `File Station` showing `pirate-claw/config`, `pirate-claw/runtime`, and `pirate-claw/logs`
+- `File Station` showing `transmission/config` and `transmission/watch`
+- `File Station` showing `media/downloads` and `media/downloads/incomplete`
+- one NAS shell capture showing successful `find`, `ls -ld`, and write-check results
+
+Redaction and cropping rules:
+
+- crop tightly to the relevant DSM pane or shell output
+- redact public IPs, hostnames, usernames, serial-like identifiers, tabs, bookmarks, and desktop notifications
+- exclude unrelated shared folders, apps, or browser chrome unless the navigation itself is the evidence
+- do not include secrets, tokens, or any shell history outside the commands used for this validation
+
+Validation status rule for this section:
+
+- `DSM steps validated, shell validation pending` is acceptable while only the screenshots exist
+- `P6.02 validated` requires both the redacted DSM evidence and a successful NAS shell run of the commands in this section
+
 ## 3. Transmission Container Baseline
 
 Purpose:
