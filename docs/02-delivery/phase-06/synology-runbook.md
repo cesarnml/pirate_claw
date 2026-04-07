@@ -356,34 +356,44 @@ The Pirate Claw container uses `--network host` so it can reach the Transmission
 
 Bind mounts:
 
-| Host Path (on `volume1`)                              | Container Path                 | Mode |
-| ----------------------------------------------------- | ------------------------------ | ---- |
-| `/volume1/pirate-claw/config/pirate-claw.config.json` | `/app/pirate-claw.config.json` | `ro` |
-| `/volume1/pirate-claw/config/pirate-claw.db`          | `/app/pirate-claw.db`          |      |
-| `/volume1/pirate-claw/runtime`                        | `/data/runtime`                |      |
-| `/volume1/pirate-claw/logs`                           | `/data/logs`                   |      |
-| `/volume1/media/downloads`                            | `/downloads`                   |      |
+| Host Path (on `volume1`)                              | Container Path                    | Mode |
+| ----------------------------------------------------- | --------------------------------- | ---- |
+| `/volume1/pirate-claw/config/pirate-claw.config.json` | `/config/pirate-claw.config.json` | `ro` |
+| `/volume1/pirate-claw/config/.env`                    | `/config/.env`                    | `ro` |
+| `/volume1/pirate-claw/data/pirate-claw.db`            | `/app/pirate-claw.db`             |      |
+| `/volume1/pirate-claw/data/runtime`                   | `/data/runtime`                   |      |
+| `/volume1/pirate-claw/data/poll-state.json`           | `/app/poll-state.json`            |      |
+
+Bun `.env` auto-load caveat:
+
+Bun automatically loads a `.env` file from its working directory (`/app`) before any user code runs. On Docker 20.10.x (DSM 7.1.x) this causes a silent crash — the process exits with no output. The workaround is to mount the config and `.env` files under `/config/` instead of `/app/` and pass `--config /config/pirate-claw.config.json` to the daemon command. The app's own `.env` loader resolves the `.env` file relative to the config path, so it finds `/config/.env` automatically.
 
 Database durability note:
 
-Pirate Claw writes its SQLite database to `pirate-claw.db` in the container working directory (`/app`). Without a bind mount this file would be ephemeral. The mount above maps it to `/volume1/pirate-claw/config/pirate-claw.db` on the host so it survives container recreation.
+Pirate Claw writes its SQLite database to `pirate-claw.db` in the container working directory (`/app`). Without a bind mount this file would be ephemeral. The mount above maps it to `/volume1/pirate-claw/data/pirate-claw.db` on the host so it survives container recreation.
 
-Before creating the container for the first time, create the empty file on the host:
+Before creating the container for the first time, create the data directory and seed files:
 
 ```sh
-touch /volume1/pirate-claw/config/pirate-claw.db
+mkdir -p /volume1/pirate-claw/data/runtime
+touch /volume1/pirate-claw/data/pirate-claw.db
+touch /volume1/pirate-claw/data/poll-state.json
 ```
 
-Environment variables:
+Credentials via `.env`:
 
-| Variable                            | Value             | Purpose                                                                                        |
-| ----------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------- |
-| `PIRATE_CLAW_TRANSMISSION_USERNAME` | operator-provided | Transmission RPC username (required by config validator even if Transmission auth is disabled) |
-| `PIRATE_CLAW_TRANSMISSION_PASSWORD` | operator-provided | Transmission RPC password (required by config validator even if Transmission auth is disabled) |
+Place a `.env` file at `/volume1/pirate-claw/config/.env` with the Transmission credentials:
+
+```
+PIRATE_CLAW_TRANSMISSION_USERNAME=<your-username>
+PIRATE_CLAW_TRANSMISSION_PASSWORD=<your-password>
+```
+
+The `.env` file is mounted read-only inside the container at `/config/.env`. The app loads it automatically because `loadConfigEnv()` resolves `.env` relative to the config file path.
 
 Config file:
 
-Place the Pirate Claw config file at `/volume1/pirate-claw/config/pirate-claw.config.json`. The config must include a `runtime` section with `artifactDir` set to `/data/runtime` (matching the runtime bind mount inside the container). Set the Transmission URL to `http://localhost:9091/transmission/rpc` (reachable because the container uses host networking).
+Place the Pirate Claw config file at `/volume1/pirate-claw/config/pirate-claw.config.json`. The config must include a `runtime` section with `artifactDir` set to `/data/runtime` (matching the runtime bind mount inside the container). Set the Transmission URL to `http://localhost:9091/transmission/rpc` (reachable because the container uses host networking). Do not include `username` or `password` in the `transmission` section — those come from the `.env` file.
 
 Example minimal config for validation:
 
@@ -445,8 +455,25 @@ Docker package steps:
 4. Enable auto-restart.
 5. On the network page, select `Use the same network as Docker Host`.
 6. On the volume settings page, add the five bind mounts listed above.
-7. On the environment page, add `PIRATE_CLAW_TRANSMISSION_USERNAME` and `PIRATE_CLAW_TRANSMISSION_PASSWORD`.
+7. On the execution command page, set the command to `daemon --config /config/pirate-claw.config.json`.
 8. Review the summary and click `Done` to create and start the container.
+
+Shell alternative (create via CLI):
+
+```sh
+docker create \
+  --name pirate-claw \
+  --restart always \
+  --network host \
+  -v /volume1/pirate-claw/config/pirate-claw.config.json:/config/pirate-claw.config.json:ro \
+  -v /volume1/pirate-claw/config/.env:/config/.env:ro \
+  -v /volume1/pirate-claw/data/pirate-claw.db:/app/pirate-claw.db \
+  -v /volume1/pirate-claw/data/runtime:/data/runtime \
+  -v /volume1/pirate-claw/data/poll-state.json:/app/poll-state.json \
+  pirate-claw:latest daemon --config /config/pirate-claw.config.json
+
+docker start pirate-claw
+```
 
 Shell validation:
 
@@ -477,13 +504,13 @@ docker inspect pirate-claw --format '{{range .Mounts}}{{.Source}} -> {{.Destinat
 Expected: five mount lines matching the bind-mount table above.
 
 ```sh
-ls -la /volume1/pirate-claw/config/pirate-claw.db
+ls -la /volume1/pirate-claw/data/pirate-claw.db
 ```
 
 Expected: non-zero file size, proving the database is being written to the durable host path.
 
 ```sh
-ls /volume1/pirate-claw/runtime/cycles/ | tail -5
+ls /volume1/pirate-claw/data/runtime/ | tail -5
 ```
 
 Expected: timestamped cycle artifact files (`.json` and `.md`), proving the daemon is writing runtime artifacts to the durable bind mount.
@@ -492,8 +519,8 @@ Operator verification cues:
 
 - the container is running with restart policy `always` and host networking
 - `daemon started` appears in the logs and cycle logs show no fatal errors
-- `pirate-claw.db` exists on the host at `/volume1/pirate-claw/config/pirate-claw.db` with non-zero size
-- runtime cycle artifacts are being written to `/volume1/pirate-claw/runtime/cycles/`
+- `pirate-claw.db` exists on the host at `/volume1/pirate-claw/data/pirate-claw.db` with non-zero size
+- runtime cycle artifacts are being written to `/volume1/pirate-claw/data/runtime/`
 - the config file is mounted read-only; operator changes require a container restart
 - both `pirate-claw` and `transmission` containers are running simultaneously
 

@@ -7,7 +7,9 @@ RUN bun install --frozen-lockfile --production
 
 COPY src/ src/
 COPY bin/ bin/
-COPY pirate-claw.config.json ./
+COPY pirate-claw.config.example.json ./
 
-ENTRYPOINT ["bun", "run", "src/cli.ts"]
+RUN bun build src/cli.ts --outdir dist --target bun --format esm
+
+ENTRYPOINT ["bun", "run", "dist/cli.js"]
 CMD ["daemon"]

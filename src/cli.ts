@@ -384,6 +384,5 @@ function parseConfigPath(argv: string[]): string | undefined {
 }
 
 if (import.meta.main) {
-  const exitCode = await runCli(Bun.argv.slice(2));
-  process.exit(exitCode);
+  process.exitCode = await runCli(Bun.argv.slice(2));
 }
