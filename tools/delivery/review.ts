@@ -950,25 +950,40 @@ async function applyTicketReviewUpdate(
   updateTicket: (ticket: TicketState) => TicketState,
   dependencies: Pick<TicketReviewDependencies, 'updatePullRequestBody'>,
 ): Promise<DeliveryState> {
-  const nextState: DeliveryState = {
-    ...state,
-    tickets: state.tickets.map((ticket) =>
-      ticket.id === ticketId ? updateTicket(ticket) : ticket,
-    ),
-  };
-  const updatedTarget = nextState.tickets.find(
+  const updatedTickets = state.tickets.map((ticket) =>
+    ticket.id === ticketId ? updateTicket(ticket) : ticket,
+  );
+  const updatedIndex = updatedTickets.findIndex(
     (ticket) => ticket.id === ticketId,
   );
 
-  if (!updatedTarget) {
+  if (updatedIndex === -1) {
     throw new Error(`Unknown ticket ${ticketId}.`);
   }
 
+  const updatedTarget = updatedTickets[updatedIndex]!;
+  const isLastTicket = updatedIndex === updatedTickets.length - 1;
+  const finalizedTickets: TicketState[] =
+    isLastTicket &&
+    updatedTarget.status === 'reviewed' &&
+    (updatedTarget.reviewOutcome === 'clean' ||
+      updatedTarget.reviewOutcome === 'patched')
+      ? updatedTickets.map((ticket, index) =>
+          index === updatedIndex ? { ...ticket, status: 'done' } : ticket,
+        )
+      : updatedTickets;
+
+  const nextState: DeliveryState = {
+    ...state,
+    tickets: finalizedTickets,
+  };
+  const persistedTarget = nextState.tickets[updatedIndex]!;
+
   try {
-    await dependencies.updatePullRequestBody?.(nextState, updatedTarget);
+    await dependencies.updatePullRequestBody?.(nextState, persistedTarget);
   } catch (error) {
     console.warn(
-      `Review was recorded locally for ${updatedTarget.id}, but PR body update failed: ${formatError(error)}`,
+      `Review was recorded locally for ${persistedTarget.id}, but PR body update failed: ${formatError(error)}`,
     );
   }
 
