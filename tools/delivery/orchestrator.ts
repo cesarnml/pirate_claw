@@ -1,8 +1,38 @@
-import { spawnSync as nodeSpawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { readdir } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
+
+import {
+  addWorktree as addPlatformWorktree,
+  bootstrapWorktreeIfNeeded as bootstrapPlatformWorktreeIfNeeded,
+  copyLocalEnvIfPresent as copyPlatformEnvIfPresent,
+  createPullRequest as createPlatformPullRequest,
+  editPullRequest as editPlatformPullRequest,
+  ensureBranchPushed as ensurePlatformBranchPushed,
+  ensureCleanWorktree as ensurePlatformCleanWorktree,
+  fetchOrigin as fetchPlatformOrigin,
+  findOpenPullRequest as findPlatformOpenPullRequest,
+  findPrimaryWorktreePath as findPlatformPrimaryWorktreePath,
+  hasMergedPullRequestForBranch as hasPlatformMergedPullRequestForBranch,
+  listCommitSubjectsBetween as listPlatformCommitSubjectsBetween,
+  listLocalBranches as listPlatformLocalBranches,
+  listMergedPullRequests as listPlatformMergedPullRequests,
+  listOpenPullRequests as listPlatformOpenPullRequests,
+  listRemoteBranches as listPlatformRemoteBranches,
+  readCurrentBranch as readPlatformCurrentBranch,
+  readHeadSha as readPlatformHeadSha,
+  readLatestCommitSubject as readPlatformLatestCommitSubject,
+  readMergeBase as readPlatformMergeBase,
+  rebaseOnto as rebasePlatformOnto,
+  rebaseOntoDefaultBranch as rebasePlatformOntoDefaultBranch,
+  resolveReviewThread as resolvePlatformReviewThread,
+  resolveStandalonePullRequest as resolvePlatformStandalonePullRequest,
+  runProcess as runPlatformProcess,
+  runProcessResult as runPlatformProcessResult,
+  type PullRequestSummary,
+} from './platform';
+
+export { parseGitWorktreeList } from './platform';
 
 export type TicketStatus =
   | 'pending'
@@ -78,22 +108,6 @@ type RepairStateResult = {
   backupPath?: string;
   changes: string[];
   hadExistingState: boolean;
-};
-
-type PullRequestSummary = {
-  baseRefName?: string;
-  body?: string;
-  createdAt?: string;
-  headRefName?: string;
-  number: number;
-  title?: string;
-  url: string;
-  state: string;
-};
-
-type PullRequestDetail = PullRequestSummary & {
-  baseRefName?: string;
-  mergedAt?: string | null;
 };
 
 type BranchMatch = {
@@ -728,49 +742,6 @@ export async function runDeliveryOrchestrator(
   }
 }
 
-type GitWorktreeEntry = {
-  branch?: string;
-  path: string;
-};
-
-export function parseGitWorktreeList(output: string): GitWorktreeEntry[] {
-  const entries: GitWorktreeEntry[] = [];
-  let current: GitWorktreeEntry | undefined;
-
-  for (const rawLine of output.split('\n')) {
-    const line = rawLine.trim();
-
-    if (line.length === 0) {
-      if (current) {
-        entries.push(current);
-        current = undefined;
-      }
-      continue;
-    }
-
-    if (line.startsWith('worktree ')) {
-      if (current) {
-        entries.push(current);
-      }
-
-      current = {
-        path: line.slice('worktree '.length),
-      };
-      continue;
-    }
-
-    if (line.startsWith('branch ') && current) {
-      current.branch = line.slice('branch '.length);
-    }
-  }
-
-  if (current) {
-    entries.push(current);
-  }
-
-  return entries;
-}
-
 export function parseDotEnv(content: string): Record<string, string> {
   const values: Record<string, string> = {};
 
@@ -827,15 +798,11 @@ async function ensureLocalEnvFile(cwd: string): Promise<void> {
 }
 
 export function findPrimaryWorktreePath(cwd: string): string | undefined {
-  const worktrees = parseGitWorktreeList(
-    runProcess(cwd, ['git', 'worktree', 'list', '--porcelain']),
+  return findPlatformPrimaryWorktreePath(
+    cwd,
+    _config.defaultBranch,
+    _config.runtime,
   );
-
-  return worktrees.find(
-    (worktree) =>
-      resolve(worktree.path) !== resolve(cwd) &&
-      worktree.branch === `refs/heads/${_config.defaultBranch}`,
-  )?.path;
 }
 
 async function loadDotEnvIntoProcess(cwd: string): Promise<void> {
@@ -1427,17 +1394,8 @@ function inferStateFromRepo(
   ticketDefinitions: TicketDefinition[],
   options: OrchestratorOptions,
 ): DeliveryState {
-  const remoteBranches = runGitLines(cwd, [
-    'git',
-    'branch',
-    '-r',
-    '--format=%(refname:short)',
-  ]).map((line) => line.replace(/^origin\//, ''));
-  const localBranches = runGitLines(cwd, [
-    'git',
-    'branch',
-    '--format=%(refname:short)',
-  ]);
+  const remoteBranches = listPlatformRemoteBranches(cwd, _config.runtime);
+  const localBranches = listPlatformLocalBranches(cwd, _config.runtime);
   const openPullRequests = listOpenPullRequests(cwd);
   const mergedPullRequests = listMergedPullRequests(cwd);
   const branchCatalog = [
@@ -1622,93 +1580,18 @@ export function summarizeStateDifferences(
 }
 
 function listOpenPullRequests(cwd: string): Map<string, PullRequestSummary> {
-  const stdout = runProcess(cwd, [
-    'gh',
-    'pr',
-    'list',
-    '--state',
-    'open',
-    '--limit',
-    '100',
-    '--json',
-    'number,url,headRefName,state',
-  ]);
-  const parsed = JSON.parse(stdout) as Array<{
-    number: number;
-    url: string;
-    headRefName: string;
-    state: string;
-  }>;
-
-  return new Map(
-    parsed.map((pr) => [
-      pr.headRefName,
-      {
-        headRefName: pr.headRefName,
-        number: pr.number,
-        url: pr.url,
-        state: pr.state,
-      } satisfies PullRequestSummary,
-    ]),
-  );
+  return listPlatformOpenPullRequests(cwd, _config.runtime);
 }
 
 function listMergedPullRequests(cwd: string): Map<string, PullRequestSummary> {
-  const stdout = runProcess(cwd, [
-    'gh',
-    'pr',
-    'list',
-    '--state',
-    'merged',
-    '--limit',
-    '100',
-    '--json',
-    'number,url,headRefName,state',
-  ]);
-  const parsed = JSON.parse(stdout) as Array<{
-    number: number;
-    url: string;
-    headRefName: string;
-    state: string;
-  }>;
-
-  return new Map(
-    parsed.map((pr) => [
-      pr.headRefName,
-      {
-        headRefName: pr.headRefName,
-        number: pr.number,
-        url: pr.url,
-        state: pr.state,
-      } satisfies PullRequestSummary,
-    ]),
-  );
+  return listPlatformMergedPullRequests(cwd, _config.runtime);
 }
 
 function resolveStandalonePullRequest(
   cwd: string,
   prNumber?: number,
 ): StandalonePullRequest {
-  const target = prNumber ? String(prNumber) : undefined;
-  const stdout = runProcess(cwd, [
-    'gh',
-    'pr',
-    'view',
-    ...(target ? [target] : []),
-    '--json',
-    'number,url,title,body,headRefName,headRefOid,createdAt',
-  ]);
-  const parsed = JSON.parse(stdout) as {
-    body: string;
-    createdAt: string;
-    headRefName: string;
-    headRefOid: string;
-    number: number;
-    title: string;
-    url: string;
-  };
-
-  return parsed;
+  return resolvePlatformStandalonePullRequest(cwd, _config.runtime, prNumber);
 }
 
 function findPullRequestForTicket(
@@ -1770,15 +1653,7 @@ async function startTicket(
   }
 
   if (!existsSync(target.worktreePath)) {
-    runProcess(cwd, [
-      'git',
-      'worktree',
-      'add',
-      target.worktreePath,
-      '-b',
-      target.branch,
-      target.baseBranch,
-    ]);
+    addWorktree(cwd, target.worktreePath, target.branch, target.baseBranch);
   }
 
   await copyLocalEnvIfPresent(cwd, target.worktreePath);
@@ -1805,14 +1680,7 @@ export async function copyLocalEnvIfPresent(
   sourceWorktreePath: string,
   targetWorktreePath: string,
 ): Promise<void> {
-  const sourceEnvPath = resolve(sourceWorktreePath, '.env');
-  const targetEnvPath = resolve(targetWorktreePath, '.env');
-
-  if (!existsSync(sourceEnvPath) || existsSync(targetEnvPath)) {
-    return;
-  }
-
-  await copyFile(sourceEnvPath, targetEnvPath);
+  await copyPlatformEnvIfPresent(sourceWorktreePath, targetWorktreePath);
 }
 
 export async function recordInternalReview(
@@ -1915,32 +1783,19 @@ export async function openPullRequest(
   let prNumber: number;
 
   if (existingPullRequest) {
-    runProcess(target.worktreePath, [
-      'gh',
-      'pr',
-      'edit',
-      String(existingPullRequest.number),
-      '--title',
-      title,
-      '--body',
+    editPullRequest(target.worktreePath, existingPullRequest.number, {
       body,
-    ]);
+      title,
+    });
     prUrl = existingPullRequest.url;
     prNumber = existingPullRequest.number;
   } else {
-    prUrl = runProcess(target.worktreePath, [
-      'gh',
-      'pr',
-      'create',
-      '--base',
-      target.baseBranch,
-      '--head',
-      target.branch,
-      '--title',
-      title,
-      '--body',
+    prUrl = createPullRequest(target.worktreePath, {
+      base: target.baseBranch,
       body,
-    ]).trim();
+      head: target.branch,
+      title,
+    });
     prNumber = parsePullRequestNumber(prUrl);
   }
 
@@ -2363,15 +2218,7 @@ function resolveNativeReviewThreads(
     }
 
     try {
-      const response = runProcess(worktreePath, [
-        'gh',
-        'api',
-        'graphql',
-        '-F',
-        `threadId=${comment.threadId}`,
-        '-f',
-        'query=mutation($threadId: ID!) { resolveReviewThread(input: { threadId: $threadId }) { thread { id isResolved } } }',
-      ]);
+      const response = resolveReviewThread(worktreePath, comment.threadId);
       const parsed = parseResolveReviewThreadOutput(response);
 
       if (!parsed.resolved) {
@@ -3145,7 +2992,7 @@ async function restackTicket(
     );
   }
 
-  runProcess(cwd, ['git', 'fetch', 'origin']);
+  fetchOrigin(cwd);
 
   const targetIndex = state.tickets.findIndex(
     (ticket) => ticket.id === target.id,
@@ -3156,12 +3003,7 @@ async function restackTicket(
   let rebaseTarget = `origin/${_config.defaultBranch}`;
 
   if (previous) {
-    const oldBase = runProcess(cwd, [
-      'git',
-      'merge-base',
-      target.branch,
-      previous.branch,
-    ]).trim();
+    const oldBase = readMergeBase(cwd, target.branch, previous.branch);
 
     if (!oldBase) {
       throw new Error(
@@ -3174,9 +3016,9 @@ async function restackTicket(
       rebaseTarget = previous.branch;
     }
 
-    runProcess(cwd, ['git', 'rebase', '--onto', rebaseTarget, oldBase]);
+    rebaseOnto(cwd, rebaseTarget, oldBase);
   } else {
-    runProcess(cwd, ['git', 'rebase', `origin/${_config.defaultBranch}`]);
+    rebaseOntoDefaultBranch(cwd, _config.defaultBranch);
   }
 
   const nextState: DeliveryState = {
@@ -3202,15 +3044,9 @@ async function restackTicket(
 
   if (pullRequest) {
     const currentHeadSha = readHeadSha(updatedTarget.worktreePath);
-    runProcess(cwd, [
-      'gh',
-      'pr',
-      'edit',
-      String(pullRequest.number),
-      '--base',
-      nextBaseBranch,
-      '--body',
-      buildPullRequestBody(nextState, updatedTarget, {
+    editPullRequest(cwd, pullRequest.number, {
+      base: nextBaseBranch,
+      body: buildPullRequestBody(nextState, updatedTarget, {
         actionCommits: listReviewActionCommits(
           updatedTarget.worktreePath,
           updatedTarget.reviewHeadSha,
@@ -3220,17 +3056,10 @@ async function restackTicket(
         ),
         currentHeadSha,
       }),
-    ]);
+    });
   }
 
   return nextState;
-}
-
-function runGitLines(cwd: string, cmd: string[]): string[] {
-  return runProcess(cwd, cmd)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
 }
 
 function parseMarkdownHeading(
@@ -3491,15 +3320,12 @@ function listReviewActionCommits(
 
   const actionVendors = collectActionVendors(comments, vendors);
   try {
-    return runGitLines(cwd, [
-      'git',
-      'log',
-      '--no-merges',
-      '--reverse',
-      `--max-count=${MAX_ACTION_COMMITS}`,
-      '--format=%H%x09%s',
-      `${reviewedHeadSha}..${currentHeadSha}`,
-    ])
+    return listCommitSubjectsBetween(
+      cwd,
+      reviewedHeadSha,
+      currentHeadSha,
+      MAX_ACTION_COMMITS,
+    )
       .map((line) => {
         const [sha, subject] = line.split('\t', 2);
         if (!sha || !subject) {
@@ -4437,14 +4263,7 @@ function updatePullRequestBody(
   );
   assertReviewerFacingMarkdown(body);
 
-  runProcess(ticket.worktreePath, [
-    'gh',
-    'pr',
-    'edit',
-    String(ticket.prNumber),
-    '--body',
-    body,
-  ]);
+  editPullRequest(ticket.worktreePath, ticket.prNumber, { body });
 }
 
 export function buildStandaloneAiReviewSection(
@@ -4574,137 +4393,110 @@ function updateStandalonePullRequestBody(
   );
   assertReviewerFacingMarkdown(nextBody);
 
-  runProcess(cwd, [
-    'gh',
-    'pr',
-    'edit',
-    String(pullRequest.number),
-    '--body',
-    nextBody,
-  ]);
+  editPullRequest(cwd, pullRequest.number, { body: nextBody });
 }
 
 function findOpenPullRequest(
   cwd: string,
   branch: string,
 ): PullRequestSummary | undefined {
-  const stdout = runProcess(cwd, [
-    'gh',
-    'pr',
-    'list',
-    '--state',
-    'open',
-    '--head',
-    branch,
-    '--json',
-    'number,url,state',
-  ]);
-  const parsed = JSON.parse(stdout) as Array<PullRequestSummary>;
-  return parsed[0];
-}
-
-function findMergedPullRequest(
-  cwd: string,
-  branch: string,
-): PullRequestDetail | undefined {
-  const stdout = runProcess(cwd, [
-    'gh',
-    'pr',
-    'list',
-    '--state',
-    'merged',
-    '--head',
-    branch,
-    '--limit',
-    '1',
-    '--json',
-    'number,url,state,baseRefName,mergedAt',
-  ]);
-  const parsed = JSON.parse(stdout) as Array<PullRequestDetail>;
-  return parsed[0];
+  return findPlatformOpenPullRequest(cwd, branch, _config.runtime);
 }
 
 function hasMergedPullRequestForBranch(cwd: string, branch: string): boolean {
-  return findMergedPullRequest(cwd, branch) !== undefined;
+  return hasPlatformMergedPullRequestForBranch(cwd, branch, _config.runtime);
 }
 
 function readLatestCommitSubject(cwd: string): string {
-  return runProcess(cwd, ['git', 'log', '-1', '--pretty=%s']).trim();
+  return readPlatformLatestCommitSubject(cwd, _config.runtime);
 }
 
 function readHeadSha(cwd: string): string {
-  return runProcess(cwd, ['git', 'rev-parse', 'HEAD']).trim();
+  return readPlatformHeadSha(cwd, _config.runtime);
 }
 
 function readCurrentBranch(cwd: string): string {
-  const branch = runProcess(cwd, ['git', 'branch', '--show-current']).trim();
-
-  if (!branch) {
-    throw new Error('Restack requires an attached branch checkout.');
-  }
-
-  return branch;
+  return readPlatformCurrentBranch(cwd, _config.runtime);
 }
 
 function ensureCleanWorktree(cwd: string): void {
-  const status = runProcess(cwd, ['git', 'status', '--short']).trim();
-
-  if (status) {
-    throw new Error(
-      'Restack requires a clean worktree. Commit, stash, or discard local changes first.',
-    );
-  }
+  ensurePlatformCleanWorktree(cwd, _config.runtime);
 }
 
 function ensureBranchPushed(cwd: string, branch: string): void {
-  const localSha = runGitLines(cwd, ['git', 'rev-parse', branch])[0];
-  const remoteRef = runProcessResult(cwd, [
-    'git',
-    'ls-remote',
-    '--heads',
-    'origin',
-    branch,
-  ]);
+  ensurePlatformBranchPushed(cwd, branch, _config.runtime);
+}
 
-  if (remoteRef.exitCode !== 0) {
-    throw new Error(
-      formatCommandFailure(
-        ['git', 'ls-remote', '--heads', 'origin', branch],
-        remoteRef,
-      ),
-    );
-  }
+function addWorktree(
+  cwd: string,
+  worktreePath: string,
+  branch: string,
+  baseBranch: string,
+): void {
+  addPlatformWorktree(cwd, worktreePath, branch, baseBranch, _config.runtime);
+}
 
-  const remoteSha = remoteRef.stdout.trim().split(/\s+/)[0] || undefined;
+function createPullRequest(
+  cwd: string,
+  options: {
+    base: string;
+    body: string;
+    head: string;
+    title: string;
+  },
+): string {
+  return createPlatformPullRequest(cwd, options, _config.runtime);
+}
 
-  if (!remoteSha) {
-    runProcess(cwd, ['git', 'push', '-u', 'origin', branch]);
-    return;
-  }
+function editPullRequest(
+  cwd: string,
+  prNumber: number,
+  options: {
+    base?: string;
+    body?: string;
+    title?: string;
+  },
+): void {
+  editPlatformPullRequest(cwd, prNumber, options, _config.runtime);
+}
 
-  if (remoteSha !== localSha) {
-    runProcess(cwd, ['git', 'push', 'origin', branch]);
-  }
+function resolveReviewThread(worktreePath: string, threadId: string): string {
+  return resolvePlatformReviewThread(worktreePath, threadId, _config.runtime);
+}
 
-  const upstream = runProcessResult(cwd, [
-    'git',
-    'branch',
-    '--set-upstream-to',
-    `origin/${branch}`,
-    branch,
-  ]);
+function fetchOrigin(cwd: string): void {
+  fetchPlatformOrigin(cwd, _config.runtime);
+}
 
-  if (
-    upstream.exitCode !== 0 &&
-    !upstream.stderr.includes('is already set up to track')
-  ) {
-    throw new Error(
-      formatCommandFailure(
-        ['git', 'branch', '--set-upstream-to', `origin/${branch}`, branch],
-        upstream,
-      ),
-    );
-  }
+function readMergeBase(
+  cwd: string,
+  branch: string,
+  previousBranch: string,
+): string {
+  return readPlatformMergeBase(cwd, branch, previousBranch, _config.runtime);
+}
+
+function rebaseOnto(cwd: string, rebaseTarget: string, oldBase: string): void {
+  rebasePlatformOnto(cwd, rebaseTarget, oldBase, _config.runtime);
+}
+
+function rebaseOntoDefaultBranch(cwd: string, defaultBranch: string): void {
+  rebasePlatformOntoDefaultBranch(cwd, defaultBranch, _config.runtime);
+}
+
+function listCommitSubjectsBetween(
+  cwd: string,
+  reviewedHeadSha: string,
+  currentHeadSha: string,
+  maxCount: number,
+): string[] {
+  return listPlatformCommitSubjectsBetween(
+    cwd,
+    reviewedHeadSha,
+    currentHeadSha,
+    maxCount,
+    _config.runtime,
+  );
 }
 
 async function emitNotificationWarnings(
@@ -4796,13 +4588,7 @@ function parsePullRequestNumber(prUrl: string): number {
 }
 
 function runProcess(cwd: string, cmd: string[]): string {
-  const result = runProcessResult(cwd, cmd);
-
-  if (result.exitCode !== 0) {
-    throw new Error(formatCommandFailure(cmd, result));
-  }
-
-  return result.stdout;
+  return runPlatformProcess(cwd, cmd, _config.runtime);
 }
 
 export function runProcessResult(
@@ -4813,51 +4599,7 @@ export function runProcessResult(
   stderr: string;
   stdout: string;
 } {
-  if (_config.runtime === 'bun' && typeof globalThis.Bun !== 'undefined') {
-    const result = Bun.spawnSync(cmd, {
-      cwd,
-      stderr: 'pipe',
-      stdout: 'pipe',
-      env: process.env,
-    });
-
-    return {
-      exitCode: result.exitCode,
-      stderr: new TextDecoder().decode(result.stderr).trim(),
-      stdout: new TextDecoder().decode(result.stdout),
-    };
-  }
-
-  const result = nodeSpawnSync(cmd[0]!, cmd.slice(1), {
-    cwd,
-    env: process.env,
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-
-  return {
-    exitCode: result.status ?? 1,
-    stderr: [result.stderr?.toString() ?? '', result.error?.message ?? '']
-      .filter(Boolean)
-      .join('\n')
-      .trim(),
-    stdout: result.stdout?.toString() ?? '',
-  };
-}
-
-function formatCommandFailure(
-  cmd: string[],
-  result: {
-    stderr: string;
-    stdout: string;
-  },
-): string {
-  return [
-    `Command failed: ${cmd.join(' ')}`,
-    result.stderr.trim(),
-    result.stdout.trim(),
-  ]
-    .filter(Boolean)
-    .join('\n');
+  return runPlatformProcessResult(cwd, cmd, _config.runtime);
 }
 
 function normalizeRepoPath(value: string): string {
@@ -4895,41 +4637,12 @@ function sleep(milliseconds: number): Promise<void> {
   );
 }
 
-const LOCK_FILES = [
-  'bun.lock',
-  'pnpm-lock.yaml',
-  'yarn.lock',
-  'package-lock.json',
-] as const;
-
 async function bootstrapWorktreeIfNeeded(worktreePath: string): Promise<void> {
-  if (
-    !existsSync(resolve(worktreePath, 'package.json')) ||
-    existsSync(resolve(worktreePath, 'node_modules'))
-  ) {
-    return;
-  }
-
-  const hasLockfile = LOCK_FILES.some((file) =>
-    existsSync(resolve(worktreePath, file)),
+  await bootstrapPlatformWorktreeIfNeeded(
+    worktreePath,
+    _config.packageManager,
+    _config.runtime,
   );
-
-  if (!hasLockfile) {
-    return;
-  }
-
-  const pm = _config.packageManager;
-  runProcess(worktreePath, [pm, 'install']);
-
-  const packageJson = JSON.parse(
-    await readFile(resolve(worktreePath, 'package.json'), 'utf8'),
-  ) as {
-    scripts?: Record<string, string>;
-  };
-
-  if (packageJson.scripts?.['hooks:install']) {
-    runProcess(worktreePath, [pm, 'run', 'hooks:install']);
-  }
 }
 
 export function formatStatus(state: DeliveryState): string {
