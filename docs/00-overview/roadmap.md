@@ -141,6 +141,11 @@ Goal:
 
 - provide a validated runbook for always-on Pirate Claw + Transmission operation on Synology
 
+Current status:
+
+- `P6.01` is on `main`: the canonical runbook skeleton and acceptance checklist are established
+- `P6.02+` remain validation-driven and must stay anchored to the `DS918+ / DSM 7.1.1-42962 Update 9` baseline
+
 Committed scope:
 
 - tested setup and operations documentation only
@@ -154,6 +159,7 @@ Working notes:
 
 - `docs/01-product/phase-06-synology-runbook.md`
 - `docs/02-delivery/phase-06/implementation-plan.md`
+- `docs/02-delivery/phase-06/synology-runbook.md`
 
 ## Phase 07: Config Ergonomics
 

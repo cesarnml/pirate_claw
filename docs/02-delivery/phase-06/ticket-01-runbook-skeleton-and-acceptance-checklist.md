@@ -29,3 +29,4 @@ Phase 06 is a documentation-and-validation phase. The operator journey, evidence
 - `Why this path:` a dedicated skeleton ticket keeps the canonical runbook from fragmenting across later tickets and creates the explicit developer control point the phase requires before NAS validation starts.
 - `Alternative considered:` letting the runbook structure emerge inside the first setup ticket was rejected because it would make the first DS918+ validation slice too broad and would hide the evidence standard until too late.
 - `Deferred:` all hands-on validation and operational claims remain later tickets in this phase.
+- `Implementation note:` the canonical runbook now exists at `docs/02-delivery/phase-06/synology-runbook.md` with operator-journey sections, an explicit acceptance checklist, and a hard split between operator-facing verification cues and ticket-rationale proof.
