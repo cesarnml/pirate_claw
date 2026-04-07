@@ -32,6 +32,10 @@ Phase-level product definitions.
 - `phase-05-intake-policy-and-routing.md`: codec policy mode and Transmission routing labels
 - `phase-06-synology-runbook.md`: Synology runbook goals and boundaries
 - `phase-07-config-ergonomics.md`: compact config, config visibility, and env-backed Transmission secrets
+- `phase-08-media-placement.md`: per-media-type Transmission download directories
+- `phase-09-daemon-http-api.md`: read-only JSON API served by the daemon
+- `phase-10-read-only-dashboard.md`: SvelteKit browser-based read-only dashboard
+- `phase-11-tmdb-metadata-enrichment.md`: TMDB ratings, posters, and metadata enrichment
 
 ### `02-delivery`
 

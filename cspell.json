@@ -46,6 +46,8 @@
     "ENOSYS",
     "Celeron",
     "Geminilake",
+    "tmdb",
+    "TMDB",
     "unvalidated"
   ],
   "ignoreWords": [],

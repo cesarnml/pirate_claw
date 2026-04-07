@@ -210,11 +210,129 @@ Current status:
 - this remains a separate engineering epic, not a product phase
 - any further delivery-tooling work should start from the current extracted module boundaries rather than reopening the original monolith-vs-modules decision
 
+## Phase 08: Media Placement
+
+Goal:
+
+- route completed Transmission downloads into media-type-specific directories via per-type `downloadDir` at queue time
+
+Current status:
+
+- planned, not yet implemented
+
+Committed scope:
+
+- per-media-type download directory config (`transmission.downloadDirs.movie`, `transmission.downloadDirs.tv`)
+- resolve effective `downloadDir` at queue time based on candidate media type
+- preserve existing label-routing and fallback behavior
+
+Explicitly deferred:
+
+- Pirate-Claw-side post-completion file moves or renaming
+- per-feed custom download directories beyond the two media types
+
+Working notes:
+
+- `docs/01-product/phase-08-media-placement.md`
+
+## Phase 09: Daemon HTTP API
+
+Goal:
+
+- expose a read-only JSON API from the daemon process so external consumers can query run history, candidate states, per-show breakdowns, and effective config
+
+Current status:
+
+- planned, not yet implemented
+
+Committed scope:
+
+- lightweight HTTP listener in the daemon on a configurable port
+- read-only endpoints: `/api/status`, `/api/candidates`, `/api/shows`, `/api/config`
+- no authentication in v1 (private NAS network)
+
+Explicitly deferred:
+
+- write endpoints (config editing, manual queue/retry)
+- authentication or TLS
+- WebSocket or push-based updates
+
+Working notes:
+
+- `docs/01-product/phase-09-daemon-http-api.md`
+
+## Phase 10: Read-Only SvelteKit Dashboard
+
+Goal:
+
+- provide a browser-based read-only dashboard that consumes the daemon HTTP API
+
+Current status:
+
+- planned, not yet implemented
+
+Committed scope:
+
+- SvelteKit (Svelte 5) app in `web/` consuming the daemon API
+- views: dashboard home, candidates list, per-show season/episode detail, config view
+- Dockerfile for NAS deployment alongside the daemon container
+- functional styling only
+
+Explicitly deferred:
+
+- config editing through the UI
+- TMDB metadata, posters, or ratings
+- visually rich styling or theming
+- Docker Compose orchestration
+
+Working notes:
+
+- `docs/01-product/phase-10-read-only-dashboard.md`
+
+## Phase 11: TMDB Metadata Enrichment
+
+Goal:
+
+- enrich the daemon API and dashboard with TMDB metadata: ratings, posters, overviews, and season/episode detail
+
+Current status:
+
+- planned, not yet implemented
+
+Committed scope:
+
+- TMDB API client in the daemon with configurable API key
+- candidate-to-TMDB matching for movies and TV
+- SQLite-cached metadata with configurable TTL
+- enriched API responses and dashboard views with posters and ratings
+- display-only — ratings do not gate the intake pipeline
+
+Explicitly deferred:
+
+- rating-based intake gating (`minRating` pipeline filter)
+- TMDB-powered search-to-add from the UI
+- release calendar or upcoming schedule views
+- poster/image local caching or CDN proxying
+
+Working notes:
+
+- `docs/01-product/phase-11-tmdb-metadata-enrichment.md`
+
+## Future Deferrals
+
+These items emerged during ideation and are explicitly deferred beyond Phase 11:
+
+- **Config editor via web UI** — deferred until the API has a write path and the dashboard is stable
+- **Release calendar** — deferred as a feature inside the TMDB/dashboard surface, not its own phase
+- **Rating-based intake gating** — deferred until TMDB integration is stable and display-only has been validated
+- **Show/movie search-to-add from the UI** — deferred to the config editor phase
+- **Visual polish iteration** — iteration on the working dashboard, not a standalone phase
+
 ## Current Planning Posture
 
-- all currently documented numbered product phases (`01`-`07`) are complete on `main`
-- all currently documented engineering epics (`01`-`03`) are complete on `main`
-- new product-surface expansion now requires a fresh planning pass, reviewed phase docs, and approved ticket decomposition before implementation
+- product phases `01`-`07` and engineering epics `01`-`03` are complete on `main`
+- product phases `08`-`11` are planned with approved product docs but do not yet have delivery implementation plans or ticket decompositions
+- each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
 - smaller bounded changes can still proceed as standalone PR work without inventing a new phase
 
 Working notes:
