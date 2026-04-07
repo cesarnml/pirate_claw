@@ -1861,7 +1861,7 @@ describe('delivery orchestrator', () => {
     });
 
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'patched',
       reviewNote: 'Patched the prudent AI review follow-up.',
       reviewThreadResolutions: [
@@ -1931,7 +1931,7 @@ describe('delivery orchestrator', () => {
 
     expect(sleeps).toEqual([120000, 240000, 360000, 480000, 600000]);
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'clean',
       reviewIncompleteAgents: ['coderabbit'],
       reviewNote:
@@ -1990,7 +1990,7 @@ describe('delivery orchestrator', () => {
 
     expect(sleeps).toEqual([120000, 240000, 360000, 480000]);
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'clean',
       reviewNote:
         'No AI review feedback was detected within the 8-minute polling window.',
@@ -2056,7 +2056,7 @@ describe('delivery orchestrator', () => {
     });
 
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'patched',
       reviewNote:
         'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
@@ -2107,7 +2107,7 @@ describe('delivery orchestrator', () => {
     });
 
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'patched',
       reviewNote:
         'No AI review feedback was detected within the 8-minute polling window. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
@@ -2621,7 +2621,7 @@ describe('delivery orchestrator', () => {
     );
 
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'patched',
       reviewNote:
         'Actionable AI review findings were detected and still need follow-up.',
@@ -2675,7 +2675,7 @@ describe('delivery orchestrator', () => {
     );
 
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'patched',
       reviewNote:
         'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
@@ -2722,7 +2722,7 @@ describe('delivery orchestrator', () => {
     );
 
     expect(nextState.tickets[0]).toMatchObject({
-      status: 'reviewed',
+      status: 'done',
       reviewOutcome: 'patched',
       reviewNote:
         'External AI review completed without prudent follow-up changes. Earlier review cycles led to prudent follow-up patches, and the latest review pass found no additional prudent follow-up changes.',
