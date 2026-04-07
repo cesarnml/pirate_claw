@@ -10,7 +10,7 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through Phase 05.
+Pirate Claw is implemented through Phase 07.
 
 Current delivered surface:
 
@@ -20,6 +20,9 @@ Current delivered surface:
 - `pirate-claw retry-failed`
 - `pirate-claw reconcile`
 - local config via `pirate-claw.config.json`
+- compact TV config via `tv.defaults + tv.shows` with per-show overrides
+- effective config inspection via `pirate-claw config show`
+- env-backed Transmission username/password loading via process env or `.env`
 - local runtime persistence via `pirate-claw.db`
 - runtime artifacts under `.pirate-claw/runtime/cycles/` with 7-day retention
 - movie codec policy mode via `movies.codecPolicy` (`prefer` by default, `require` for strict matching)
@@ -36,7 +39,8 @@ Current product boundary:
 - per-feed polling cadence with persistent poll state
 - shared runtime lock prevents overlapping cycles
 - machine-readable and human-readable cycle artifacts with bounded retention
-  Still deferred:
+
+Still deferred:
 
 - web UI
 - remote feed capture
@@ -49,8 +53,9 @@ Last verified against `README.md` and CLI commands: 2026-04-07.
 
 Current planning focus:
 
-- use the roadmap to identify the active phase or bounded ticket work; phase/epic requests should flow through the delivery orchestrator until blocked or explicitly narrowed
-- the delivery orchestrator's post-PR external AI-review lifecycle convergence work is implemented; further delivery-tooling changes should treat that boundary as the new baseline
+- there is no currently defined next numbered product phase or engineering epic beyond the docs already in this repo
+- use the roadmap to confirm whether the request is a bounded standalone change or needs a new approved phase/epic planning pass
+- treat the current Phase 07 config surface and the current extracted delivery-orchestrator module boundaries as the baseline for future work
 
 ## Read These Docs By Task Type
 

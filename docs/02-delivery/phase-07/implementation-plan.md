@@ -2,6 +2,11 @@
 
 Phase 07 improves operator-facing config ergonomics while preserving backward compatibility with the current config model.
 
+## Current Status
+
+- complete on `main`
+- tickets `P7.01`-`P7.05` are delivered and remain the historical execution record for this phase
+
 ## Epic
 
 - `Phase 07 Config Ergonomics`

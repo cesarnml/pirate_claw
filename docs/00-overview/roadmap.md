@@ -172,9 +172,10 @@ Goal:
 - keep Transmission credentials out of the main JSON file when desired
 - improve config validation clarity for compact config forms
 
-Current planning note:
+Current status:
 
-- Phase 07 is independent of Phase 06 and may be implemented next because it depends on the current config and CLI surface, not Synology validation
+- implemented on `main` via `P7.01`-`P7.05`
+- compact TV config, per-show overrides, `pirate-claw config show`, env-backed Transmission secrets, and clearer compact-config validation are part of the shipped CLI surface
 
 Committed scope:
 
@@ -202,13 +203,19 @@ Goal:
 
 - keep orchestrator and delivery tooling maintainable as configuration and workflow surface expand
 
-Planning note:
+Current status:
 
-- this is a separate engineering epic, not a product phase
-- recently completed engineering epics:
-  - `docs/03-engineering/epic-01-pr-body-reporting-unification.md`
-  - `docs/03-engineering/epic-02-delivery-orchestrator-pr-flow-convergence.md`
-- any further modularity push should start from the now-converged post-PR review lifecycle rather than reopening that same boundary
+- implemented on `main`
+- the delivery orchestrator now uses extracted concern-oriented modules under `tools/delivery/` including `planning.ts`, `state.ts`, `review.ts`, `pr-metadata.ts`, `platform.ts`, `ticket-flow.ts`, and `notifications.ts`
+- this remains a separate engineering epic, not a product phase
+- any further delivery-tooling work should start from the current extracted module boundaries rather than reopening the original monolith-vs-modules decision
+
+## Current Planning Posture
+
+- all currently documented numbered product phases (`01`-`07`) are complete on `main`
+- all currently documented engineering epics (`01`-`03`) are complete on `main`
+- new product-surface expansion now requires a fresh planning pass, reviewed phase docs, and approved ticket decomposition before implementation
+- smaller bounded changes can still proceed as standalone PR work without inventing a new phase
 
 Working notes:
 

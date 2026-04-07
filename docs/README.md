@@ -4,12 +4,13 @@ The docs are organized by purpose so later phases can be added without flattenin
 
 ## Recommended Reading Order
 
-1. `00-overview/start-here.md`
-2. `00-overview/roadmap.md`
-3. `03-engineering/delivery-orchestrator.md`
-4. `01-product/phase-04-always-on-local-runtime.md`
-5. `02-delivery/phase-04/implementation-plan.md`
-6. `03-engineering/tdd-workflow.md`
+1. `../README.md`
+2. `00-overview/start-here.md`
+3. `00-overview/roadmap.md`
+4. the most relevant current product doc under `01-product/`
+5. the matching delivery plan under `02-delivery/` when the work is phase/epic-scoped
+6. `03-engineering/delivery-orchestrator.md` for delivery-tooling work
+7. `03-engineering/tdd-workflow.md` for test-first implementation work
 
 ## Folder Structure
 

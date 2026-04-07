@@ -2,6 +2,11 @@
 
 Engineering Epic 03 breaks the delivery orchestrator into concern-first modules behind the existing `runDeliveryOrchestrator()` facade and current command surface.
 
+## Current Status
+
+- complete on `main`
+- tickets `E3.01`-`E3.06` remain the historical implementation slices for this epic
+
 ## Epic
 
 - `Engineering Epic 03 Delivery Orchestrator Modularity And Concern Separation`

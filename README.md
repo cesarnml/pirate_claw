@@ -2,15 +2,20 @@
 
 Pirate Claw is a local CLI for pulling media candidates from RSS feeds, matching them against your rules, and queueing approved downloads in Transmission.
 
+Phases 01-07 of the current product roadmap are implemented on `main`. The currently documented engineering epics through Epic 03 are also implemented on `main`. Further product-surface or delivery-tooling expansion now requires a new planning pass and new approved phase/epic docs.
+
 It currently supports:
 
 - RSS feeds for TV and movies
 - title normalization into media metadata
 - TV matching with per-title rules
+- compact TV config through `tv.defaults + tv.shows` with per-show overrides
 - movie matching with global year, resolution, and codec preferences
 - local dedupe and run history in SQLite
 - queueing through Transmission RPC
 - status inspection and retry of failed submissions
+- effective config inspection through `pirate-claw config show`
+- env-backed Transmission credentials via process env or `.env`
 
 ## Commands
 

@@ -4,6 +4,11 @@ This engineering epic tracks the next maintainability step for the repo-local de
 
 It is intentionally not a numbered Pirate Claw product phase. The target is delivery-tooling architecture, not new CLI or runtime behavior.
 
+## Current Status
+
+- complete on `main`
+- the orchestrator now has extracted concern-oriented modules under `tools/delivery/` while preserving the public `runDeliveryOrchestrator(argv, cwd)` facade
+
 ## Goal
 
 Break the orchestrator into concern-first modules so the repo can keep evolving delivery tooling without concentrating every behavior in one file.

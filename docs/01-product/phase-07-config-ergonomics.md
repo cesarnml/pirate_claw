@@ -1,8 +1,13 @@
 # Phase 07 Config Ergonomics
 
-Phase 07 improves the operator experience of authoring and inspecting `pirate-claw.config.json` without changing the core feed, queueing, or runtime model.
+Phase 07 improved the operator experience of authoring and inspecting `pirate-claw.config.json` without changing the core feed, queueing, or runtime model.
 
-This is a product-facing phase, and it is independent of the Synology runbook work in Phase 06. It may be implemented next because it builds on the current local config and CLI surface rather than on NAS validation.
+This is a product-facing phase, independent of the Synology runbook work in Phase 06, and it is implemented on `main`.
+
+## Current Status
+
+- complete on `main` through tickets `P7.01`-`P7.05`
+- shipped surface includes compact TV config, per-show overrides, `pirate-claw config show`, env-backed Transmission credentials, and clearer compact-config validation guidance
 
 ## Phase Goal
 
