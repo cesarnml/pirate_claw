@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 
 import { join } from 'node:path';
 
-import { createApiFetch } from './api';
+import { createApiFetch, createHealthState, recordCycleInHealth } from './api';
 import { ConfigError, loadConfig, resolveConfigPath } from './config';
 import { daemonOptionsFromConfig, runDaemonLoop } from './daemon';
 import {
@@ -139,6 +139,8 @@ export async function runCli(argv: string[]): Promise<number> {
 
         const { artifactDir, artifactRetentionDays } = config.runtime;
 
+        const health = createHealthState();
+
         await runDaemonLoop({
           runCycle: async () => {
             let pollState = loadPollState(pollStatePath);
@@ -180,10 +182,13 @@ export async function runCli(argv: string[]): Promise<number> {
           signal: controller.signal,
           log,
           onCycleResult: (result) => {
+            recordCycleInHealth(health, result);
             writeCycleArtifact(artifactDir, result);
             pruneArtifacts(artifactDir, artifactRetentionDays);
           },
-          fetch: config.runtime.apiPort ? createApiFetch() : undefined,
+          fetch: config.runtime.apiPort
+            ? createApiFetch({ repository, health })
+            : undefined,
         });
       } finally {
         database.close();
