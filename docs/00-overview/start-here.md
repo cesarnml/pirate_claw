@@ -27,6 +27,7 @@ Current delivered surface:
 - runtime artifacts under `.pirate-claw/runtime/cycles/` with 7-day retention
 - movie codec policy mode via `movies.codecPolicy` (`prefer` by default, `require` for strict matching)
 - queue-time Transmission `movie` / `tv` labels with warning+retry fallback when labels are unsupported
+- per-media-type Transmission download directories via `transmission.downloadDirs`
 
 Current product boundary:
 

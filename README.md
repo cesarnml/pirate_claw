@@ -76,7 +76,7 @@ High-level config shape:
 - `feeds`: RSS sources to inspect (optional `pollIntervalMinutes` per feed)
 - `tv`: either the legacy per-show rule array or a compact `defaults + shows` object
 - `movies`: global movie intake policy
-- `transmission`: local Transmission RPC settings
+- `transmission`: local Transmission RPC settings (optional `downloadDirs` for per-media-type download directories)
 - `runtime`: daemon scheduling and artifact settings (optional, all fields have defaults)
 
 Example:
@@ -116,7 +116,11 @@ Example:
     "codecPolicy": "prefer"
   },
   "transmission": {
-    "url": "http://localhost:9091/transmission/rpc"
+    "url": "http://localhost:9091/transmission/rpc",
+    "downloadDirs": {
+      "movie": "/data/movies",
+      "tv": "/data/tv"
+    }
   },
   "runtime": {
     "runIntervalMinutes": 30,
