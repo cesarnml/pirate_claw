@@ -55,6 +55,18 @@ The recommended decomposition is concern-first with thin mode adapters:
 - `ticket-flow/` owns ticket progression and handoff generation, but not review semantics or reviewer-facing markdown rendering.
 - `tools/delivery/orchestrator.ts` remains the stable facade entrypoint and composition shell for `runDeliveryOrchestrator(argv, cwd)`.
 
+## Facade Freeze
+
+Engineering Epic 03 preserves the public orchestrator boundary while changing the internal layout behind it.
+
+The stable contract for the full epic is:
+
+- `scripts/deliver.ts` continues to delegate to `runDeliveryOrchestrator(argv, cwd)`
+- `runDeliveryOrchestrator(argv, cwd)` remains the public facade for the repo-local delivery tool
+- operator-visible command names, storage roots, and stacked-delivery semantics stay the same unless a later approved epic explicitly changes them
+
+That freeze lets later tickets extract seams without reopening whether callers should use a different entrypoint or expect a different orchestration workflow.
+
 ## Why This Is One Epic
 
 This remains one epic as long as it stays focused on extracting existing concerns behind stable boundaries.

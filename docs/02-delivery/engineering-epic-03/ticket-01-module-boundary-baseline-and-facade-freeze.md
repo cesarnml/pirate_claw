@@ -20,3 +20,9 @@ Define the modularization contract before code moves.
 - no code extraction in this ticket
 - no command-surface changes
 - no workflow redesign
+
+## Rationale
+
+This ticket locks the architectural target before any code movement starts. The durable engineering note and implementation plan are the source of truth for the concern-first module map, ownership boundaries, and the requirement that `runDeliveryOrchestrator(argv, cwd)` remains the stable facade throughout the epic.
+
+Keeping this slice doc-only avoids mixing seam-definition work with extraction work. That keeps later tickets reviewable and gives each follow-on refactor a fixed contract to preserve instead of renegotiating module ownership or operator-facing behavior mid-stream.
