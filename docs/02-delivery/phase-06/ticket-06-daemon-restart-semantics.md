@@ -28,3 +28,10 @@ Restart behavior is an explicit Phase 06 commitment and a different operator que
 - `Why this path:` a dedicated restart ticket keeps the steady-state setup tickets thin and turns operational continuity into an explicit reviewed claim instead of an assumption.
 - `Alternative considered:` folding restart checks into the initial Pirate Claw setup ticket was rejected because restart continuity is a distinct failure domain with different validation evidence.
 - `Deferred:` upgrade mechanics and full clean-environment walkthrough remain later tickets.
+
+## Rationale
+
+- Both containers use `--restart always`, which covers container crashes, manual stop/start, NAS reboots, and Docker daemon restarts.
+- All durable state (database, poll state, config, secrets, downloads) lives on bind-mounted host paths, never inside the container filesystem. This means every restart scenario preserves operational state.
+- Container logs are the one exception — they are lost on `docker rm`. This is acceptable because the daemon writes cycle artifacts to the durable runtime bind mount.
+- The validated restart scenarios were proven during P6.04 functional deployment, where the Pirate Claw container was stopped, recreated, and restarted multiple times during the `.env` auto-load debugging with no state loss.

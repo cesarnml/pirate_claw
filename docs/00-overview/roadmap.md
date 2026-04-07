@@ -143,11 +143,10 @@ Goal:
 
 Current status:
 
-- `P6.01` is on `main`: the canonical runbook skeleton and acceptance checklist are established
-- `P6.02` is on `main`: the `volume1` storage layout, directory tree, and writeability checks were validated on the target `DS918+ / DSM 7.1.1-42962 Update 9` NAS
-- `P6.03` is on `main`: the `linuxserver/transmission:latest` container baseline is validated with bind mounts, ports, restart policy, and healthy RPC on the target NAS; DSM 7.1.x `Docker` package naming and Synology permission fixes are documented
-- `P6.04` is on `main`: the `pirate-claw:latest` container baseline is validated with daemon mode, durable DB bind mount, host networking, and runtime cycle artifacts on the target NAS; `Dockerfile` and `.dockerignore` added to the repo
-- `P6.05+` remain validation-driven and must stay anchored to the `DS918+ / DSM 7.1.1-42962 Update 9` baseline
+- Phase 06 is complete. All tickets (`P6.01`–`P6.10`) are on `main`.
+- The canonical Synology runbook (`docs/02-delivery/phase-06/synology-runbook.md`) covers: storage layout, Transmission baseline, Pirate Claw container baseline, secrets/env injection, restart semantics, upgrade path, end-to-end validation, troubleshooting, and portability notes.
+- Validated on `DS918+ / DSM 7.1.1-42962 Update 9` with Docker 20.10.3 on kernel 4.4.x.
+- Key finding: Bun's `statx` syscall crashes silently on kernel 4.4.x when auto-loading `.env`. Workaround: mount config and `.env` under `/config/` instead of `/app/`.
 
 Committed scope:
 

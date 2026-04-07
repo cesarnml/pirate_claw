@@ -47,7 +47,7 @@ Execution plans, issue conventions, and ticket breakdowns.
 - `phase-04/implementation-plan.md`: always-on local runtime delivery plan
 - `phase-05/implementation-plan.md`: intake policy and Transmission routing delivery plan
 - `phase-06/implementation-plan.md`: Synology runbook delivery plan
-- `phase-06/synology-runbook.md`: canonical operator-facing Synology runbook under validation
+- `phase-06/synology-runbook.md`: canonical operator-facing Synology runbook (validated)
 - `phase-07/implementation-plan.md`: config ergonomics delivery plan
 
 ### `03-engineering`

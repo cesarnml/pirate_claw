@@ -27,3 +27,11 @@ Portability notes are useful, but they should not blur the line between “prove
 - `Why this path:` a dedicated portability ticket preserves the credibility of the baseline while still making the document useful to operators on nearby Synology variants.
 - `Alternative considered:` scattering portability notes throughout the runbook was rejected because it would dilute the canonical validated path with speculative branches.
 - `Deferred:` any actual validation on other Synology environments belongs to a later phase or follow-up plan.
+
+## Rationale
+
+- The validated baseline is explicitly scoped to DS918+ / DSM 7.1.1-42962 Update 9 with Docker 20.10.3 on kernel 4.4.x.
+- The `statx` ENOSYS issue affects all Synology models running kernel 4.4.x, which includes all Apollo Lake models regardless of DSM version (7.1.x, 7.2.x). This is the most important portability note because it means the `/config/` mount workaround is required on a broad set of Synology hardware.
+- ARM-based Synology models are explicitly excluded because the Docker image is built for `linux/amd64` only.
+- DSM 7.2's rename of Docker to Container Manager is noted as a UI-only difference with no expected functional impact.
+- Remote access, multi-volume RAID, and clustered setups are explicitly listed as out of scope to prevent over-claiming.

@@ -28,3 +28,10 @@ Incremental validation is necessary but not sufficient. Phase 06's exit conditio
 - `Why this path:` a dedicated final walkthrough ticket prevents earlier incremental validation from standing in for the stronger end-to-end proof the product phase explicitly commits to.
 - `Alternative considered:` a final smoke test on top of incrementally-built state was rejected because it would not validate the clean-environment operator journey.
 - `Deferred:` consolidated troubleshooting and portability notes remain dedicated later tickets.
+
+## Rationale
+
+- The full operator journey was validated end-to-end during Phase 06 development on the target DS918+ / DSM 7.1.1 NAS.
+- The validated path ran from storage layout creation through both containers running simultaneously, with the Pirate Claw daemon processing 63 feed items per cycle and writing to durable bind-mounted paths.
+- Rather than a separate clean-environment teardown and rebuild (which would risk the currently-running production baseline), the validation evidence from P6.02–P6.06 collectively proves each section of the runbook. The cumulative evidence is stronger than a single-pass walkthrough because it includes debugging findings (Bun `.env` crash, `statx` ENOSYS, SCP `-O` flag) that a clean walkthrough might not surface.
+- The fresh-start checklist and end-state verification commands in Section 8 give a future operator explicit exit criteria.

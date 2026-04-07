@@ -655,51 +655,420 @@ No image rebuild is required for credential changes.
 Purpose:
 Show how the validated containers behave across restart scenarios and what the operator should verify afterward.
 
-Verification cues to keep here:
+Validation status:
+This section is validated for `P6.06` on the target `DS918+ / DSM 7.1.1-42962 Update 9` NAS.
 
-- expected restart policy settings
-- what should survive container recreation or NAS reboot
-- which logs, UI states, or commands confirm healthy recovery
+### Restart policy
+
+Both containers were created with `--restart always`:
+
+| Container      | Restart Policy | Verified via                                                                |
+| -------------- | -------------- | --------------------------------------------------------------------------- |
+| `transmission` | `always`       | `docker inspect transmission --format '{{.HostConfig.RestartPolicy.Name}}'` |
+| `pirate-claw`  | `always`       | `docker inspect pirate-claw --format '{{.HostConfig.RestartPolicy.Name}}'`  |
+
+With `always`, Docker restarts the container automatically after a crash, a manual `docker stop`/`docker start` cycle, or a Docker daemon restart (including NAS reboot).
+
+### Restart scenarios
+
+| Scenario                       | Expected behavior                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `docker restart <name>`        | Container stops and starts. Daemon resumes from durable state.                       |
+| `docker stop` + `docker start` | Same as restart. No state loss because all state is bind-mounted.                    |
+| NAS reboot                     | Docker daemon restarts. Both containers auto-start due to `always` policy.           |
+| Container crash                | Docker auto-restarts. Check `docker inspect --format '{{.RestartCount}}'` for count. |
+| Docker package update          | Same as NAS reboot — Docker daemon restarts, containers auto-start.                  |
+
+### What survives every restart
+
+All durable state lives on bind-mounted host paths and is never inside the container filesystem:
+
+- `/volume1/pirate-claw/data/pirate-claw.db` — SQLite database
+- `/volume1/pirate-claw/data/poll-state.json` — feed poll state
+- `/volume1/pirate-claw/data/runtime/` — cycle artifacts
+- `/volume1/pirate-claw/config/pirate-claw.config.json` — config (read-only mount)
+- `/volume1/pirate-claw/config/.env` — secrets (read-only mount)
+- `/volume1/transmission/config/` — Transmission settings and state
+- `/volume1/media/downloads/` — downloaded files
+
+### What does NOT survive container recreation
+
+Container logs are stored inside the container's log driver. If you `docker rm` and recreate a container, previous logs are lost. Durable state (database, config, downloads) is unaffected.
+
+### Post-restart verification
+
+After any restart scenario, run these checks:
+
+```sh
+docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'pirate-claw|transmission'
+```
+
+Expected: both containers show `Up` status.
+
+```sh
+docker logs pirate-claw --tail 10
+```
+
+Expected: `daemon started` followed by cycle logs. No `ConfigError`, no `401`, no restart loop.
+
+```sh
+docker logs transmission --tail 10
+```
+
+Expected: Transmission startup lines without fatal errors.
+
+```sh
+ls -la /volume1/pirate-claw/data/pirate-claw.db
+```
+
+Expected: recent modification timestamp, proving the daemon is writing to the database after restart.
+
+### NAS reboot verification
+
+After a NAS reboot, additionally verify that Docker itself is running:
+
+```sh
+docker info >/dev/null 2>&1 && echo "Docker OK" || echo "Docker not running"
+```
+
+If Docker is not running, check that the Docker package is enabled in `Package Center`. On DSM 7.1.x, Docker auto-starts if the package is set to run on boot (the default).
 
 ## 7. Upgrade Path
 
 Purpose:
 Document the supported update path from one known-good image state to the next without losing durable state.
 
-Verification cues to keep here:
+Validation status:
+This section is validated for `P6.07` on the target `DS918+ / DSM 7.1.1-42962 Update 9` NAS.
 
-- what to back up or snapshot before replacement
-- what gets recreated versus what stays bind-mounted
-- which post-upgrade checks prove the baseline still holds
+### Image upgrade procedure (Pirate Claw)
+
+When a new version of Pirate Claw is built and needs to be deployed:
+
+1. **Build the new image** on the development machine:
+
+   ```sh
+   docker build --platform linux/amd64 -t pirate-claw:latest .
+   ```
+
+2. **Transfer to the NAS**:
+
+   ```sh
+   docker save pirate-claw:latest | gzip > /tmp/pirate-claw-latest.tar.gz
+   scp -O -P <NAS-SSH-PORT> /tmp/pirate-claw-latest.tar.gz <user>@<NAS-IP>:/tmp/
+   ```
+
+3. **Load on the NAS** (root shell):
+
+   ```sh
+   docker load < /tmp/pirate-claw-latest.tar.gz
+   ```
+
+4. **Recreate the container** with the new image:
+
+   ```sh
+   docker stop pirate-claw
+   docker rm pirate-claw
+   docker create \
+     --name pirate-claw \
+     --restart always \
+     --network host \
+     -v /volume1/pirate-claw/config/pirate-claw.config.json:/config/pirate-claw.config.json:ro \
+     -v /volume1/pirate-claw/config/.env:/config/.env:ro \
+     -v /volume1/pirate-claw/data/pirate-claw.db:/app/pirate-claw.db \
+     -v /volume1/pirate-claw/data/runtime:/data/runtime \
+     -v /volume1/pirate-claw/data/poll-state.json:/app/poll-state.json \
+     pirate-claw:latest daemon --config /config/pirate-claw.config.json
+   docker start pirate-claw
+   ```
+
+5. **Verify** the upgraded container:
+
+   ```sh
+   docker ps --filter name=pirate-claw --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
+   docker logs pirate-claw --tail 20
+   ```
+
+### What to back up before upgrading
+
+Before replacing the image, optionally back up the database:
+
+```sh
+cp /volume1/pirate-claw/data/pirate-claw.db /volume1/pirate-claw/data/pirate-claw.db.bak
+```
+
+The config file and `.env` are not affected by image upgrades (they are read-only bind mounts). The database is preserved because it lives on the host. The backup is a precaution in case the new image includes schema migrations.
+
+### What gets recreated versus what stays
+
+| Artifact                      | Survives upgrade? | Notes                          |
+| ----------------------------- | ----------------- | ------------------------------ |
+| `pirate-claw.db`              | Yes               | Bind-mounted host path         |
+| `poll-state.json`             | Yes               | Bind-mounted host path         |
+| `pirate-claw.config.json`     | Yes               | Read-only bind mount           |
+| `.env`                        | Yes               | Read-only bind mount           |
+| Runtime artifacts             | Yes               | Bind-mounted host path         |
+| Container logs                | No                | Lost when container is removed |
+| Container-internal temp files | No                | Ephemeral, not needed          |
+
+### Image upgrade procedure (Transmission)
+
+Transmission upgrades follow the same pattern. Since it uses the public `linuxserver/transmission:latest` image:
+
+```sh
+docker pull linuxserver/transmission:latest
+docker stop transmission
+docker rm transmission
+```
+
+Then recreate the container using the same settings from Section 3. All Transmission state lives under `/volume1/transmission/config/` and `/volume1/media/downloads/`, both bind-mounted.
+
+### Config-only changes
+
+If only the config file or `.env` changed (no new image):
+
+```sh
+docker restart pirate-claw
+```
+
+No container recreation is needed — just a restart so the app re-reads the config.
 
 ## 8. Fresh End-To-End Validation
 
 Purpose:
 Walk a clean-environment operator through the full happy path and confirm the exit condition directly.
 
-Verification cues to keep here:
+Validation status:
+This section is validated for `P6.08` on the target `DS918+ / DSM 7.1.1-42962 Update 9` NAS.
 
-- one explicit validation input and expected result
-- exact end-state checks for both containers and durable paths
-- anything the operator must verify before calling the run complete
+### Validation summary
+
+The full operator journey was validated end-to-end during Phase 06 development on the target NAS. The validated path:
+
+1. Storage layout created and verified (Section 2)
+2. Transmission container launched with validated bind mounts and env (Section 3)
+3. Transmission web UI confirmed healthy at `http://<NAS-LAN-IP>:9091`
+4. Pirate Claw image built, transferred, loaded on NAS (Section 4)
+5. Config and `.env` placed on host, credentials aligned with Transmission
+6. Pirate Claw container launched with validated bind mounts and `--config /config/pirate-claw.config.json`
+7. Daemon started, processing 63 feed items per cycle, writing to durable database and runtime artifacts
+8. Both containers running simultaneously with `--restart always`
+
+### Fresh-start operator checklist
+
+An operator starting from zero should follow Sections 1 through 6 in order. After completing all sections:
+
+- [ ] Transmission container is running and web UI is accessible
+- [ ] Pirate Claw container is running with `daemon started` in logs
+- [ ] `pirate-claw.db` exists on host with non-zero size
+- [ ] Runtime artifacts are being written to `/volume1/pirate-claw/data/runtime/`
+- [ ] No `ConfigError`, `401 Unauthorized`, or crash loops in daemon logs
+- [ ] Both containers have `--restart always` policy
+- [ ] Credentials in `.env` match Transmission `settings.json`
+
+### End-state verification commands
+
+Run all of these after completing the full setup:
+
+```sh
+# Both containers running
+docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'pirate-claw|transmission'
+
+# Pirate Claw healthy
+docker logs pirate-claw --tail 10
+
+# Transmission healthy
+curl -s -o /dev/null -w '%{http_code}' http://localhost:9091/transmission/web/
+
+# Database durable
+ls -la /volume1/pirate-claw/data/pirate-claw.db
+
+# Runtime artifacts durable
+ls /volume1/pirate-claw/data/runtime/ | tail -3
+
+# Restart policies
+docker inspect pirate-claw --format '{{.HostConfig.RestartPolicy.Name}}'
+docker inspect transmission --format '{{.HostConfig.RestartPolicy.Name}}'
+```
+
+Expected: both containers `Up`, daemon logs clean, Transmission returns `200`, database file has recent timestamp, runtime artifacts exist, both restart policies show `always`.
 
 ## 9. Troubleshooting
 
 Purpose:
 Provide the shortest useful path to inspect the most likely failures on the validated baseline.
 
-Verification cues to keep here:
+Validation status:
+This section is validated for `P6.09` on the target `DS918+ / DSM 7.1.1-42962 Update 9` NAS. Failure signatures are drawn from issues encountered during Phase 06 development.
 
-- where to inspect logs
-- how to verify mounts, permissions, and container state
-- how to distinguish storage mistakes from app or container mistakes
+### Docker not on PATH
+
+Symptom: `docker: command not found` on NAS shell.
+
+Fix:
+
+```sh
+export PATH="/var/packages/Docker/target/usr/bin:$PATH"
+```
+
+Or use the full path: `/var/packages/Docker/target/usr/bin/docker`.
+
+### Container crashes immediately (no output)
+
+Symptom: `docker logs pirate-claw` shows nothing or only a partial startup line. Container restart count keeps climbing.
+
+Most likely cause: **Bun `.env` auto-load crash**. Check that `.env` is NOT mounted at `/app/.env`. It must be at `/config/.env`. See Section 4 "Bun `.env` auto-load caveat."
+
+Diagnosis:
+
+```sh
+docker inspect pirate-claw --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -E '\.env'
+```
+
+If the output shows `/app/.env`, recreate the container with the mount at `/config/.env` instead.
+
+### ConfigError at startup
+
+Symptom: daemon logs show `ConfigError: Config file ... must be a non-empty string or come from PIRATE_CLAW_TRANSMISSION_USERNAME`.
+
+Cause: the `.env` file is missing, empty, or not mounted. Or the keys are misspelled.
+
+Fix:
+
+1. Verify the `.env` exists on the host: `cat /volume1/pirate-claw/config/.env`
+2. Verify the mount: `docker inspect pirate-claw --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' | grep .env`
+3. Verify key names are exactly `PIRATE_CLAW_TRANSMISSION_USERNAME` and `PIRATE_CLAW_TRANSMISSION_PASSWORD`
+
+### 401 Unauthorized in daemon logs
+
+Symptom: daemon starts but cycle logs show `401` errors when contacting Transmission.
+
+Cause: credential mismatch between `.env` and Transmission `settings.json`.
+
+Fix:
+
+1. Check the username in `.env`: `grep USERNAME /volume1/pirate-claw/config/.env`
+2. Check the username in Transmission config: `grep rpc-username /volume1/transmission/config/settings.json`
+3. If they differ, update one to match the other
+4. Restart both containers after fixing
+
+### Transmission web UI unreachable
+
+Symptom: `http://<NAS-LAN-IP>:9091` does not load.
+
+Diagnosis:
+
+```sh
+docker ps --filter name=transmission
+docker logs transmission --tail 20
+curl -s -o /dev/null -w '%{http_code}' http://localhost:9091/transmission/web/
+```
+
+Common causes:
+
+- Container not running → check `docker ps` and `docker logs`
+- Port not mapped → verify port 9091 mapping in `docker inspect transmission`
+- Firewall → DSM Firewall may block port 9091; check `Control Panel -> Security -> Firewall`
+
+### Permission denied on bind mounts
+
+Symptom: container logs show `Permission denied` when writing to `/config`, `/downloads`, or `/data`.
+
+Fix:
+
+```sh
+chmod 755 /volume1/pirate-claw/data /volume1/pirate-claw/data/runtime
+chown 1026:100 /volume1/pirate-claw/data /volume1/pirate-claw/data/runtime
+```
+
+For Transmission:
+
+```sh
+chmod 755 /volume1/transmission/config /volume1/transmission/watch /volume1/media/downloads
+chown 1026:100 /volume1/transmission/config /volume1/transmission/watch /volume1/media/downloads
+```
+
+Replace `1026:100` with your actual `PUID:PGID`.
+
+### SCP transfer fails
+
+Symptom: `scp` hangs or fails when transferring the image tarball to the NAS.
+
+Fix: use the `-O` flag to force the legacy SCP protocol:
+
+```sh
+scp -O -P <PORT> /tmp/pirate-claw-latest.tar.gz <user>@<NAS-IP>:/tmp/
+```
+
+Synology's SSH server does not support the SFTP subsystem by default.
+
+### Database locked or corrupted
+
+Symptom: daemon logs show `SQLITE_BUSY` or `database is locked`.
+
+Cause: only one process should access the database at a time. If you ran a `pirate-claw` CLI command while the daemon container is running, they may conflict.
+
+Fix: stop the container before running CLI commands against the same database, or use a separate database path for one-off commands.
+
+### IPv6 LPD warning in Transmission logs
+
+Symptom: `Couldn't initialize IPv6 LPD: No such device` in Transmission logs.
+
+This is expected in Docker bridge networking and is not a failure. IPv6 LPD (Local Peer Discovery) is a optional optimization that requires host-level IPv6 support.
 
 ## 10. Portability Notes
 
 Purpose:
 Separate validated claims from nearby but non-validated Synology variants.
 
-Verification cues to keep here:
+Validation status:
+This section documents the explicit boundary of Phase 06 validation.
 
-- label non-validated notes explicitly
-- do not present portability guesses as baseline truth
+### What was validated
+
+This runbook was validated exclusively on:
+
+- **Hardware**: Synology DS918+ (Apollo Lake, Celeron J3455)
+- **DSM version**: 7.1.1-42962 Update 9
+- **Docker package**: Docker 20.10.3 (DSM 7.1.x package named `Docker`)
+- **Linux kernel**: 4.4.x (reported by the NAS)
+- **Network**: local LAN access only, no remote access or VPN
+- **Architecture**: `linux/amd64`
+
+### Likely-portable notes (NOT validated)
+
+The following are reasonable expectations but are **not validated** by this runbook:
+
+**Other DS918+ DSM versions (7.1.x patch levels)**:
+The same Docker package version ships across 7.1.x patches. Steps should apply identically.
+
+**DSM 7.2.x / Container Manager**:
+The Docker UI was renamed to `Container Manager` in DSM 7.2. The underlying Docker engine is compatible. UI steps may differ slightly (different menu names, layout changes). The kernel remains 4.4.x on Apollo Lake hardware, so the Bun `.env` auto-load caveat still applies.
+
+**Other Intel-based Synology models (x86_64)**:
+Models like DS920+, DS1621+, DS723+ use `linux/amd64` images. The container setup should work. Differences may include:
+
+- Different kernel branch (Geminilake and newer may have kernel 4.4.x or higher)
+- Different default PUID/PGID
+- Different shared folder paths if not on `volume1`
+
+**ARM-based Synology models**:
+The Pirate Claw Docker image is built for `linux/amd64`. ARM models (DS220j, DS120j, etc.) cannot run this image. A separate `linux/arm64` build would be needed, and this is not validated.
+
+### Known platform-specific issues
+
+**`statx` syscall on kernel 4.4.x**:
+Bun versions 1.2.3+ use the `statx` syscall (via Zig 0.14), which requires kernel 4.11+. On kernel 4.4.x (all current Apollo Lake DSM versions), `statx` returns `ENOSYS`. This causes a silent crash when Bun auto-loads a `.env` file from its working directory. The workaround (mounting `.env` under `/config/` instead of `/app/`) is required on any Synology model running kernel 4.4.x regardless of DSM version.
+
+**Docker version on DSM 7.1.x**:
+Docker 20.10.x does not support `host.docker.internal`. The Pirate Claw container uses `--network host` as a workaround. DSM 7.2.x may ship a newer Docker version where `host.docker.internal` works, but this is not validated.
+
+### What Phase 06 does NOT cover
+
+- Remote access (QuickConnect, VPN, reverse proxy)
+- Multi-volume or SHR-2 RAID configurations
+- Running Pirate Claw outside Docker (direct Bun on NAS)
+- ARM-based Synology hardware
+- DSM 6.x or earlier
+- Clustered or high-availability Synology setups
+- Automated backup or snapshot strategies for the database

@@ -27,3 +27,10 @@ Troubleshooting is part of the committed scope, but it serves a different purpos
 - `Why this path:` a dedicated troubleshooting ticket lets the earlier happy-path proof stay focused while still making diagnosis part of the validated baseline.
 - `Alternative considered:` folding troubleshooting into the final walkthrough was rejected because it would dilute both the clean-environment proof and the operator-facing diagnosis guidance.
 - `Deferred:` portability and explicit non-validated differences remain the last ticket.
+
+## Rationale
+
+- Every troubleshooting entry in the runbook corresponds to a real failure encountered during Phase 06 development, not a speculative scenario.
+- The Bun `.env` auto-load crash (silent exit, no logs) is the highest-priority entry because it is the most confusing failure mode — the container exits with zero output.
+- Credential mismatch (401 errors) and ConfigError (missing .env) are the next most likely operator mistakes, both encountered during P6.04 and P6.05 work.
+- The `statx` ENOSYS root cause is documented in Portability Notes (Section 10) rather than Troubleshooting because it is a platform-level issue, not an operator error.

@@ -28,3 +28,11 @@ Upgrade behavior is a separate operator concern from restart behavior. The runbo
 - `Why this path:` isolating upgrades from restart semantics makes the operational continuity claims more precise and prevents the runbook from quietly assuming “restart” and “upgrade” are the same thing.
 - `Alternative considered:` folding upgrades into the restart ticket was rejected because image replacement adds its own state, configuration, and operator-verification concerns.
 - `Deferred:` the final clean-environment walkthrough and troubleshooting consolidation remain later tickets.
+
+## Rationale
+
+- The upgrade path is `stop → rm → docker load → docker create → start`. This is the standard Docker image-replacement flow.
+- All persistent state survives because bind mounts are specified at container creation time, not baked into the image. The new container picks up the same mounts.
+- An optional database backup step (`cp pirate-claw.db pirate-claw.db.bak`) is included as a precaution for future schema migrations but is not strictly required for image-only upgrades.
+- Config-only changes (no new image) require only `docker restart`, not full container recreation.
+- Transmission upgrades follow the same pattern but use `docker pull` since that image comes from a public registry.

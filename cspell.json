@@ -41,6 +41,11 @@
     "PUID",
     "PGID",
     "println",
+    "statx",
+    "syscall",
+    "ENOSYS",
+    "Celeron",
+    "Geminilake",
     "unvalidated"
   ],
   "ignoreWords": [],
