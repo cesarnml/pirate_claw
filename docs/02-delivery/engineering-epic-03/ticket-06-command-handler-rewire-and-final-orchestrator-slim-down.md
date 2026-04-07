@@ -17,7 +17,7 @@ Finish the modularization by turning the orchestrator file into a composition sh
 ## Explicit Deferrals
 
 - no new commands
-- no redesign of `stacked-closeout`
+- no redesign of `closeout-stack`
 - no workflow-semantic expansion
 
 ## Rationale

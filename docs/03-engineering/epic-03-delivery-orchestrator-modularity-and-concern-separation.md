@@ -32,7 +32,7 @@ Do not widen into:
 
 - PR-creation redesign
 - branch/worktree naming or bootstrap redesign
-- `stacked-closeout` redesign
+- `closeout-stack` redesign
 - storage-layout migration
 - `ai-code-review` fetcher or triager contract redesign
 

@@ -11,7 +11,7 @@ import {
   type TicketState,
 } from './orchestrator';
 
-type StackedCloseoutArgs = {
+type CloseoutStackArgs = {
   planPath: string;
 };
 
@@ -42,7 +42,7 @@ type CloseoutSummary = {
   skippedMerged: Array<{ prNumber: number; ticketId: string; url: string }>;
 };
 
-export function parseStackedCloseoutArgs(argv: string[]): StackedCloseoutArgs {
+export function parseCloseoutStackArgs(argv: string[]): CloseoutStackArgs {
   let planPath: string | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -72,7 +72,7 @@ export function getCloseoutTicketChain(state: DeliveryState): TicketState[] {
 
   if (incomplete.length > 0) {
     throw new Error(
-      `stacked-closeout requires the full phase to be done first. Incomplete tickets: ${incomplete.map((ticket) => `${ticket.id}=${ticket.status}`).join(', ')}`,
+      `closeout-stack requires the full phase to be done first. Incomplete tickets: ${incomplete.map((ticket) => `${ticket.id}=${ticket.status}`).join(', ')}`,
     );
   }
 
@@ -82,7 +82,7 @@ export function getCloseoutTicketChain(state: DeliveryState): TicketState[] {
 
   if (missingPr.length > 0) {
     throw new Error(
-      `stacked-closeout requires tracked PR metadata for every ticket. Missing PRs: ${missingPr.map((ticket) => ticket.id).join(', ')}`,
+      `closeout-stack requires tracked PR metadata for every ticket. Missing PRs: ${missingPr.map((ticket) => ticket.id).join(', ')}`,
     );
   }
 
@@ -90,7 +90,7 @@ export function getCloseoutTicketChain(state: DeliveryState): TicketState[] {
 }
 
 function getUsage(): string {
-  return 'Usage: bun run stacked-closeout --plan <plan-path>';
+  return 'Usage: bun run closeout-stack --plan <plan-path>';
 }
 
 function runProcess(cwd: string, cmd: string[]): string {
@@ -107,7 +107,7 @@ function ensureCleanWorktree(cwd: string): void {
   const status = runProcess(cwd, ['git', 'status', '--short']).trim();
   if (status.length > 0) {
     throw new Error(
-      `Worktree ${cwd} is not clean. Commit or stash changes before stacked-closeout.`,
+      `Worktree ${cwd} is not clean. Commit or stash changes before closeout-stack.`,
     );
   }
 }
@@ -385,12 +385,12 @@ function formatCloseoutSummary(
   return lines.join('\n');
 }
 
-export async function runStackedCloseout(
+export async function runCloseoutStack(
   argv: string[],
   cwd: string,
 ): Promise<number> {
   try {
-    const parsed = parseStackedCloseoutArgs(argv);
+    const parsed = parseCloseoutStackArgs(argv);
     const rawConfig = await loadOrchestratorConfig(cwd);
     const config = resolveOrchestratorConfig(rawConfig, cwd);
     initOrchestratorConfig(config);

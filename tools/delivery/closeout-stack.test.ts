@@ -3,8 +3,8 @@ import { describe, expect, it } from 'bun:test';
 import type { DeliveryState, TicketState } from './orchestrator';
 import {
   getCloseoutTicketChain,
-  parseStackedCloseoutArgs,
-} from './stacked-closeout';
+  parseCloseoutStackArgs,
+} from './closeout-stack';
 
 function createTicket(overrides: Partial<TicketState>): TicketState {
   return {
@@ -35,23 +35,23 @@ function createState(tickets: TicketState[]): DeliveryState {
   };
 }
 
-describe('stacked closeout', () => {
-  describe('parseStackedCloseoutArgs', () => {
+describe('closeout-stack', () => {
+  describe('parseCloseoutStackArgs', () => {
     it('requires an explicit plan path', () => {
-      expect(() => parseStackedCloseoutArgs([])).toThrow(
-        'Usage: bun run stacked-closeout --plan <plan-path>',
+      expect(() => parseCloseoutStackArgs([])).toThrow(
+        'Usage: bun run closeout-stack --plan <plan-path>',
       );
     });
 
     it('rejects a missing value for --plan', () => {
-      expect(() => parseStackedCloseoutArgs(['--plan'])).toThrow(
-        'Usage: bun run stacked-closeout --plan <plan-path>',
+      expect(() => parseCloseoutStackArgs(['--plan'])).toThrow(
+        'Usage: bun run closeout-stack --plan <plan-path>',
       );
     });
 
     it('parses the requested plan path', () => {
       expect(
-        parseStackedCloseoutArgs([
+        parseCloseoutStackArgs([
           '--plan',
           'docs/02-delivery/phase-07/implementation-plan.md',
         ]),
@@ -94,7 +94,7 @@ describe('stacked closeout', () => {
       ]);
 
       expect(() => getCloseoutTicketChain(state)).toThrow(
-        'stacked-closeout requires the full phase to be done first. Incomplete tickets: P1.02=reviewed',
+        'closeout-stack requires the full phase to be done first. Incomplete tickets: P1.02=reviewed',
       );
     });
   });

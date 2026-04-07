@@ -19,7 +19,7 @@ After the semantic and adapter seams are shared, the main remaining risk is stru
 
 - top-level command handlers are materially thinner and delegate to the shared lifecycle helpers
 - docs accurately describe what is unified and what remains intentionally separate
-- no new architectural work is pulled in from pre-PR orchestration, state repair, or stacked-closeout
+- no new architectural work is pulled in from pre-PR orchestration, state repair, or closeout-stack
 - the final result still reads as a sequence of reviewer-sized PRs rather than a one-shot refactor
 
 ## Why This PR Stays Reviewable

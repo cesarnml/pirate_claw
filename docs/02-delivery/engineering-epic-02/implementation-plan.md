@@ -66,7 +66,7 @@ These are intentionally out of scope for Engineering Epic 02:
 
 - PR creation/base-selection redesign
 - branch/worktree/bootstrap redesign
-- `stacked-closeout` redesign
+- `closeout-stack` redesign
 - `sync` / `repair-state` redesign
 - `ai-code-review` vendor fetcher and triager contract redesign
 - universal review artifact storage
@@ -76,7 +76,7 @@ These are intentionally out of scope for Engineering Epic 02:
 
 Pause for review if:
 
-- convergence work starts pulling in pre-PR ticket orchestration or stacked-closeout logic
+- convergence work starts pulling in pre-PR ticket orchestration or closeout-stack logic
 - a proposed helper cannot be introduced without also redesigning storage layout across both flows
 - a ticket grows large enough that the resulting stacked PR would no longer be comfortably reviewable on its own
 - the intended separation between ticket-linked state and standalone author-owned PR content becomes ambiguous

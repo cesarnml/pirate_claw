@@ -46,7 +46,7 @@ Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.m
 
 - PR-creation redesign
 - branch/worktree strategy redesign
-- `stacked-closeout` redesign
+- `closeout-stack` redesign
 - storage-layout migration
 - `ai-code-review` fetcher and triager contract redesign
 - new operator-visible delivery commands or workflow semantics

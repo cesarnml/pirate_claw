@@ -16,7 +16,7 @@ The affected seams all sit inside one bounded architectural area: what happens a
 
 This remains one epic as long as it stays inside that post-PR review lifecycle boundary.
 
-If implementation starts pulling in broader ticket orchestration, PR creation/base chaining, delivery-state repair, or stacked-closeout redesign, that work should split into a separate follow-up epic instead of widening this one.
+If implementation starts pulling in broader ticket orchestration, PR creation/base chaining, delivery-state repair, or closeout-stack redesign, that work should split into a separate follow-up epic instead of widening this one.
 
 ## In Scope
 
@@ -58,7 +58,7 @@ If implementation starts pulling in broader ticket orchestration, PR creation/ba
 
 - PR creation flow redesign
 - branch naming, worktree creation, or bootstrap redesign
-- `stacked-closeout` redesign
+- `closeout-stack` redesign
 - `ai-code-review` vendor fetcher or triager contract redesign
 - artifact storage unification into one universal path
 - Telegram notification redesign beyond bounded helper reuse needed for the converged lifecycle
