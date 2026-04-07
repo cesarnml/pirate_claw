@@ -1,5 +1,6 @@
 # Repo Rules
 
+- If the user says `triage`, use `.agents/skills/ai-code-review/SKILL.md`.
 - For phase work, first read `docs/00-overview/start-here.md` and `docs/03-engineering/delivery-orchestrator.md`, then surface the orchestrator path before coding.
 - Use `.agents/skills/son-of-anton-ethos/SKILL.md` automatically when a user asks to execute, begin, start, deliver, implement, continue, resume, run, drive, carry, or work on an approved multi-ticket phase or epic, or uses equivalent wording that clearly means end-to-end orchestrated execution. Also use it when the user explicitly mentions `son of anton`, `son-of-anton`, `son of anton ethos`, or `son-of-anton ethos`. Do not wait for the skill to be named explicitly.
 - For new product feature-set expansion, phase shaping, or epic decomposition work, run an explicit planning pass and use `grill-me` before accepting a plan or ticket breakdown. In this repo, son-of-anton treats developer engagement in ideation, decomposition approval, and final delivered-slice approval as required control points rather than optional ceremony. Plan Mode is optional workflow support, not a repo policy requirement.
