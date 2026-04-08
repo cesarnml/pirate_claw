@@ -124,9 +124,16 @@ export type RunSummaryRecord = {
 	counts: Record<FeedItemOutcomeStatus, number>;
 };
 
+export type CycleSnapshot = {
+	status: RunStatus;
+	startedAt: string;
+	completedAt?: string;
+	durationMs?: number;
+};
+
 export type DaemonHealth = {
 	uptime: number;
 	startedAt: string;
-	lastRunCycle?: string;
-	lastReconcileCycle?: string;
+	lastRunCycle?: CycleSnapshot;
+	lastReconcileCycle?: CycleSnapshot;
 };

@@ -14,7 +14,11 @@
 	}
 
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleString();
+		return new Date(iso).toLocaleString('en-US', {
+			dateStyle: 'medium',
+			timeStyle: 'short',
+			timeZone: 'UTC',
+		});
 	}
 </script>
 
@@ -40,13 +44,13 @@
 			{#if health.lastRunCycle}
 				<div class="flex gap-2">
 					<dt class="text-gray-400">Last run cycle:</dt>
-					<dd class="text-gray-200">{formatDate(health.lastRunCycle)}</dd>
+					<dd class="text-gray-200">{formatDate(health.lastRunCycle.startedAt)}</dd>
 				</div>
 			{/if}
 			{#if health.lastReconcileCycle}
 				<div class="flex gap-2">
 					<dt class="text-gray-400">Last reconcile:</dt>
-					<dd class="text-gray-200">{formatDate(health.lastReconcileCycle)}</dd>
+					<dd class="text-gray-200">{formatDate(health.lastReconcileCycle.startedAt)}</dd>
 				</div>
 			{/if}
 		</dl>
@@ -91,5 +95,7 @@
 		<a href="/candidates" class="text-blue-400 hover:underline">View Candidates</a>
 		<a href="/config" class="text-blue-400 hover:underline">View Config</a>
 	</nav>
+{:else}
+	<p class="mt-4 text-gray-400">Loading…</p>
 {/if}
 

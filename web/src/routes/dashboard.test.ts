@@ -6,8 +6,8 @@ import type { DaemonHealth, RunSummaryRecord } from '$lib/types';
 const mockHealth: DaemonHealth = {
 	uptime: 3661000,
 	startedAt: '2024-01-01T00:00:00Z',
-	lastRunCycle: '2024-01-01T01:00:00Z',
-	lastReconcileCycle: '2024-01-01T01:00:30Z',
+	lastRunCycle: { status: 'completed', startedAt: '2024-01-01T01:00:00Z' },
+	lastReconcileCycle: { status: 'completed', startedAt: '2024-01-01T01:00:30Z' },
 };
 
 const mockRun: RunSummaryRecord = {
