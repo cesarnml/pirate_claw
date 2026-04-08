@@ -251,6 +251,7 @@ export async function runCli(argv: string[]): Promise<number> {
                   loadPollState,
                   tmdbMovies,
                   tmdbShows,
+                  tmdbCache: tmdbMovies?.cache ?? tmdbShows?.cache,
                 })
               : undefined,
         });

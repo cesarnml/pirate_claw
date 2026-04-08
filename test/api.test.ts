@@ -1,3 +1,4 @@
+import { Database } from 'bun:sqlite';
 import { describe, expect, it } from 'bun:test';
 
 import {
@@ -14,6 +15,9 @@ import type { AppConfig } from '../src/config';
 import type { PollState } from '../src/poll-state';
 import type { CandidateStateRecord, Repository } from '../src/repository';
 import type { CycleResult } from '../src/runtime-artifacts';
+import { TmdbCache } from '../src/tmdb/cache';
+import { movieMatchKey } from '../src/tmdb/keys';
+import { ensureTmdbSchema } from '../src/tmdb/schema';
 
 function stubRepository(overrides: Partial<Repository> = {}): Repository {
   return {
@@ -201,6 +205,42 @@ describe('GET /api/candidates', () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.candidates).toEqual(candidates);
+  });
+
+  it('merges TMDB from SQLite cache when tmdbCache is set (no HTTP)', async () => {
+    const db = new Database(':memory:');
+    ensureTmdbSchema(db);
+    const cache = new TmdbCache(db);
+    const matchKey = movieMatchKey('test movie', 2024);
+    cache.upsertMovie({
+      matchKey,
+      tmdbId: 99,
+      isNegative: false,
+      expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      title: 'Test Movie TMDB',
+      overview: null,
+      posterPath: '/p.jpg',
+      backdropPath: null,
+      voteAverage: 7.5,
+      voteCount: 10,
+      genreIdsJson: '[]',
+      releaseDate: null,
+    });
+    const candidates = [movieCandidate()];
+    const deps: ApiFetchDeps = {
+      ...createDeps({ listCandidateStates: () => candidates as never }),
+      tmdbCache: cache,
+    };
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/candidates'),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.candidates[0].tmdb?.title).toBe('Test Movie TMDB');
+    expect(body.candidates[0].tmdb?.voteAverage).toBe(7.5);
+    db.close();
   });
 });
 

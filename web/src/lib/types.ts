@@ -42,6 +42,8 @@ export type CandidateStateRecord = {
 	lastSeenRunId: number;
 	lastFeedItemId?: number;
 	updatedAt: string;
+	/** From GET /api/candidates when TMDB cache has metadata for this title. */
+	tmdb?: TmdbMoviePublic | TmdbTvShowMeta;
 };
 
 export type TmdbTvEpisodeMeta = {
