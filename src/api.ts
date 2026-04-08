@@ -57,6 +57,18 @@ export type ApiFetchDeps = {
   tmdbMovies?: MovieEnrichDeps;
 };
 
+function json500(): Response {
+  return Response.json({ error: 'internal server error' }, { status: 500 });
+}
+
+function safeJson<T>(body: () => T): Response {
+  try {
+    return Response.json(body());
+  } catch {
+    return json500();
+  }
+}
+
 export function createApiFetch(
   deps?: ApiFetchDeps,
 ): (request: Request) => Response | Promise<Response> {
@@ -74,9 +86,9 @@ export function createApiFetch(
   } = deps;
 
   return async (request: Request) => {
-    const url = new URL(request.url);
+    const path = new URL(request.url).pathname;
 
-    if (url.pathname === '/api/health') {
+    if (path === '/api/health') {
       const uptimeMs = Date.now() - new Date(health.startedAt).getTime();
       return Response.json({
         uptime: uptimeMs,
@@ -86,45 +98,24 @@ export function createApiFetch(
       });
     }
 
-    if (url.pathname === '/api/status') {
-      try {
-        return Response.json({
-          runs: repository.listRecentRunSummaries(),
-        });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+    if (path === '/api/status') {
+      return safeJson(() => ({ runs: repository.listRecentRunSummaries() }));
     }
 
-    if (url.pathname === '/api/candidates') {
-      try {
-        return Response.json({
-          candidates: repository.listCandidateStates(),
-        });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+    if (path === '/api/candidates') {
+      return safeJson(() => ({
+        candidates: repository.listCandidateStates(),
+      }));
     }
 
-    if (url.pathname === '/api/shows') {
-      try {
+    if (path === '/api/shows') {
+      return safeJson(() => {
         const candidates = repository.listCandidateStates();
-        return Response.json({ shows: buildShowBreakdowns(candidates) });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+        return { shows: buildShowBreakdowns(candidates) };
+      });
     }
 
-    if (url.pathname === '/api/movies') {
+    if (path === '/api/movies') {
       try {
         const candidates = repository.listCandidateStates();
         const base = buildMovieBreakdowns(candidates);
@@ -133,36 +124,21 @@ export function createApiFetch(
           : base;
         return Response.json({ movies });
       } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
+        return json500();
       }
     }
 
-    if (url.pathname === '/api/feeds') {
-      try {
+    if (path === '/api/feeds') {
+      return safeJson(() => {
         const pollState = loadPollState(pollStatePath);
-        return Response.json({
+        return {
           feeds: buildFeedStatuses(config.feeds, pollState, config.runtime),
-        });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+        };
+      });
     }
 
-    if (url.pathname === '/api/config') {
-      try {
-        return Response.json(redactConfig(config));
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+    if (path === '/api/config') {
+      return safeJson(() => redactConfig(config));
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });

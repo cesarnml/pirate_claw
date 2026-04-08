@@ -38,18 +38,15 @@ async function resolveMatchKey(
   sample: MovieBreakdown,
   deps: MovieEnrichDeps,
 ): Promise<TmdbMoviePublic | undefined> {
-  const cached = deps.cache.getMovie(key);
-  if (cached && !isCacheExpired(cached.expiresAt)) {
-    if (cached.isNegative) {
-      return undefined;
-    }
-    return cacheRowToPublic(cached);
-  }
-
   const title = sample.normalizedTitle;
   const year = sample.year;
 
   try {
+    const cached = deps.cache.getMovie(key);
+    if (cached && !isCacheExpired(cached.expiresAt)) {
+      return cached.isNegative ? undefined : cacheRowToPublic(cached);
+    }
+
     const search = await deps.client.searchMovie(title, year);
     if (!search) {
       deps.cache.upsertMovie({
@@ -72,20 +69,9 @@ async function resolveMatchKey(
 
     const details = await deps.client.getMovie(search.id);
     if (!details) {
-      deps.cache.upsertMovie({
-        matchKey: key,
-        tmdbId: null,
-        isNegative: true,
-        expiresAt: expiresAtIso(deps.negativeCacheTtlMs),
-        title: null,
-        overview: null,
-        posterPath: null,
-        backdropPath: null,
-        voteAverage: null,
-        voteCount: null,
-        genreIdsJson: null,
-        releaseDate: null,
-      });
+      deps.log(
+        `tmdb movie details unavailable: ${key} (id=${String(search.id)})`,
+      );
       return undefined;
     }
 
@@ -118,20 +104,6 @@ async function resolveMatchKey(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     deps.log(`tmdb movie enrich failed for ${key}: ${message}`);
-    deps.cache.upsertMovie({
-      matchKey: key,
-      tmdbId: null,
-      isNegative: true,
-      expiresAt: expiresAtIso(deps.negativeCacheTtlMs),
-      title: null,
-      overview: null,
-      posterPath: null,
-      backdropPath: null,
-      voteAverage: null,
-      voteCount: null,
-      genreIdsJson: null,
-      releaseDate: null,
-    });
     return undefined;
   }
 }

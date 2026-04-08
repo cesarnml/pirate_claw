@@ -27,7 +27,7 @@
 				{#if movie.tmdb?.posterUrl}
 					<img
 						src={movie.tmdb.posterUrl}
-						alt=""
+						alt={`Poster for ${movie.tmdb?.title ?? movie.normalizedTitle}${movie.year ? ` (${movie.year})` : ''}`}
 						class="mx-auto h-48 w-32 shrink-0 rounded object-cover sm:mx-0"
 						loading="lazy"
 					/>
@@ -46,12 +46,14 @@
 						{#if movie.year}
 							<span class="text-gray-400">({movie.year})</span>
 						{/if}
-						<span
-							class="rounded bg-amber-900/60 px-2 py-0.5 text-sm text-amber-100"
-							title="TMDB vote average"
-						>
-							★ {formatRating(movie.tmdb?.voteAverage)}
-						</span>
+						{#if movie.tmdb?.voteAverage !== undefined}
+							<span
+								class="rounded bg-amber-900/60 px-2 py-0.5 text-sm text-amber-100"
+								title="TMDB vote average"
+							>
+								★ {formatRating(movie.tmdb.voteAverage)}
+							</span>
+						{/if}
 					</div>
 					{#if movie.tmdb?.overview}
 						<p class="mt-2 text-sm leading-relaxed text-gray-300">{movie.tmdb.overview}</p>

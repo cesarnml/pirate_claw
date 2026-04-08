@@ -31,3 +31,4 @@ Movies are the first vertical slice after foundation so the simpler TMDB entity 
 - JSON adds optional `tmdb` on each movie row (`posterUrl`, `backdropUrl`, `overview`, `voteAverage`, `voteCount`, `tmdbId`, `title`).
 - Dashboard: new `/movies` route listing movie candidates with poster placeholder, rating badge, and overview when present.
 - `createApiFetch` returns an async `fetch` handler; callers `await` the handler result.
+- Review follow-up: SQLite negative rows only after a definitive TMDB search miss; `getMovie` null and network errors log without negative caching; cache read inside the same `try` as API calls; `safeJson`/`json500` reduce handler complexity; `tmdbMovieEnrichDeps()` in `cli.ts`; movies page poster `alt` text and rating badge gated on TMDB vote data.
