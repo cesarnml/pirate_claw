@@ -47,7 +47,7 @@ export type CandidateStateRecord = {
 export type ShowEpisode = {
 	episode: number;
 	identityKey: string;
-	status: string;
+	status: CandidateStatus;
 	lifecycleStatus?: string;
 	queuedAt?: string;
 };

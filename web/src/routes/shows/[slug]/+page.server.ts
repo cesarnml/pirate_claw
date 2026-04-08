@@ -3,7 +3,7 @@ import type { ShowBreakdown } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const title = decodeURIComponent(params.slug);
+	const title = params.slug;
 	try {
 		const data = await apiFetch<{ shows: ShowBreakdown[] }>('/api/shows');
 		const show = data.shows.find(
