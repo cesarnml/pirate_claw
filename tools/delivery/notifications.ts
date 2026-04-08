@@ -242,6 +242,21 @@ export function eventsForRecordReviewCommand(
     : [];
 }
 
+export function eventsForReconcileLateReviewCommand(
+  state: DeliveryState,
+  ticketId: string,
+): DeliveryNotificationEvent[] {
+  const ticket = state.tickets.find((candidate) => candidate.id === ticketId);
+
+  if (!ticket || ticket.status !== 'done') {
+    return [];
+  }
+
+  return [buildReviewRecordedEvent(state, ticket)].filter(
+    (event): event is DeliveryNotificationEvent => event !== undefined,
+  );
+}
+
 export function eventsForPollReviewCommand(
   state: DeliveryState,
   ticketId?: string,

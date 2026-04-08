@@ -110,6 +110,12 @@ When the triager hook resolves to `clean` or `patched`, `poll-review` records th
 
 At this point in the repo, `poll-review`, `record-review`, and standalone `ai-review` are intentionally thin mode-specific shells around the same post-PR lifecycle helpers. Ticket-linked flow still owns stacked state transitions and standalone flow still owns PR discovery plus author-body preservation, but the semantic review handling between those edges is shared.
 
+### Late review reconcile (`done` tickets)
+
+`poll-review` only targets tickets in **`in_review`**. After a ticket is **`done`**, use **`reconcile-late-review <ticket-id>`** when external AI review comments arrived late and you want to re-fetch, re-run the repo triager, persist updated artifacts under the plan reviews directory, refresh delivery state (while keeping the ticket **`done`**), and refresh the PR body (best-effort).
+
+Run it from a worktree where `.agents/delivery/<plan-key>/state.json` for that plan is authoritative (this repo does not discover state across worktrees for you). The ticket must still have a stored **`prNumber`**. The command uses a short single-interval poll so the first check runs immediately; re-run if vendors are still in flight.
+
 ## Ticket Context Reset
 
 The orchestrator also owns the repo-side context reset contract for stacked ticket work.
@@ -180,6 +186,7 @@ Available commands:
 - `post-verify-self-audit [ticket-id]` (alias: `internal-review`, deprecated)
 - `open-pr [ticket-id]`
 - `poll-review [ticket-id]`
+- `reconcile-late-review <ticket-id>`
 - `record-review <ticket-id> <clean|patched|operator_input_needed> [note]`
 - `advance [--no-start-next]`
 - `restack [ticket-id]`

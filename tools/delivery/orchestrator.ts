@@ -57,6 +57,7 @@ import {
   eventsForAdvanceCommand,
   eventsForOpenPrCommand,
   eventsForPollReviewCommand,
+  eventsForReconcileLateReviewCommand,
   eventsForRecordReviewCommand,
   eventsForStartCommand,
   formatNotificationMessage,
@@ -84,6 +85,7 @@ import {
   parseResolveReviewThreadOutput,
   recordTicketReview,
   resolveReviewPollWindowStart,
+  runReconcileLateTicketReview,
   runStandaloneAiReviewLifecycle,
   runTicketReviewLifecycle,
   type StandaloneAiReviewDependencies,
@@ -119,12 +121,14 @@ export {
 export {
   type AiReviewLifecycleHooks,
   DEFAULT_REVIEW_POLLING_PROFILE,
+  RECONCILE_REVIEW_POLLING_PROFILE,
   type PollForAiReviewResult,
   type ReviewPollingProfile,
   computeExtendedReviewPollMaxWaitMinutes,
   pollForAiReview,
   resolveDeliveryReviewPollingProfile,
   runAiReviewLifecycleWithAdapters,
+  runReconcileLateTicketReview,
 } from './review';
 export {
   buildTicketHandoff,
@@ -132,6 +136,7 @@ export {
   eventsForAdvanceCommand,
   eventsForOpenPrCommand,
   eventsForPollReviewCommand,
+  eventsForReconcileLateReviewCommand,
   eventsForRecordReviewCommand,
   eventsForStartCommand,
   findNextPendingTicket,
@@ -555,6 +560,25 @@ export async function runDeliveryOrchestrator(
         );
         return 0;
       }
+      case 'reconcile-late-review': {
+        const ticketId = parsed.positionals[0];
+
+        if (!ticketId) {
+          throw new Error(
+            `Usage: ${generateRunDeliverInvocation(_config.packageManager)} --plan <plan-path> reconcile-late-review <ticket-id>`,
+          );
+        }
+
+        const nextState = await reconcileLateReview(state, cwd, ticketId);
+        await saveState(cwd, nextState);
+        console.log(formatStatus(nextState));
+        await emitNotificationWarnings(
+          notifier,
+          cwd,
+          eventsForReconcileLateReviewCommand(nextState, ticketId),
+        );
+        return 0;
+      }
       case 'record-review': {
         const [ticketId, outcome, ...noteParts] = parsed.positionals;
 
@@ -926,6 +950,26 @@ export async function pollReview(
   dependencies: Partial<TicketReviewDependencies> = {},
 ): Promise<DeliveryState> {
   return runTicketReviewLifecycle(state, cwd, ticketId, {
+    ...dependencies,
+    relativeToRepo,
+    replyToReviewThread:
+      dependencies.replyToReviewThread ?? replyToReviewThreadForOrchestrator,
+    resolveReviewFetcher,
+    resolveReviewThread,
+    resolveReviewTriager,
+    runProcess,
+    updatePullRequestBody:
+      dependencies.updatePullRequestBody ?? updatePullRequestBody,
+  });
+}
+
+export async function reconcileLateReview(
+  state: DeliveryState,
+  cwd: string,
+  ticketId: string,
+  dependencies: Partial<TicketReviewDependencies> = {},
+): Promise<DeliveryState> {
+  return runReconcileLateTicketReview(state, cwd, ticketId, {
     ...dependencies,
     relativeToRepo,
     replyToReviewThread:

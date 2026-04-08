@@ -11,6 +11,13 @@ export const DEFAULT_REVIEW_POLLING_PROFILE: ReviewPollingProfile = {
   extendByOneInterval: true,
 };
 
+/** Single short poll for late reconcile on already-done tickets (immediate first check via negative sleep). */
+export const RECONCILE_REVIEW_POLLING_PROFILE: ReviewPollingProfile = {
+  intervalMinutes: 1,
+  maxWaitMinutes: 1,
+  extendByOneInterval: false,
+};
+
 export function computeExtendedReviewPollMaxWaitMinutes(
   intervalMinutes: number,
   maxWaitMinutes: number,

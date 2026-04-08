@@ -21,6 +21,7 @@ import {
   eventsForAdvanceCommand,
   eventsForOpenPrCommand,
   eventsForPollReviewCommand,
+  eventsForReconcileLateReviewCommand,
   eventsForRecordReviewCommand,
   eventsForStartCommand,
   findExistingBranch,
@@ -41,6 +42,7 @@ import {
   parseAiReviewTriagerOutput,
   parsePlan,
   pollReview,
+  reconcileLateReview,
   recordPostVerifySelfAudit,
   recordReview,
   resolveOrchestratorConfig,
@@ -2779,6 +2781,211 @@ describe('delivery orchestrator', () => {
     });
 
     expect(sleeps).toEqual([120000]);
+  });
+
+  it('reconcile-late-review keeps done status when triage resolves to needs_patch', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 10,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'done',
+          branch:
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+          reviewOutcome: 'patched',
+        },
+      ],
+    };
+    const cwd = await mkdtemp(join(tmpdir(), 'orchestrator-reconcile-'));
+    const sleeps: number[] = [];
+    let fetchCount = 0;
+
+    try {
+      const nextState = await reconcileLateReview(state, cwd, 'P3.01', {
+        now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+        sleep: async (milliseconds) => {
+          sleeps.push(milliseconds);
+        },
+        fetcher: () => {
+          fetchCount += 1;
+          return {
+            agents: [
+              {
+                agent: 'coderabbit',
+                state: 'completed',
+                note: 'review completed',
+              },
+            ],
+            detected: true,
+            artifactText: 'late review artifact',
+            reviewedHeadSha: 'abcdef1234567890',
+            vendors: ['coderabbit'],
+            comments: [
+              {
+                vendor: 'coderabbit',
+                channel: 'inline_review',
+                authorLogin: 'coderabbitai',
+                authorType: 'Bot',
+                body: 'Late follow-up.',
+                threadId: 'thread_late_1',
+                threadViewerCanResolve: true,
+                kind: 'finding',
+              },
+            ],
+          };
+        },
+        triager: () => ({
+          outcome: 'needs_patch',
+          note: 'Actionable AI review findings were detected and still need follow-up.',
+          actionSummary: 'Flagged 1 finding comment for follow-up.',
+          nonActionSummary: undefined,
+          vendors: ['coderabbit'],
+        }),
+      });
+
+      expect(sleeps).toEqual([]);
+      expect(fetchCount).toBe(1);
+      expect(nextState.tickets[0]?.status).toBe('done');
+      expect(nextState.tickets[0]?.reviewOutcome).toBe('patched');
+      expect(nextState.tickets[0]?.reviewArtifactJsonPath).toBe(
+        '.agents/delivery/phase-03/reviews/P3.01-ai-review.json',
+      );
+      expect(nextState.tickets[0]?.reviewHeadSha).toBe('abcdef1234567890');
+      expect(
+        eventsForReconcileLateReviewCommand(nextState, 'P3.01').map(
+          (event) => event.kind,
+        ),
+      ).toEqual(['review_recorded']);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('reconcile-late-review rejects when the ticket is not done', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 10,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'in_review',
+          branch:
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+        },
+      ],
+    };
+
+    await expect(
+      reconcileLateReview(state, '/tmp/pirate_claw', 'P3.01', {
+        now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+        sleep: async () => {},
+        fetcher: () => ({
+          agents: [],
+          detected: false,
+          artifactText: '',
+          vendors: [],
+          comments: [],
+        }),
+      }),
+    ).rejects.toThrow(/must be done before reconciling late review/);
+  });
+
+  it('reconcile-late-review keeps done and preserves prior artifacts on clean timeout', async () => {
+    const state: DeliveryState = {
+      planKey: 'phase-03',
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      statePath: '.agents/delivery/phase-03/state.json',
+      reviewsDirPath: '.agents/delivery/phase-03/reviews',
+      handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+      reviewPollIntervalMinutes: 2,
+      reviewPollMaxWaitMinutes: 10,
+      tickets: [
+        {
+          id: 'P3.01',
+          title: 'Persist Transmission Identity For Queued Torrents',
+          slug: 'persist-transmission-identity-for-queued-torrents',
+          ticketFile:
+            'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
+          status: 'done',
+          branch:
+            'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+          baseBranch: 'main',
+          worktreePath: '/tmp/p3_01',
+          prUrl: 'https://example.test/pull/20',
+          prNumber: 20,
+          prOpenedAt: '2026-04-01T10:00:00.000Z',
+          reviewOutcome: 'patched',
+          reviewArtifactJsonPath:
+            '.agents/delivery/phase-03/reviews/P3.01-ai-review.json',
+          reviewArtifactPath:
+            '.agents/delivery/phase-03/reviews/P3.01-ai-review.txt',
+          reviewNote: 'Earlier patched note.',
+        },
+      ],
+    };
+
+    const nextState = await reconcileLateReview(
+      state,
+      '/tmp/pirate_claw',
+      'P3.01',
+      {
+        now: () => Date.parse('2026-04-01T10:00:00.000Z'),
+        sleep: async () => {},
+        fetcher: () => ({
+          agents: [
+            {
+              agent: 'coderabbit',
+              state: 'started',
+              note: 'still running',
+            },
+          ],
+          detected: false,
+          artifactText: '',
+          vendors: [],
+          comments: [],
+        }),
+      },
+    );
+
+    expect(nextState.tickets[0]?.status).toBe('done');
+    expect(nextState.tickets[0]?.reviewArtifactJsonPath).toBe(
+      '.agents/delivery/phase-03/reviews/P3.01-ai-review.json',
+    );
+    expect(nextState.tickets[0]?.reviewArtifactPath).toBe(
+      '.agents/delivery/phase-03/reviews/P3.01-ai-review.txt',
+    );
+    expect(nextState.tickets[0]?.reviewNote).toContain(
+      'No AI review feedback was detected within the 1-minute polling window',
+    );
   });
 
   it('preserves the triage note when recording a final review outcome without a new note', async () => {

@@ -20,6 +20,7 @@ import type {
 import {
   type ReviewPollingProfile,
   DEFAULT_REVIEW_POLLING_PROFILE,
+  RECONCILE_REVIEW_POLLING_PROFILE,
   computeExtendedReviewPollMaxWaitMinutes,
   resolveDeliveryReviewPollingProfile,
 } from './review-polling-profile';
@@ -27,6 +28,7 @@ import {
 export {
   type ReviewPollingProfile,
   DEFAULT_REVIEW_POLLING_PROFILE,
+  RECONCILE_REVIEW_POLLING_PROFILE,
   computeExtendedReviewPollMaxWaitMinutes,
   resolveDeliveryReviewPollingProfile,
 } from './review-polling-profile';
@@ -1206,6 +1208,131 @@ export async function runTicketReviewLifecycle(
           reviewIncompleteAgents: processedReview.incompleteAgents,
           reviewThreadResolutions: undefined,
           reviewVendors: [],
+        }),
+        dependencies,
+      );
+    },
+  });
+}
+
+export async function runReconcileLateTicketReview(
+  state: DeliveryState,
+  cwd: string,
+  ticketId: string,
+  dependencies: TicketReviewDependencies,
+): Promise<DeliveryState> {
+  const target = state.tickets.find((ticket) => ticket.id === ticketId);
+
+  if (!target) {
+    throw new Error(`Unknown ticket ${ticketId}.`);
+  }
+
+  if (target.status !== 'done') {
+    throw new Error(
+      `Ticket ${ticketId} must be done before reconciling late review (use poll-review while the ticket is in review).`,
+    );
+  }
+
+  if (!target.prNumber) {
+    throw new Error(
+      `Ticket ${ticketId} has no PR number; cannot reconcile review.`,
+    );
+  }
+
+  const now = dependencies.now ?? Date.now;
+  const triager =
+    dependencies.triager ??
+    ((worktreePath: string, artifactJsonPath: string) =>
+      runAiReviewTriager(worktreePath, artifactJsonPath, dependencies));
+  const resolveThreads =
+    dependencies.resolveThreads ??
+    ((worktreePath: string, comments: AiReviewComment[]) =>
+      resolveNativeReviewThreads(worktreePath, comments, dependencies));
+  const profile = RECONCILE_REVIEW_POLLING_PROFILE;
+  const { pollWindowStartedAt: resolvedStart, pollWindowStartedAtIso } =
+    resolveReviewPollWindowStart(target.prOpenedAt, now);
+  const pollWindowStartedAt = Math.min(
+    resolvedStart,
+    now() - (profile.intervalMinutes + 1) * 60_000,
+  );
+
+  return runAiReviewLifecycleWithAdapters({
+    profile,
+    worktreePath: target.worktreePath,
+    prNumber: target.prNumber,
+    pollWindowStartedAt,
+    dependencies,
+    async onTriageOrPartial(reviewPollResult) {
+      const processedReview = await processDetectedAiReview({
+        artifactStemPath: resolve(
+          cwd,
+          state.reviewsDirPath,
+          `${target.id}-ai-review`,
+        ),
+        detectedReview: reviewPollResult.result,
+        effectiveMaxWaitMinutes: reviewPollResult.effectiveMaxWaitMinutes,
+        incompleteAgents:
+          reviewPollResult.status === 'partial_timeout'
+            ? reviewPollResult.incompleteAgents
+            : undefined,
+        mode: 'ticketed',
+        previousOutcome: target.reviewOutcome,
+        resolveThreads,
+        triager,
+        worktreePath: target.worktreePath,
+      });
+      return applyTicketReviewUpdate(
+        state,
+        target.id,
+        (ticket) => ({
+          ...ticket,
+          prOpenedAt: ticket.prOpenedAt ?? pollWindowStartedAtIso,
+          status: 'done',
+          reviewActionSummary: processedReview.actionSummary,
+          reviewComments: processedReview.comments,
+          reviewArtifactJsonPath: dependencies.relativeToRepo(
+            cwd,
+            processedReview.artifactJsonPath,
+          ),
+          reviewArtifactPath: dependencies.relativeToRepo(
+            cwd,
+            processedReview.artifactTextPath,
+          ),
+          reviewFetchedAt: new Date(now()).toISOString(),
+          reviewHeadSha: processedReview.reviewedHeadSha,
+          reviewNonActionSummary: processedReview.nonActionSummary,
+          reviewOutcome: accumulateTicketReviewOutcome(
+            ticket.reviewOutcome,
+            processedReview.outcome,
+          ),
+          reviewNote: processedReview.note,
+          reviewIncompleteAgents: processedReview.incompleteAgents,
+          reviewThreadResolutions: processedReview.threadResolutions,
+          reviewVendors: processedReview.vendors,
+        }),
+        dependencies,
+      );
+    },
+    async onCleanTimeout(reviewPollResult) {
+      const processedReview = processCleanAiReview({
+        effectiveMaxWaitMinutes: reviewPollResult.effectiveMaxWaitMinutes,
+        incompleteAgents: reviewPollResult.incompleteAgents,
+        maxWaitMinutes: profile.maxWaitMinutes,
+        previousOutcome: target.reviewOutcome,
+      });
+      return applyTicketReviewUpdate(
+        state,
+        target.id,
+        (ticket) => ({
+          ...ticket,
+          prOpenedAt: ticket.prOpenedAt ?? pollWindowStartedAtIso,
+          status: 'done',
+          reviewOutcome: accumulateTicketReviewOutcome(
+            ticket.reviewOutcome,
+            processedReview.outcome,
+          ),
+          reviewNote: processedReview.note,
+          reviewIncompleteAgents: processedReview.incompleteAgents,
         }),
         dependencies,
       );

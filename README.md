@@ -280,6 +280,7 @@ Useful local commands:
 - `bun run deliver restack` to restack the current delivery ticket after its parent PR was squash-merged to `main`
 - `bun run closeout-stack --plan <plan-path>` to squash-merge a completed stacked delivery phase onto `main` in ticket order using forward `git merge --squash` (no rebase)
 - `bun run deliver --plan <plan-path> poll-review` to run the orchestrator's 2/4/6/8-minute `ai-code-review` polling loop for the active PR and persist reviewed-SHA provenance plus vendor-attributed review artifacts
+- `bun run deliver --plan <plan-path> reconcile-late-review <ticket-id>` to re-run fetch + triage + artifact persistence + PR body refresh for a **done** ticket when late review feedback appears (see `docs/03-engineering/delivery-orchestrator.md`)
 - `bun run deliver --plan <plan-path> record-review <ticket-id> patched ...` to record patched follow-up and make a best-effort attempt to resolve mapped native GitHub inline review threads
 - `bun run deliver ai-review` to run the same converged post-PR external AI-review lifecycle for a standalone non-ticket PR
 
