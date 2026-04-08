@@ -38,6 +38,7 @@ import {
 import { TmdbCache } from './tmdb/cache';
 import { TmdbHttpClient } from './tmdb/client';
 import type { MovieEnrichDeps } from './tmdb/movie-enrichment';
+import type { TvEnrichDeps } from './tmdb/tv-enrichment';
 import { resolveTmdbSettings } from './tmdb/settings';
 import { createTransmissionDownloader } from './transmission';
 
@@ -46,6 +47,26 @@ function tmdbMovieEnrichDeps(
   config: AppConfig,
   log: (message: string) => void,
 ): MovieEnrichDeps | undefined {
+  const tmdbResolved = resolveTmdbSettings(config);
+  if (!tmdbResolved || config.runtime.apiPort == null) {
+    return undefined;
+  }
+  return {
+    cache: new TmdbCache(database),
+    client: new TmdbHttpClient(tmdbResolved.apiKey, (m: string) =>
+      log(`[tmdb] ${m}`),
+    ),
+    cacheTtlMs: tmdbResolved.cacheTtlMs,
+    negativeCacheTtlMs: tmdbResolved.negativeCacheTtlMs,
+    log: (m: string) => log(`[tmdb] ${m}`),
+  };
+}
+
+function tmdbShowsEnrichDeps(
+  database: Database,
+  config: AppConfig,
+  log: (message: string) => void,
+): TvEnrichDeps | undefined {
   const tmdbResolved = resolveTmdbSettings(config);
   if (!tmdbResolved || config.runtime.apiPort == null) {
     return undefined;
@@ -173,6 +194,7 @@ export async function runCli(argv: string[]): Promise<number> {
         const health = createHealthState();
 
         const tmdbMovies = tmdbMovieEnrichDeps(database, config, log);
+        const tmdbShows = tmdbShowsEnrichDeps(database, config, log);
 
         await runDaemonLoop({
           runCycle: async () => {
@@ -228,6 +250,7 @@ export async function runCli(argv: string[]): Promise<number> {
                   pollStatePath,
                   loadPollState,
                   tmdbMovies,
+                  tmdbShows,
                 })
               : undefined,
         });
