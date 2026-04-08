@@ -3,10 +3,10 @@ FROM oven/bun:1 AS build
 
 WORKDIR /app
 
-COPY package.json bun.lock* ./
+COPY web/package.json web/bun.lock* ./
 RUN bun install --frozen-lockfile
 
-COPY . .
+COPY web/ .
 RUN bun run build
 
 # Runtime stage
