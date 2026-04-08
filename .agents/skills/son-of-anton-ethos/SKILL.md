@@ -15,18 +15,19 @@ Treat the whole approved phase or epic as the unit of work.
 
 Do not treat a single ticket as the unit of work unless the user explicitly narrows scope to one ticket.
 
-When the user asks to execute, begin, start, deliver, implement, continue, resume, run, drive, carry, or work on a phase or epic, read that as standing approval to keep advancing ticket-by-ticket until the full stack is complete or a real repo-defined blocker appears.
+When the user asks to execute, begin, start, deliver, implement, continue, resume, run, drive, carry, or work on a phase or epic, read that as standing approval to keep advancing ticket-by-ticket.
 
-Do not stop merely because:
+**Expected completion state:** every ticket in the phase stack has reached `done` and the developer has received a final summary — all without requiring re-invocation between tickets.
 
-- one ticket was implemented
-- one PR was opened
-- one review window started
-- one review window finished clean
-- a natural checkpoint "feels" like a good time to hand control back
-- the work already took a while
+The following are normal orchestrator milestones, not permission checkpoints or completion signals. Reaching any of them is not a reason to pause or return control:
 
-Those are normal orchestrator milestones, not permission checkpoints.
+- one ticket implemented
+- one PR opened
+- one review window started or finished clean
+- a natural checkpoint that feels complete
+- elapsed time
+
+The workflow is not complete until the full phase stack is done or a repo-valid stop condition applies.
 
 ## Pre-Flight Sequencing
 
@@ -87,15 +88,15 @@ If none of those are true, continue.
 
 ## Anti-Pattern
 
-Do not invent a soft stop such as:
+These are execution failures for approved stacked delivery work. Do not use them as stopping points:
 
-- "I finished the current ticket"
-- "the PR is open now"
-- "the review window is running"
-- "I should summarize progress before continuing"
-- "the user can tell me to keep going"
+- returning control after one ticket with a summary like "I finished the current ticket"
+- treating an open PR as completion
+- treating a running or clean review window as completion
+- pausing to ask whether to continue when no stop condition exists
+- offering a progress summary mid-run and waiting for acknowledgment
 
-In this repo, those are execution failures for approved stacked delivery work.
+If you find yourself about to do any of the above and no repo-valid stop condition is present, that is a signal to continue, not to pause.
 
 ## Response Rule
 
