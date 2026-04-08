@@ -35,6 +35,7 @@ import {
   type CandidateStateRecord,
   type RunSummaryRecord,
 } from './repository';
+import { runTmdbBackgroundRefresh } from './tmdb/background-refresh';
 import { TmdbCache } from './tmdb/cache';
 import { TmdbHttpClient } from './tmdb/client';
 import type { MovieEnrichDeps } from './tmdb/movie-enrichment';
@@ -48,7 +49,7 @@ function tmdbMovieEnrichDeps(
   log: (message: string) => void,
 ): MovieEnrichDeps | undefined {
   const tmdbResolved = resolveTmdbSettings(config);
-  if (!tmdbResolved || config.runtime.apiPort == null) {
+  if (!tmdbResolved) {
     return undefined;
   }
   return {
@@ -68,7 +69,7 @@ function tmdbShowsEnrichDeps(
   log: (message: string) => void,
 ): TvEnrichDeps | undefined {
   const tmdbResolved = resolveTmdbSettings(config);
-  if (!tmdbResolved || config.runtime.apiPort == null) {
+  if (!tmdbResolved) {
     return undefined;
   }
   return {
@@ -195,6 +196,10 @@ export async function runCli(argv: string[]): Promise<number> {
 
         const tmdbMovies = tmdbMovieEnrichDeps(database, config, log);
         const tmdbShows = tmdbShowsEnrichDeps(database, config, log);
+        const tmdbRefreshIntervalMinutes =
+          config.runtime.tmdbRefreshIntervalMinutes!;
+        const scheduleTmdbRefresh =
+          (tmdbMovies || tmdbShows) && tmdbRefreshIntervalMinutes > 0;
 
         await runDaemonLoop({
           runCycle: async () => {
@@ -233,6 +238,16 @@ export async function runCli(argv: string[]): Promise<number> {
             });
             console.log(formatReconcileSummary(result));
           },
+          tmdbRefreshCycle: scheduleTmdbRefresh
+            ? async () => {
+                await runTmdbBackgroundRefresh({
+                  repository,
+                  tmdbMovies,
+                  tmdbShows,
+                  log,
+                });
+              }
+            : undefined,
           options: daemonOptionsFromConfig(config.runtime),
           signal: controller.signal,
           log,
