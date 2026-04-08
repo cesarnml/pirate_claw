@@ -75,6 +75,11 @@ export type ApiFetchDeps = {
    * SQLite cache only — same rows as movies/shows enrichment, no extra HTTP.
    */
   tmdbCache?: TmdbCache;
+  /** Optional hook when a cache read throws during candidate enrichment (fail-open). */
+  onCandidateTmdbCacheError?: (
+    error: unknown,
+    candidate: CandidateStateRecord,
+  ) => void;
 };
 
 function json500(): Response {
@@ -105,6 +110,7 @@ export function createApiFetch(
     tmdbMovies,
     tmdbShows,
     tmdbCache,
+    onCandidateTmdbCacheError,
   } = deps;
 
   return async (request: Request) => {
@@ -128,7 +134,11 @@ export function createApiFetch(
       try {
         const list = repository.listCandidateStates();
         const candidates = tmdbCache
-          ? enrichCandidatesFromCache(list, tmdbCache)
+          ? enrichCandidatesFromCache(
+              list,
+              tmdbCache,
+              onCandidateTmdbCacheError,
+            )
           : list;
         return Response.json({ candidates });
       } catch {

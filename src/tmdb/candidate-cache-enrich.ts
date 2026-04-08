@@ -12,6 +12,7 @@ import { tvCacheRowToShowMeta } from './tv-enrichment';
 export function enrichCandidatesFromCache(
   candidates: CandidateStateRecord[],
   cache: TmdbCache,
+  onError?: (error: unknown, candidate: CandidateStateRecord) => void,
 ): CandidateStateRecord[] {
   return candidates.map((c) => {
     try {
@@ -34,8 +35,8 @@ export function enrichCandidatesFromCache(
           }
         }
       }
-    } catch {
-      // Ignore cache read errors; return unenriched candidate.
+    } catch (error) {
+      onError?.(error, c);
     }
     return c;
   });
