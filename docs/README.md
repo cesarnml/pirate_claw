@@ -65,7 +65,6 @@ Cross-cutting engineering rules that apply beyond a single phase.
 - `epic-03-delivery-orchestrator-modularity-and-concern-separation.md`: concern-first modularization plan for the delivery orchestrator
 - `sqlite-schema.md`: current local SQLite tables, identities, and persistence invariants
 - `son-of-anton.md`: the dev-facing doctrine for this repo's AI-assisted delivery workflow
-- `snyk-workflow-rationale.md`: rationale for adding Snyk-based security scanning to CI
 - `tdd-workflow.md`: red-green-refactor workflow for this repo
 
 ### `04-decisions`
