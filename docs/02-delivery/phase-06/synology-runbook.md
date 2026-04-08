@@ -801,6 +801,23 @@ When a new version of Pirate Claw is built and needs to be deployed:
    docker logs pirate-claw --tail 20
    ```
 
+   Confirmed working state looks like:
+
+   ```
+   pirate-claw   pirate-claw:latest   Up N seconds
+   ```
+
+   Logs should show `daemon started` followed by a reconcile cycle within a few seconds.
+
+6. **Clean up** the transferred archive and dangling old image layers on the NAS:
+
+   ```sh
+   rm /tmp/pirate-claw-latest.tar.gz
+   docker image prune -f
+   ```
+
+   When `docker load` replaces an existing `pirate-claw:latest`, the old image layers are automatically re-tagged to `<none>:<none>` (dangling). `docker image prune -f` removes them and reclaims disk space without prompting. This is safe — the old container was already removed in step 4.
+
 ### What to back up before upgrading
 
 Before replacing the image, optionally back up the database:
