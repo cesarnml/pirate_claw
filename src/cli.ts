@@ -2,8 +2,15 @@ import { existsSync } from 'node:fs';
 
 import { join } from 'node:path';
 
+import type { Database } from 'bun:sqlite';
+
 import { createApiFetch, createHealthState, recordCycleInHealth } from './api';
-import { ConfigError, loadConfig, resolveConfigPath } from './config';
+import {
+  type AppConfig,
+  ConfigError,
+  loadConfig,
+  resolveConfigPath,
+} from './config';
 import { daemonOptionsFromConfig, runDaemonLoop } from './daemon';
 import {
   reconcileCandidates,
@@ -28,7 +35,31 @@ import {
   type CandidateStateRecord,
   type RunSummaryRecord,
 } from './repository';
+import { TmdbCache } from './tmdb/cache';
+import { TmdbHttpClient } from './tmdb/client';
+import type { MovieEnrichDeps } from './tmdb/movie-enrichment';
+import { resolveTmdbSettings } from './tmdb/settings';
 import { createTransmissionDownloader } from './transmission';
+
+function tmdbMovieEnrichDeps(
+  database: Database,
+  config: AppConfig,
+  log: (message: string) => void,
+): MovieEnrichDeps | undefined {
+  const tmdbResolved = resolveTmdbSettings(config);
+  if (!tmdbResolved || config.runtime.apiPort == null) {
+    return undefined;
+  }
+  return {
+    cache: new TmdbCache(database),
+    client: new TmdbHttpClient(tmdbResolved.apiKey, (m: string) =>
+      log(`[tmdb] ${m}`),
+    ),
+    cacheTtlMs: tmdbResolved.cacheTtlMs,
+    negativeCacheTtlMs: tmdbResolved.negativeCacheTtlMs,
+    log: (m: string) => log(`[tmdb] ${m}`),
+  };
+}
 
 export async function runCli(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
@@ -141,6 +172,8 @@ export async function runCli(argv: string[]): Promise<number> {
 
         const health = createHealthState();
 
+        const tmdbMovies = tmdbMovieEnrichDeps(database, config, log);
+
         await runDaemonLoop({
           runCycle: async () => {
             let pollState = loadPollState(pollStatePath);
@@ -194,6 +227,7 @@ export async function runCli(argv: string[]): Promise<number> {
                   config,
                   pollStatePath,
                   loadPollState,
+                  tmdbMovies,
                 })
               : undefined,
         });

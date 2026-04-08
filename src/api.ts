@@ -1,8 +1,12 @@
 import type { AppConfig, FeedConfig, RuntimeConfig } from './config';
+import type { MovieBreakdown } from './movie-api-types';
+export type { MovieBreakdown, TmdbMoviePublic } from './movie-api-types';
 import { isDueFeed } from './poll-state';
 import type { PollState } from './poll-state';
 import type { CandidateStateRecord, Repository } from './repository';
 import type { CycleResult } from './runtime-artifacts';
+import type { MovieEnrichDeps } from './tmdb/movie-enrichment';
+import { enrichMovieBreakdowns } from './tmdb/movie-enrichment';
 
 export type CycleSnapshot = {
   status: CycleResult['status'];
@@ -49,21 +53,42 @@ export type ApiFetchDeps = {
   config: AppConfig;
   pollStatePath: string;
   loadPollState: (path: string) => PollState;
+  /** When set (TMDB configured), GET /api/movies lazily enriches from cache + TMDB. */
+  tmdbMovies?: MovieEnrichDeps;
 };
+
+function json500(): Response {
+  return Response.json({ error: 'internal server error' }, { status: 500 });
+}
+
+function safeJson<T>(body: () => T): Response {
+  try {
+    return Response.json(body());
+  } catch {
+    return json500();
+  }
+}
 
 export function createApiFetch(
   deps?: ApiFetchDeps,
-): (request: Request) => Response {
+): (request: Request) => Response | Promise<Response> {
   if (!deps) {
     return () => Response.json({ error: 'not found' }, { status: 404 });
   }
 
-  const { repository, health, config, pollStatePath, loadPollState } = deps;
+  const {
+    repository,
+    health,
+    config,
+    pollStatePath,
+    loadPollState,
+    tmdbMovies,
+  } = deps;
 
-  return (request: Request) => {
-    const url = new URL(request.url);
+  return async (request: Request) => {
+    const path = new URL(request.url).pathname;
 
-    if (url.pathname === '/api/health') {
+    if (path === '/api/health') {
       const uptimeMs = Date.now() - new Date(health.startedAt).getTime();
       return Response.json({
         uptime: uptimeMs,
@@ -73,79 +98,47 @@ export function createApiFetch(
       });
     }
 
-    if (url.pathname === '/api/status') {
-      try {
-        return Response.json({
-          runs: repository.listRecentRunSummaries(),
-        });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+    if (path === '/api/status') {
+      return safeJson(() => ({ runs: repository.listRecentRunSummaries() }));
     }
 
-    if (url.pathname === '/api/candidates') {
-      try {
-        return Response.json({
-          candidates: repository.listCandidateStates(),
-        });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+    if (path === '/api/candidates') {
+      return safeJson(() => ({
+        candidates: repository.listCandidateStates(),
+      }));
     }
 
-    if (url.pathname === '/api/shows') {
+    if (path === '/api/shows') {
+      return safeJson(() => {
+        const candidates = repository.listCandidateStates();
+        return { shows: buildShowBreakdowns(candidates) };
+      });
+    }
+
+    if (path === '/api/movies') {
       try {
         const candidates = repository.listCandidateStates();
-        return Response.json({ shows: buildShowBreakdowns(candidates) });
+        const base = buildMovieBreakdowns(candidates);
+        const movies = tmdbMovies
+          ? await enrichMovieBreakdowns(base, tmdbMovies)
+          : base;
+        return Response.json({ movies });
       } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
+        return json500();
       }
     }
 
-    if (url.pathname === '/api/movies') {
-      try {
-        const candidates = repository.listCandidateStates();
-        return Response.json({ movies: buildMovieBreakdowns(candidates) });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
-    }
-
-    if (url.pathname === '/api/feeds') {
-      try {
+    if (path === '/api/feeds') {
+      return safeJson(() => {
         const pollState = loadPollState(pollStatePath);
-        return Response.json({
+        return {
           feeds: buildFeedStatuses(config.feeds, pollState, config.runtime),
-        });
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+        };
+      });
     }
 
-    if (url.pathname === '/api/config') {
-      try {
-        return Response.json(redactConfig(config));
-      } catch {
-        return Response.json(
-          { error: 'internal server error' },
-          { status: 500 },
-        );
-      }
+    if (path === '/api/config') {
+      return safeJson(() => redactConfig(config));
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });
@@ -219,17 +212,6 @@ export function buildShowBreakdowns(
 }
 
 // --- Movie breakdowns ---
-
-export type MovieBreakdown = {
-  normalizedTitle: string;
-  year?: number;
-  resolution?: string;
-  codec?: string;
-  identityKey: string;
-  status: string;
-  lifecycleStatus?: string;
-  queuedAt?: string;
-};
 
 export function buildMovieBreakdowns(
   candidates: CandidateStateRecord[],
