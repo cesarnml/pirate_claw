@@ -56,6 +56,7 @@ Execution plans, issue conventions, and ticket breakdowns.
 - `phase-07/implementation-plan.md`: config ergonomics delivery plan
 - `phase-08/implementation-plan.md`: media placement delivery plan
 - `phase-09/implementation-plan.md`: daemon HTTP API delivery plan
+- `phase-10/implementation-plan.md`: read-only SvelteKit dashboard delivery plan
 
 ### `03-engineering`
 
