@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import Page from './+page.svelte';
 import type { CandidateStateRecord } from '$lib/types';
