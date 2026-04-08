@@ -1,13 +1,26 @@
 ---
 name: son-of-anton-ethos
-description: Execute an approved multi-ticket phase or epic through the repo's orchestrated delivery flow with strong continuation bias. Use automatically when a user asks to execute, begin, start, deliver, implement, continue, resume, run, drive, carry, or work on a phase or epic, or explicitly mentions son of anton or son-of-anton ethos.
+description: Execute approved multi-ticket phase/epic work or standalone (non-ticketed) PR delivery through the repo orchestrator with strong continuation bias. Use automatically when a user asks to execute, begin, start, deliver, implement, continue, resume, run, drive, carry, or work on a phase, epic, or standalone PR, or explicitly mentions son of anton or son-of-anton ethos.
 ---
 
 # Son Of Anton Ethos
 
-This is the repo-local execution ethos for approved multi-ticket phase and epic work.
+This is the repo-local execution ethos for **approved multi-ticket phase and epic work** and for **standalone (non-ticketed) PRs** that use the delivery orchestrator without a ticket stack.
 
-The point of the delivery orchestrator is to carry a reviewed ticket stack forward without the agent repeatedly falling back to permission-seeking pauses.
+The point of the delivery orchestrator is to carry a reviewed ticket stack forward without the agent repeatedly falling back to permission-seeking pauses. For standalone PRs, the same discipline applies to finishing verify, review sequencing, and orchestrator-driven external review—without pretending a single phase plan exists when it does not.
+
+## Standalone (non-ticketed) PRs
+
+Policy lifted from [`AGENTS.md`](../../../AGENTS.md) and [`docs/03-engineering/delivery-orchestrator.md`](../../../docs/03-engineering/delivery-orchestrator.md):
+
+1. **Entrypoint and config.** Prefer `bun run deliver` as the operator entrypoint. Read repo-root `orchestrator.config.json` when relevant and `docs/03-engineering/delivery-orchestrator.md` for command surface and behavior—not ad hoc substitutes for what the orchestrator already implements.
+2. **When to use this path.** Smaller bounded product changes may ship as **standalone PRs without a new phase/epic**. For those, use the orchestrator's **standalone `ai-review` path**—`bun run deliver ai-review [--pr <number>]`—**not** the ticketed stacked flow (`--plan …`, `poll-review`, `advance`, `closeout-stack`, etc.).
+3. **Before external AI-agent review.** Complete implement → verify (e.g. `bun run verify` and scoped tests). Perform a **discretionary internal self-review** of the diff (human or agent); there is **no** `internal-review` CLI for standalone PRs, but the step is still required—do not skip straight to `ai-review` without that pass and without stating what you verified.
+4. **Running `ai-review`.** The standalone command uses **real wall-clock** polling intervals. Surface that before starting a long run; do not background it silently or treat “invoke” as permission to hide time cost from the developer.
+5. **Commits.** Follow AGENTS **Pre-Commit** (Prettier for touched files; spellcheck when docs or user-facing copy changed).
+6. **Product-scope gates** in AGENTS (planning pass, approved decomposition, handoffs) apply to **new product phase/epic** work—not to standalone PRs that AGENTS already allows outside a new phase. Do not expand scope into a faux epic without developer direction.
+
+For ticket stacks, the sections below remain authoritative. For standalone PRs, use **[AI Review Polling](#ai-review-polling)** with `deliver ai-review` instead of `poll-review`, and respect **[Stop Conditions](#stop-conditions)**.
 
 ## Core Stance
 
