@@ -335,6 +335,14 @@ function shortenSha(sha: string | undefined): string | undefined {
   return sha ? sha.slice(0, 12) : undefined;
 }
 
+function buildGitHubCommitLink(input: {
+  githubRepo: { defaultBranch: string; name: string; owner: string };
+  sha: string;
+}): string {
+  const short = input.sha.slice(0, 12);
+  return `[\`${short}\`](https://github.com/${input.githubRepo.owner}/${input.githubRepo.name}/commit/${input.sha})`;
+}
+
 function formatHumanUtcTimestamp(iso: string): string {
   const parsed = Date.parse(iso);
   if (Number.isNaN(parsed)) {
@@ -641,24 +649,30 @@ function buildAiReviewDetailLines(input: {
     input.reviewedHeadSha === input.currentHeadSha;
 
   if (input.reviewedHeadSha) {
-    const short = shortenSha(input.reviewedHeadSha);
     if (input.githubRepo) {
       lines.push(
-        `- reviewed commit: [\`${short}\`](https://github.com/${input.githubRepo.owner}/${input.githubRepo.name}/commit/${input.reviewedHeadSha})`,
+        `- reviewed commit: ${buildGitHubCommitLink({
+          githubRepo: input.githubRepo,
+          sha: input.reviewedHeadSha,
+        })}`,
       );
     } else {
-      lines.push(`- reviewed commit: \`${short}\``);
+      lines.push(`- reviewed commit: \`${shortenSha(input.reviewedHeadSha)}\``);
     }
   }
 
   if (input.currentHeadSha) {
-    const short = shortenSha(input.currentHeadSha);
     if (input.githubRepo) {
       lines.push(
-        `- current branch head: [\`${short}\`](https://github.com/${input.githubRepo.owner}/${input.githubRepo.name}/commit/${input.currentHeadSha})`,
+        `- current branch head: ${buildGitHubCommitLink({
+          githubRepo: input.githubRepo,
+          sha: input.currentHeadSha,
+        })}`,
       );
     } else {
-      lines.push(`- current branch head: \`${short}\``);
+      lines.push(
+        `- current branch head: \`${shortenSha(input.currentHeadSha)}\``,
+      );
     }
   }
 
