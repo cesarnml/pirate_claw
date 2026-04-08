@@ -3,18 +3,20 @@ import { describe, it, expect } from 'vitest';
 import Layout from './+layout.svelte';
 
 describe('+layout.svelte', () => {
-	it('renders nav links for all four routes', () => {
+	it('renders nav links for home and all main routes including Movies', () => {
 		const { getByRole } = render(Layout, {
 			props: { children: (() => {}) as unknown as import('svelte').Snippet }
 		});
 
-		const links = ['Home', 'Candidates', 'Shows', 'Config'].map((label) =>
-			getByRole('link', { name: label })
-		);
+		const home = getByRole('link', { name: 'Home' });
+		expect(home).toHaveAttribute('href', '/');
 
-		expect(links[0]).toHaveAttribute('href', '/');
-		expect(links[1]).toHaveAttribute('href', '/candidates');
-		expect(links[2]).toHaveAttribute('href', '/shows');
-		expect(links[3]).toHaveAttribute('href', '/config');
+		const labels = ['Candidates', 'Shows', 'Movies', 'Config'] as const;
+		const hrefs = ['/candidates', '/shows', '/movies', '/config'] as const;
+
+		for (let i = 0; i < labels.length; i++) {
+			const link = getByRole('link', { name: labels[i] });
+			expect(link).toHaveAttribute('href', hrefs[i]);
+		}
 	});
 });
