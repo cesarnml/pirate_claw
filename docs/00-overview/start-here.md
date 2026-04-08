@@ -55,7 +55,7 @@ Last verified against `README.md` and CLI commands: 2026-04-08.
 
 Current planning focus:
 
-- there is no currently defined next numbered product phase or engineering epic beyond the docs already in this repo
+- see [`roadmap.md`](./roadmap.md) for numbered phases: Phase 10 (read-only dashboard) and Phase 11 (TMDB enrichment) have approved product docs; Phase 11 also has an approved ticket decomposition under `docs/02-delivery/phase-11/`
 - use the roadmap to confirm whether the request is a bounded standalone change or needs a new approved phase/epic planning pass
 - treat the current Phase 07 config surface and the current extracted delivery-orchestrator module boundaries as the baseline for future work
 

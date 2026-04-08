@@ -301,7 +301,7 @@ Goal:
 
 Current status:
 
-- planned, not yet implemented
+- product doc approved; delivery ticket decomposition in `docs/02-delivery/phase-11/implementation-plan.md` — implementation not started
 
 Committed scope:
 
@@ -321,6 +321,7 @@ Explicitly deferred:
 Working notes:
 
 - `docs/01-product/phase-11-tmdb-metadata-enrichment.md`
+- `docs/02-delivery/phase-11/implementation-plan.md`
 
 ## Future Deferrals
 
@@ -335,7 +336,8 @@ These items emerged during ideation and are explicitly deferred beyond Phase 11:
 ## Current Planning Posture
 
 - product phases `01`-`09` and engineering epics `01`-`03` are complete on `main`
-- product phases `10`-`11` are planned with approved product docs but do not yet have delivery implementation plans or ticket decompositions
+- product phase `10` is planned with an approved product doc and a delivery implementation plan
+- product phase `11` is planned with an approved product doc and an approved ticket decomposition (`docs/02-delivery/phase-11/`), but implementation has not started
 - each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
 - smaller bounded changes can still proceed as standalone PR work without inventing a new phase
 
@@ -351,4 +353,4 @@ Working notes:
 - promote durable technical choices into ADRs
 - numbered phases are planning buckets, not a promise of strict implementation sequence when dependencies allow independent work
 
-Last verified against `README.md` and active delivery plans: 2026-04-08.
+Last verified against `README.md` and active delivery plans: 2026-04-09.
