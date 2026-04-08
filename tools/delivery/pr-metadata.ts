@@ -540,10 +540,7 @@ function hasPatchEvidence(input: {
   actionCommits?: ReviewActionCommit[];
   threadResolutions?: AiReviewThreadResolution[];
 }): boolean {
-  return (
-    (input.actionCommits?.length ?? 0) > 0 ||
-    (input.threadResolutions?.length ?? 0) > 0
-  );
+  return (input.actionCommits?.length ?? 0) > 0;
 }
 
 export function assertReviewerFacingMarkdown(body: string): void {
