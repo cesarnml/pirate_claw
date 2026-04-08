@@ -9,15 +9,24 @@ Merge a completed stacked delivery phase onto `main` after the developer has rev
 
 ## Primary Path
 
-Run the closeout command:
+Run the closeout command from the default branch:
 
 ```bash
+git checkout main     # must be on the default branch
 bun run closeout-stack --plan <plan-path>
 ```
 
-The command squash-merges each PR in ticket order, rebases the next child branch onto the new `main`, force-pushes, retargets or replaces the surviving child PR, and deletes the merged parent branch.
+The command processes each ticket in stack order using forward `git merge --squash` — no rebase step. For each ticket it:
 
-If the command succeeds cleanly, the phase is done. Delete local worktrees and prune stale remote refs:
+1. Fetches and resets local `main` to `origin/main`
+2. Fetches the ticket branch and runs `git merge --squash` (3-way merge, robust against parent patches)
+3. Commits with the PR title as the commit message
+4. Pushes to `origin/main`
+5. Closes the PR with a comment and deletes the remote branch
+
+This produces one squash commit per ticket on `main`, preserving per-ticket granularity without the fragility of rebasing child branches after parent squash-merges.
+
+After the command succeeds, delete local worktrees and prune stale remote refs:
 
 ```bash
 git worktree list          # identify phase worktrees
@@ -25,43 +34,29 @@ git worktree remove <path> # for each phase worktree
 git remote prune origin
 ```
 
-## Cherry-Pick Recovery
+## Recovery
 
-If the closeout command fails mid-flight (rebase conflict, GitHub API error, etc.), **do not retry the command**. The partial state is unrecoverable by re-running.
+If the closeout command fails mid-flight (merge conflict, GitHub API error, etc.), **do not retry the command**. Instead:
 
-Instead, follow this deterministic recovery:
+1. **Check what made it to `main`.** `git log --oneline origin/main` and GitHub PR state.
 
-1. **Identify what made it to `main`.** Check `git log --oneline origin/main` and the GitHub PR state (merged vs still open).
+2. **Reset local to remote main.** `git checkout main && git reset --hard origin/main`
 
-2. **Reset local to remote main.**
-
-   ```bash
-   git checkout main && git reset --hard origin/main
-   ```
-
-3. **Cherry-pick the remaining commits.** For each un-merged ticket branch, cherry-pick its implementation and patch commits (skip merge commits):
+3. **Resume manually.** For each remaining un-merged ticket, run the same merge --squash locally:
 
    ```bash
-   git cherry-pick <commit-sha-1> <commit-sha-2> --no-commit
-   # repeat for each remaining ticket's commits in stack order
-   git commit -m "feat: <summary of remaining tickets>"
-   ```
-
-4. **Push and clean up.**
-
-   ```bash
+   git fetch origin <ticket-branch>
+   git merge --squash origin/<ticket-branch>
+   git commit -m "<PR title>"
    git push origin main
+   gh pr close <number> --comment "Squash-merged manually" --delete-branch
    ```
 
-   Then close any orphaned PRs and delete stale branches:
-
-   ```bash
-   gh pr close <number> --delete-branch  # for each orphaned PR
-   git remote prune origin
-   ```
+4. **Clean up.** Close any remaining orphaned PRs and prune stale refs.
 
 ## Key Rules
 
 - The developer must explicitly approve closeout. Never run it autonomously.
-- If the cherry-pick recovery itself has conflicts, stop and surface the conflict to the developer rather than force-resolving.
+- If a `git merge --squash` has conflicts, stop and surface the conflict to the developer rather than force-resolving.
 - After closeout, verify the test suite passes on `main` before moving on.
+- The command works from any checkout of the repo on the default branch — it does not require worktrees to still exist.

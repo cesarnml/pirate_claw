@@ -25,20 +25,8 @@ type PullRequestSnapshot = {
   url: string;
 };
 
-type MergeResponse = {
-  merged: boolean;
-  message?: string;
-  sha?: string;
-};
-
 type CloseoutSummary = {
   merged: Array<{ prNumber: number; ticketId: string; url: string }>;
-  replaced: Array<{
-    originalPrNumber: number;
-    replacementPrNumber: number;
-    ticketId: string;
-    url: string;
-  }>;
   skippedMerged: Array<{ prNumber: number; ticketId: string; url: string }>;
 };
 
@@ -165,42 +153,6 @@ function resolvePullRequestForTicket(
   return matched;
 }
 
-function fetchPullRequestHeadSha(
-  cwd: string,
-  repo: string,
-  prNumber: number,
-): string {
-  return runProcess(cwd, [
-    'gh',
-    'api',
-    `repos/${repo}/pulls/${prNumber}`,
-    '--jq',
-    '.head.sha',
-  ]);
-}
-
-function mergePullRequest(
-  cwd: string,
-  repo: string,
-  pr: PullRequestSnapshot,
-): MergeResponse {
-  const sha = fetchPullRequestHeadSha(cwd, repo, pr.number);
-
-  return readJson<MergeResponse>(cwd, [
-    'gh',
-    'api',
-    '-X',
-    'PUT',
-    `repos/${repo}/pulls/${pr.number}/merge`,
-    '-f',
-    'merge_method=squash',
-    '-f',
-    `sha=${sha}`,
-    '-f',
-    `commit_title=${pr.title}`,
-  ]);
-}
-
 function deleteRemoteBranch(cwd: string, repo: string, branch: string): void {
   const result = runProcessResult(cwd, [
     'gh',
@@ -228,134 +180,38 @@ function fetchOriginDefaultBranch(cwd: string, defaultBranch: string): void {
   runProcess(cwd, ['git', 'fetch', 'origin', defaultBranch]);
 }
 
-function rebaseChildOntoDefaultBranch(
-  child: TicketState,
-  parent: TicketState,
-  defaultBranch: string,
-): void {
-  ensureCleanWorktree(child.worktreePath);
-  fetchOriginDefaultBranch(child.worktreePath, defaultBranch);
-  const oldBase = runProcess(child.worktreePath, [
-    'git',
-    'merge-base',
-    child.branch,
-    parent.branch,
-  ]).trim();
-
-  if (!oldBase) {
+function ensureOnDefaultBranch(cwd: string, defaultBranch: string): void {
+  const current = runProcess(cwd, ['git', 'rev-parse', '--abbrev-ref', 'HEAD']);
+  if (current !== defaultBranch) {
     throw new Error(
-      `Could not determine the shared ancestor between ${child.branch} and ${parent.branch}.`,
+      `closeout-stack must run from the ${defaultBranch} branch, but HEAD is on ${current}.`,
     );
   }
-
-  runProcess(child.worktreePath, [
-    'git',
-    'rebase',
-    '--onto',
-    `origin/${defaultBranch}`,
-    oldBase,
-  ]);
 }
 
-function forcePushBranch(ticket: TicketState): void {
-  runProcess(ticket.worktreePath, [
-    'git',
-    'push',
-    '--force-with-lease',
-    'origin',
-    ticket.branch,
-  ]);
-}
-
-function buildReplacementPullRequestBody(
-  ticket: TicketState,
-  previousNumber: number,
-  defaultBranch: string,
-): string {
-  return [
-    `Replacement for auto-closed stacked PR #${previousNumber} after parent branch merge.`,
-    '',
-    `Content is the rebased ${ticket.id} branch against current ${defaultBranch}.`,
-  ].join('\n');
-}
-
-function createReplacementPullRequest(
-  ticket: TicketState,
-  previous: PullRequestSnapshot,
-  defaultBranch: string,
-): PullRequestSnapshot {
-  const url = runProcess(ticket.worktreePath, [
+function closePullRequest(
+  cwd: string,
+  prNumber: number,
+  ticketId: string,
+): void {
+  const result = runProcessResult(cwd, [
     'gh',
     'pr',
-    'create',
-    '--base',
-    defaultBranch,
-    '--head',
-    ticket.branch,
-    '--title',
-    previous.title,
-    '--body',
-    buildReplacementPullRequestBody(ticket, previous.number, defaultBranch),
+    'close',
+    String(prNumber),
+    '--comment',
+    `Squash-merged to main via closeout-stack (${ticketId}).`,
   ]);
-  const number = Number(url.match(/\/pull\/(\d+)$/)?.[1]);
 
-  if (!number) {
-    throw new Error(`Could not parse replacement PR number from ${url}.`);
+  if (result.exitCode !== 0) {
+    const message = `${result.stderr}\n${result.stdout}`;
+    if (
+      !message.includes('already closed') &&
+      !message.includes('already merged')
+    ) {
+      throw new Error(`Failed to close PR #${prNumber}: ${message.trim()}`);
+    }
   }
-
-  return {
-    ...previous,
-    number,
-    baseRefName: defaultBranch,
-    state: 'OPEN',
-    url,
-  };
-}
-
-function retargetChildPullRequest(
-  child: TicketState,
-  currentPr: PullRequestSnapshot,
-  defaultBranch: string,
-): PullRequestSnapshot {
-  const refreshed = resolvePullRequestForTicket(child.worktreePath, child);
-
-  if (refreshed.state === 'OPEN') {
-    runProcess(child.worktreePath, [
-      'gh',
-      'pr',
-      'edit',
-      String(refreshed.number),
-      '--base',
-      defaultBranch,
-    ]);
-    return {
-      ...refreshed,
-      baseRefName: defaultBranch,
-    };
-  }
-
-  return createReplacementPullRequest(child, currentPr, defaultBranch);
-}
-
-function updateTicketPr(
-  state: DeliveryState,
-  ticketId: string,
-  pr: PullRequestSnapshot,
-  defaultBranch: string,
-): DeliveryState {
-  return {
-    ...state,
-    tickets: state.tickets.map((ticket) =>
-      ticket.id === ticketId
-        ? {
-            ...ticket,
-            baseBranch: defaultBranch,
-            prNumber: pr.number,
-            prUrl: pr.url,
-          }
-        : ticket,
-    ),
-  };
 }
 
 function formatCloseoutSummary(
@@ -376,12 +232,6 @@ function formatCloseoutSummary(
     );
   }
 
-  for (const replaced of summary.replaced) {
-    lines.push(
-      `- replaced ${replaced.ticketId}: PR #${replaced.originalPrNumber} -> PR #${replaced.replacementPrNumber} (${replaced.url})`,
-    );
-  }
-
   return lines.join('\n');
 }
 
@@ -395,74 +245,67 @@ export async function runCloseoutStack(
     const config = resolveOrchestratorConfig(rawConfig, cwd);
     initOrchestratorConfig(config);
     const options = createOptions({ planPath: parsed.planPath });
-    let state = await loadState(cwd, options);
+    const state = await loadState(cwd, options);
     const tickets = getCloseoutTicketChain(state);
     const repo = resolveRepoSlug(cwd);
     const summary: CloseoutSummary = {
       merged: [],
-      replaced: [],
       skippedMerged: [],
     };
 
+    ensureCleanWorktree(cwd);
+    ensureOnDefaultBranch(cwd, config.defaultBranch);
+
+    // Prefetch PR snapshots before any branch mutations so child PRs
+    // are still discoverable even after parent branches are deleted.
+    const prSnapshots = tickets.map((ticket) =>
+      resolvePullRequestForTicket(cwd, ticket),
+    );
+
     for (let index = 0; index < tickets.length; index += 1) {
-      const current = state.tickets[index]!;
-      const next = state.tickets[index + 1];
-      const currentPr = resolvePullRequestForTicket(
-        current.worktreePath,
-        current,
-      );
+      const ticket = tickets[index]!;
+      const pr = prSnapshots[index]!;
 
-      if (currentPr.state === 'MERGED') {
+      if (pr.state === 'MERGED') {
         summary.skippedMerged.push({
-          prNumber: currentPr.number,
-          ticketId: current.id,
-          url: currentPr.url,
+          prNumber: pr.number,
+          ticketId: ticket.id,
+          url: pr.url,
         });
-      } else if (currentPr.state !== 'OPEN') {
-        throw new Error(
-          `${current.id} PR #${currentPr.number} is ${currentPr.state.toLowerCase()}. Expected OPEN or MERGED.`,
-        );
-      } else {
-        const merge = mergePullRequest(current.worktreePath, repo, currentPr);
-        if (!merge.merged) {
-          throw new Error(
-            `Failed to merge ${current.id} PR #${currentPr.number}: ${merge.message ?? 'unknown merge failure'}`,
-          );
-        }
-        summary.merged.push({
-          prNumber: currentPr.number,
-          ticketId: current.id,
-          url: currentPr.url,
-        });
+        fetchOriginDefaultBranch(cwd, config.defaultBranch);
+        runProcess(cwd, [
+          'git',
+          'reset',
+          '--hard',
+          `origin/${config.defaultBranch}`,
+        ]);
+        continue;
       }
 
-      fetchOriginDefaultBranch(current.worktreePath, config.defaultBranch);
+      // Sync local branch with remote main
+      fetchOriginDefaultBranch(cwd, config.defaultBranch);
+      runProcess(cwd, [
+        'git',
+        'reset',
+        '--hard',
+        `origin/${config.defaultBranch}`,
+      ]);
 
-      if (next) {
-        rebaseChildOntoDefaultBranch(next, current, config.defaultBranch);
-        forcePushBranch(next);
-        const replacementSource = resolvePullRequestForTicket(
-          next.worktreePath,
-          next,
-        );
-        const childPr = retargetChildPullRequest(
-          next,
-          replacementSource,
-          config.defaultBranch,
-        );
-        if (childPr.number !== replacementSource.number) {
-          summary.replaced.push({
-            originalPrNumber: replacementSource.number,
-            replacementPrNumber: childPr.number,
-            ticketId: next.id,
-            url: childPr.url,
-          });
-        }
-        state = updateTicketPr(state, next.id, childPr, config.defaultBranch);
-        await saveState(cwd, state);
-      }
+      // Fetch ticket branch and squash-merge locally (3-way merge, no rebase)
+      runProcess(cwd, ['git', 'fetch', 'origin', ticket.branch]);
+      runProcess(cwd, ['git', 'merge', '--squash', `origin/${ticket.branch}`]);
+      runProcess(cwd, ['git', 'commit', '-m', pr.title]);
+      runProcess(cwd, ['git', 'push', 'origin', config.defaultBranch]);
 
-      deleteRemoteBranch(current.worktreePath, repo, current.branch);
+      // Close the PR and clean up the remote branch
+      closePullRequest(cwd, pr.number, ticket.id);
+      deleteRemoteBranch(cwd, repo, ticket.branch);
+
+      summary.merged.push({
+        prNumber: pr.number,
+        ticketId: ticket.id,
+        url: pr.url,
+      });
     }
 
     await saveState(cwd, state);

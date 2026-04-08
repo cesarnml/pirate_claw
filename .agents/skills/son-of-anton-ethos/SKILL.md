@@ -35,7 +35,7 @@ Before creating any ticket branches or worktrees for a phase:
 1. Commit the delivery plan and all ticket docs to the default branch first.
 2. Only then create ticket branches from the default branch tip.
 
-This avoids the rebase-dance where ticket worktrees are missing the plan docs they depend on.
+This avoids a sequencing problem where ticket worktrees are missing the plan docs they depend on.
 
 ## Required Behavior
 

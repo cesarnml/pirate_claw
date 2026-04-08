@@ -191,7 +191,7 @@ After the developer has reviewed the full stacked PR chain and is ready to merge
 bun run closeout-stack --plan docs/02-delivery/phase-02/implementation-plan.md
 ```
 
-`closeout-stack` is intentionally separate from `deliver`. It handles stacked PR merge choreography rather than ticket implementation state: squash-merging each reviewed slice in order, rebasing the next child branch onto the new `main`, force-pushing it, retargeting the surviving child PR to `main`, and only then deleting the merged parent branch. If GitHub has already auto-closed a child PR because its previous base branch disappeared, `closeout-stack` opens a replacement PR against `main` and records that replacement in the delivery state file before continuing.
+`closeout-stack` is intentionally separate from `deliver`. It handles stacked PR merge choreography rather than ticket implementation state: for each reviewed slice in ticket order, it runs `git merge --squash` locally (a 3-way merge, robust against parent-branch patches), commits with the PR title, pushes to `main`, closes the PR, and deletes the remote branch. This produces one squash commit per ticket on `main` without rebasing child branches.
 
 For a non-ticket PR, run the manual standalone path:
 
