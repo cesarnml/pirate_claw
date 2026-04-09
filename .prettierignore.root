@@ -1,6 +1,7 @@
 node_modules/
-.vscode/settings.json
+.vscode/
 .vscode/mcp.json
+bun.lock
 .env
 .codex/delivery/
 .codex/analysis/
@@ -11,6 +12,6 @@ node_modules/
 pirate-claw.config.json
 pirate-claw.db
 .pirate-claw/
-.env
 notes/private/
 .cursor/
+web/
