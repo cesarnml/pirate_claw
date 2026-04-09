@@ -25,4 +25,10 @@ Install and wire **shadcn-svelte** (and required Tailwind/theme integration), re
 
 ## Rationale
 
-_To be filled during implementation — summarize toolchain choices, any shadcn-svelte init flags, and Docker/build notes._
+**Tooling:** `shadcn-svelte@latest init` prompts for a preset (not runnable unattended here), so the stack was bootstrapped manually: `components.json` (zinc base, `src/app.css`), `cn` + `WithElementRef` in [`web/src/lib/utils.ts`](../../../web/src/lib/utils.ts), then `bun x shadcn-svelte@latest add button -y --overwrite` for the first primitive. Peer deps: `tailwind-variants`, `clsx`, `tailwind-merge`, `tw-animate-css`, `@lucide/svelte`, `bits-ui`.
+
+**Theme:** Global CSS uses Tailwind v4 `@import` for `tailwindcss` and `tw-animate-css`, shadcn `@theme inline` color tokens, and a `.dark` palette tuned for a dark dashboard with amber-tinted `--primary` to stay close to the existing pirate-claw accent. The root layout applies `class="dark"` so tokens resolve consistently.
+
+**Shell:** [`web/src/routes/+layout.svelte`](../../../web/src/routes/+layout.svelte) uses the generated `Button` with `variant="ghost"` and `href` for nav links; the home/logo link stays a plain anchor for the “Home” accessible name. **Movies** is included in the `nav` array so `/movies` matches other primary routes.
+
+**Verification:** `bun run --cwd web test`, `check`, and `build` pass; full-repo `bun run verify` and `bun run test:web` pass from the repo root. The `web/Dockerfile` build stage is `bun install --frozen-lockfile` and `bun run build` (same as local production build); full `docker build -f web/Dockerfile .` validation is deferred to manual/CI deployment, consistent with **P10.01** (“The build output and adapter-node configuration are verified by the Vite build step”).
