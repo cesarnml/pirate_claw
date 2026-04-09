@@ -22,4 +22,4 @@ Candidates page matches Phase 12 visually and passes existing test intent; no re
 
 ## Rationale
 
-Migrated the candidates table into **shadcn-svelte** `Card`, `Table` (`TableHeader` / `TableBody` / `TableRow` / `TableCell` / `TableHead`), `Badge`, and `Button` (ghost sort controls). Status colors use `Badge variant="outline"` with token-aligned `cn()` classes instead of raw `gray-*` utilities. Error, empty, and sort behavior are unchanged; tests were not rewritten because visible text and roles stayed the same.
+Migrated the candidates table into **shadcn-svelte** `Card`, `Table` (`TableHeader` / `TableBody` / `TableRow` / `TableCell` / `TableHead`), `Badge`, and `Button` (ghost sort controls). Status colors use `Badge variant="outline"` with token-aligned `cn()` classes instead of raw `gray-*` utilities. Error, empty, and sort behavior are unchanged. Vitest assertions are unchanged because visible labels and roles stayed the same (no selector rewrites were required).

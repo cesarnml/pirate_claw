@@ -89,7 +89,7 @@
 		{:else if data.candidates.length === 0}
 			<p class="text-muted-foreground">No candidates found.</p>
 		{:else}
-			<div class="overflow-x-auto rounded-md border border-border">
+			<div class="rounded-md border border-border">
 				<Table>
 					<TableHeader>
 						<TableRow class="border-border hover:bg-transparent">
