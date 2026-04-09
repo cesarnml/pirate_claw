@@ -24,4 +24,6 @@ Operators can submit runtime-only settings changes via server-side proxy flow, w
 
 ## Rationale
 
-To be completed during implementation with behavior/tradeoff notes.
+- Added a server-only `saveRuntime` action in `+page.server.ts` so browser clients never receive or submit the write token directly.
+- Save flow now forwards `If-Match` with the loaded config `ETag`, preserving optimistic concurrency semantics from the API layer.
+- Config route now includes runtime edit controls and explicit success/error alerts, giving operators clear save feedback without widening editable scope beyond runtime fields.

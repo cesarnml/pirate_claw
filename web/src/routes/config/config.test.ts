@@ -41,7 +41,7 @@ const mockConfig: AppConfig = {
 
 describe('/config', () => {
 	it('renders config sections with mock data', () => {
-		render(Page, { data: { config: mockConfig, error: null } });
+		render(Page, { data: { config: mockConfig, error: null, etag: '"rev-1"' }, form: undefined });
 		expect(screen.getByRole('heading', { name: 'Feeds' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'TV Rules' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Movies' })).toBeInTheDocument();
@@ -49,10 +49,14 @@ describe('/config', () => {
 		expect(screen.getByRole('heading', { name: 'Runtime' })).toBeInTheDocument();
 		expect(screen.getByText('TestFeed')).toBeInTheDocument();
 		expect(screen.getByText('hd-tv')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Save runtime settings' })).toBeInTheDocument();
 	});
 
 	it('renders error state when API is unreachable', () => {
-		render(Page, { data: { config: null, error: 'Could not reach the API.' } });
+		render(Page, {
+			data: { config: null, error: 'Could not reach the API.', etag: null },
+			form: undefined
+		});
 		expect(screen.getByRole('alert')).toHaveTextContent('Could not reach the API.');
 	});
 
@@ -60,10 +64,20 @@ describe('/config', () => {
 		render(Page, {
 			data: {
 				config: { ...mockConfig, feeds: [], tv: [] },
-				error: null
-			}
+				error: null,
+				etag: '"rev-1"'
+			},
+			form: undefined
 		});
 		expect(screen.getByText('No feeds configured.')).toBeInTheDocument();
 		expect(screen.getByText('No TV rules configured.')).toBeInTheDocument();
+	});
+
+	it('renders save error message from action data', () => {
+		render(Page, {
+			data: { config: mockConfig, error: null, etag: '"rev-1"' },
+			form: { message: 'config revision conflict' }
+		});
+		expect(screen.getByRole('alert')).toHaveTextContent('config revision conflict');
 	});
 });

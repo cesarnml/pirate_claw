@@ -1,14 +1,16 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	const { data }: { data: PageData } = $props();
+	const { data, form }: { data: PageData; form?: ActionData } = $props();
+	const currentEtag = $derived(form?.etag ?? data.etag ?? null);
 </script>
 
 <h1 class="text-3xl font-bold tracking-tight">Config</h1>
 <p class="text-muted-foreground mt-1 text-sm">
-	Read-only effective configuration from the API (secrets redacted).
+	Effective configuration from the API (secrets redacted). Runtime fields can be edited and saved.
 </p>
 
 {#if data.error}
@@ -20,6 +22,13 @@
 	{@const config = data.config}
 
 	<div class="mt-8 space-y-6 pr-1">
+		{#if form?.message}
+			<Alert variant={form?.success ? 'default' : 'destructive'}>
+				<AlertTitle>{form?.success ? 'Save complete' : 'Save failed'}</AlertTitle>
+				<AlertDescription>{form.message}</AlertDescription>
+			</Alert>
+		{/if}
+
 		<Card>
 			<CardHeader class="pb-3">
 				<h2 class="text-lg font-semibold tracking-tight">Feeds</h2>
@@ -149,30 +158,82 @@
 				<h2 class="text-lg font-semibold tracking-tight">Runtime</h2>
 			</CardHeader>
 			<CardContent class="pt-0">
-				<dl class="grid gap-2 text-sm">
-					<div class="flex flex-wrap gap-2">
-						<dt class="text-muted-foreground">Run interval:</dt>
-						<dd class="text-foreground">{config.runtime.runIntervalMinutes}m</dd>
+				<form method="POST" action="?/saveRuntime" use:enhance class="grid gap-4 text-sm">
+					<input type="hidden" name="ifMatch" value={currentEtag ?? ''} />
+
+					<div class="grid gap-1">
+						<label class="text-muted-foreground" for="runIntervalMinutes"
+							>Run interval (minutes)</label
+						>
+						<input
+							id="runIntervalMinutes"
+							name="runIntervalMinutes"
+							type="number"
+							min="1"
+							step="1"
+							value={config.runtime.runIntervalMinutes}
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+						/>
 					</div>
-					<div class="flex flex-wrap gap-2">
-						<dt class="text-muted-foreground">Reconcile interval:</dt>
-						<dd class="text-foreground">{config.runtime.reconcileIntervalMinutes}m</dd>
+
+					<div class="grid gap-1">
+						<label class="text-muted-foreground" for="reconcileIntervalMinutes">
+							Reconcile interval (minutes)
+						</label>
+						<input
+							id="reconcileIntervalMinutes"
+							name="reconcileIntervalMinutes"
+							type="number"
+							min="1"
+							step="1"
+							value={config.runtime.reconcileIntervalMinutes}
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+						/>
 					</div>
-					<div class="flex flex-wrap gap-2">
-						<dt class="text-muted-foreground">Artifact dir:</dt>
-						<dd class="text-foreground">{config.runtime.artifactDir}</dd>
+
+					<div class="grid gap-1">
+						<label class="text-muted-foreground" for="tmdbRefreshIntervalMinutes">
+							TMDB refresh interval (minutes, 0 disables)
+						</label>
+						<input
+							id="tmdbRefreshIntervalMinutes"
+							name="tmdbRefreshIntervalMinutes"
+							type="number"
+							min="0"
+							step="1"
+							value={config.runtime.tmdbRefreshIntervalMinutes ?? 0}
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+						/>
 					</div>
-					<div class="flex flex-wrap gap-2">
-						<dt class="text-muted-foreground">Artifact retention:</dt>
-						<dd class="text-foreground">{config.runtime.artifactRetentionDays} days</dd>
+
+					<div class="grid gap-1">
+						<label class="text-muted-foreground" for="apiPort">API port (optional)</label>
+						<input
+							id="apiPort"
+							name="apiPort"
+							type="number"
+							min="1"
+							max="65535"
+							step="1"
+							value={config.runtime.apiPort ?? ''}
+							placeholder="unset"
+							class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+						/>
 					</div>
-					{#if config.runtime.apiPort !== undefined}
-						<div class="flex flex-wrap gap-2">
-							<dt class="text-muted-foreground">API port:</dt>
-							<dd class="text-foreground">{config.runtime.apiPort}</dd>
-						</div>
-					{/if}
-				</dl>
+
+					<div class="text-muted-foreground text-xs">
+						Revision: <code>{currentEtag ?? 'missing'}</code>
+					</div>
+					<div>
+						<button
+							type="submit"
+							class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium"
+							disabled={!currentEtag}
+						>
+							Save runtime settings
+						</button>
+					</div>
+				</form>
 			</CardContent>
 		</Card>
 	</div>
