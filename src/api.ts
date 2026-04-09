@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { AppConfig, FeedConfig, RuntimeConfig } from './config';
 import type { MovieBreakdown } from './movie-api-types';
 export type { MovieBreakdown, TmdbMoviePublic } from './movie-api-types';
@@ -182,7 +183,16 @@ export function createApiFetch(
     }
 
     if (path === '/api/config') {
-      return safeJson(() => redactConfig(config));
+      try {
+        const redacted = redactConfig(config);
+        return Response.json(redacted, {
+          headers: {
+            ETag: buildConfigEtag(redacted),
+          },
+        });
+      } catch {
+        return json500();
+      }
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });
@@ -312,4 +322,10 @@ export function redactConfig(config: AppConfig): AppConfig {
   }
 
   return next;
+}
+
+function buildConfigEtag(config: AppConfig): string {
+  const serialized = JSON.stringify(config);
+  const digest = createHash('sha256').update(serialized).digest('hex');
+  return `"${digest}"`;
 }
