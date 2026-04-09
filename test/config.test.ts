@@ -10,6 +10,13 @@ import {
   validateConfig,
 } from '../src/config';
 
+/** Avoid coupling tests to a developer's real `PIRATE_CLAW_API_WRITE_TOKEN` in `.env`. */
+function envWithoutProcessWriteToken(): Record<string, string | undefined> {
+  const copy = { ...process.env } as Record<string, string | undefined>;
+  delete copy.PIRATE_CLAW_API_WRITE_TOKEN;
+  return copy;
+}
+
 describe('validateConfig', () => {
   it('loads compact tv defaults and show names into normalized tv rules', () => {
     const config = validateConfig({
@@ -287,15 +294,19 @@ describe('validateConfig', () => {
   });
 
   it('applies all runtime overrides when fully specified', () => {
-    const config = validateConfig({
-      ...createMinimalConfig(),
-      runtime: {
-        runIntervalMinutes: 10,
-        reconcileIntervalMinutes: 5,
-        artifactDir: '/custom/path',
-        artifactRetentionDays: 14,
+    const config = validateConfig(
+      {
+        ...createMinimalConfig(),
+        runtime: {
+          runIntervalMinutes: 10,
+          reconcileIntervalMinutes: 5,
+          artifactDir: '/custom/path',
+          artifactRetentionDays: 14,
+        },
       },
-    });
+      'config',
+      envWithoutProcessWriteToken(),
+    );
 
     expect(config.runtime).toEqual({
       runIntervalMinutes: 10,
@@ -382,25 +393,37 @@ describe('validateConfig', () => {
   });
 
   it('leaves runtime.apiWriteToken undefined when omitted', () => {
-    const config = validateConfig(createMinimalConfig());
+    const config = validateConfig(
+      createMinimalConfig(),
+      'config',
+      envWithoutProcessWriteToken(),
+    );
 
     expect(config.runtime.apiWriteToken).toBeUndefined();
   });
 
   it('accepts runtime.apiWriteToken from config', () => {
-    const config = validateConfig({
-      ...createMinimalConfig(),
-      runtime: { apiWriteToken: 'config-token' },
-    });
+    const config = validateConfig(
+      {
+        ...createMinimalConfig(),
+        runtime: { apiWriteToken: 'config-token' },
+      },
+      'config',
+      envWithoutProcessWriteToken(),
+    );
 
     expect(config.runtime.apiWriteToken).toBe('config-token');
   });
 
   it('treats empty runtime.apiWriteToken as disabled', () => {
-    const config = validateConfig({
-      ...createMinimalConfig(),
-      runtime: { apiWriteToken: '' },
-    });
+    const config = validateConfig(
+      {
+        ...createMinimalConfig(),
+        runtime: { apiWriteToken: '' },
+      },
+      'config',
+      envWithoutProcessWriteToken(),
+    );
 
     expect(config.runtime.apiWriteToken).toBeUndefined();
   });
@@ -422,10 +445,14 @@ describe('validateConfig', () => {
 
   it('fails when runtime.apiWriteToken is not a string', () => {
     expect(() =>
-      validateConfig({
-        ...createMinimalConfig(),
-        runtime: { apiWriteToken: 12345 },
-      }),
+      validateConfig(
+        {
+          ...createMinimalConfig(),
+          runtime: { apiWriteToken: 12345 },
+        },
+        'config',
+        envWithoutProcessWriteToken(),
+      ),
     ).toThrow(/runtime apiWriteToken.*must be a string/);
   });
 
@@ -625,8 +652,10 @@ describe('validateConfig', () => {
   it('loads transmission credentials from a sibling .env file', async () => {
     const prevUser = process.env.PIRATE_CLAW_TRANSMISSION_USERNAME;
     const prevPass = process.env.PIRATE_CLAW_TRANSMISSION_PASSWORD;
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
     delete process.env.PIRATE_CLAW_TRANSMISSION_USERNAME;
     delete process.env.PIRATE_CLAW_TRANSMISSION_PASSWORD;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
 
     const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-config-'));
     try {
@@ -676,6 +705,11 @@ describe('validateConfig', () => {
         process.env.PIRATE_CLAW_TRANSMISSION_PASSWORD = prevPass;
       } else {
         delete process.env.PIRATE_CLAW_TRANSMISSION_PASSWORD;
+      }
+      if (prevWrite !== undefined) {
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      } else {
+        delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
       }
     }
   });
