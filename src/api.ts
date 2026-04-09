@@ -67,6 +67,11 @@ export type ApiFetchDeps = {
   repository: Repository;
   health: HealthState;
   config: AppConfig;
+  /**
+   * When set, successful PUT /api/config assigns `current` to the validated config
+   * so the daemon process can read the same object as the API (in-process refresh).
+   */
+  configHolder?: { current: AppConfig };
   configPath: string;
   pollStatePath: string;
   loadPollState: (path: string) => PollState;
@@ -109,6 +114,7 @@ export function createApiFetch(
     repository,
     health,
     config,
+    configHolder,
     configPath,
     pollStatePath,
     loadPollState,
@@ -117,7 +123,7 @@ export function createApiFetch(
     tmdbCache,
     onCandidateTmdbCacheError,
   } = deps;
-  let activeConfig = config;
+  let activeConfig = configHolder?.current ?? config;
 
   return async (request: Request) => {
     const path = new URL(request.url).pathname;
@@ -248,29 +254,97 @@ export function createApiFetch(
 
       try {
         const patch = expectRecord(body, 'request body');
-        const runtimePatch = requireRecord(patch, 'runtime', 'request body');
 
-        // Runtime-only updates for now; non-runtime updates are out-of-scope in this phase.
         for (const key of Object.keys(patch)) {
-          if (key !== 'runtime') {
+          if (key !== 'runtime' && key !== 'tv') {
             throw new ConfigError(
-              `Config file "request body ${key}" is not writable; only "runtime" is supported.`,
+              `Config file "request body ${key}" is not writable; only "runtime" and "tv" are supported.`,
+            );
+          }
+        }
+        if (!('runtime' in patch)) {
+          throw new ConfigError(
+            'Config file "request body" must include "runtime".',
+          );
+        }
+        if (!('tv' in patch)) {
+          throw new ConfigError(
+            'Config file "request body" must include "tv".',
+          );
+        }
+
+        const runtimePatch = requireRecord(patch, 'runtime', 'request body');
+        const tvPatch = requireRecord(patch, 'tv', 'request body');
+
+        for (const key of Object.keys(tvPatch)) {
+          if (key !== 'shows') {
+            throw new ConfigError(
+              `Config file "request body tv" only allows "shows"; "${key}" is not writable via the API.`,
             );
           }
         }
 
+        const rawShows = tvPatch.shows;
+        if (!Array.isArray(rawShows)) {
+          throw new ConfigError(
+            'Config file "request body tv shows" must be an array of string show names.',
+          );
+        }
+        if (rawShows.length < 1) {
+          throw new ConfigError(
+            'Config file "request body tv shows" must include at least one show.',
+          );
+        }
+
+        const showsStrings: string[] = [];
+        for (let i = 0; i < rawShows.length; i++) {
+          const entry = rawShows[i];
+          if (typeof entry !== 'string') {
+            throw new ConfigError(
+              `Config file "request body tv shows[${i}]" must be a string show name.`,
+            );
+          }
+          const trimmed = entry.trim();
+          if (!trimmed) {
+            throw new ConfigError(
+              `Config file "request body tv shows[${i}]" must be a non-empty show name.`,
+            );
+          }
+          showsStrings.push(trimmed);
+        }
+
         const baseOnDisk = await readConfigFileRecord(configPath);
+        const tvDisk = baseOnDisk.tv;
+        if (!isRecord(tvDisk)) {
+          throw new ConfigError(
+            'Config file "config tv" must be an object with "defaults" and "shows".',
+          );
+        }
+        const defaultsOnDisk = tvDisk.defaults;
+        if (!isRecord(defaultsOnDisk)) {
+          throw new ConfigError(
+            'Config file "config tv defaults" must be an object; edit the config file to change defaults.',
+          );
+        }
+
         const merged = {
           ...baseOnDisk,
           runtime: {
             ...(isRecord(baseOnDisk.runtime) ? baseOnDisk.runtime : {}),
             ...runtimePatch,
           },
+          tv: {
+            defaults: defaultsOnDisk,
+            shows: showsStrings,
+          },
         };
 
         const validated = validateConfig(merged, 'config');
         writeConfigAtomically(configPath, merged);
         activeConfig = validated;
+        if (configHolder) {
+          configHolder.current = validated;
+        }
 
         const redacted = redactConfig(activeConfig);
         return Response.json(redacted, {
