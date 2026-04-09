@@ -10,8 +10,7 @@
 		return `/shows/${encodeURIComponent(show.normalizedTitle.toLowerCase())}`;
 	}
 
-	function formatRating(v: number | undefined): string {
-		if (v === undefined) return '—';
+	function formatRating(v: number): string {
 		return v.toFixed(1);
 	}
 
@@ -49,7 +48,7 @@
 							{#if show.tmdb?.posterUrl}
 								<img
 									src={show.tmdb.posterUrl}
-									alt=""
+									alt={`Poster for ${displayTitle(show)}`}
 									class="h-28 w-[4.5rem] shrink-0 rounded-md object-cover"
 									loading="lazy"
 								/>
@@ -70,7 +69,7 @@
 											★ {formatRating(show.tmdb.voteAverage)}
 										</Badge>
 									{/if}
-									{#if show.tmdb?.numberOfSeasons != null}
+									{#if show.tmdb?.numberOfSeasons !== undefined}
 										<span>
 											{show.tmdb.numberOfSeasons} season{show.tmdb.numberOfSeasons === 1
 												? ''
