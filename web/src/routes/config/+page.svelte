@@ -19,7 +19,7 @@
 {:else if data.config}
 	{@const config = data.config}
 
-	<div class="mt-8 max-h-[calc(100vh-12rem)] space-y-6 overflow-y-auto pr-1">
+	<div class="mt-8 space-y-6 pr-1">
 		<Card>
 			<CardHeader class="pb-3">
 				<h2 class="text-lg font-semibold tracking-tight">Feeds</h2>
