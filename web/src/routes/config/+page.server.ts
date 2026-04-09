@@ -36,6 +36,34 @@ function parseOptionalInt(input: unknown): number | undefined {
 	return value;
 }
 
+function validateRuntimeBounds(
+	field: string,
+	value: number | undefined
+): { ok: true } | { ok: false; message: string } {
+	if (value === undefined) return { ok: true };
+	if (!Number.isInteger(value)) {
+		return { ok: false, message: `Field "${field}" has invalid value.` };
+	}
+
+	if (field === 'runIntervalMinutes' || field === 'reconcileIntervalMinutes') {
+		return value > 0 ? { ok: true } : { ok: false, message: `Field "${field}" has invalid value.` };
+	}
+
+	if (field === 'tmdbRefreshIntervalMinutes') {
+		return value >= 0
+			? { ok: true }
+			: { ok: false, message: `Field "${field}" has invalid value.` };
+	}
+
+	if (field === 'apiPort') {
+		return value >= 1 && value <= 65535
+			? { ok: true }
+			: { ok: false, message: `Field "${field}" has invalid value.` };
+	}
+
+	return { ok: true };
+}
+
 export const actions: Actions = {
 	saveRuntime: async ({ request }) => {
 		const writeToken = env.PIRATE_CLAW_API_WRITE_TOKEN;
@@ -44,6 +72,19 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
+		const allowedFields = new Set([
+			'ifMatch',
+			'runIntervalMinutes',
+			'reconcileIntervalMinutes',
+			'tmdbRefreshIntervalMinutes',
+			'apiPort'
+		]);
+		for (const key of formData.keys()) {
+			if (!allowedFields.has(key)) {
+				return fail(400, { message: `Field "${key}" is not allowed.` });
+			}
+		}
+
 		const ifMatch = String(formData.get('ifMatch') ?? '').trim();
 		if (!ifMatch) {
 			return fail(400, { message: 'Missing config revision. Reload and try again.' });
@@ -62,6 +103,18 @@ export const actions: Actions = {
 		].some((value) => Number.isNaN(value));
 		if (invalidRuntimeField) {
 			return fail(400, { message: 'Runtime fields must be whole numbers.' });
+		}
+
+		for (const [field, value] of [
+			['runIntervalMinutes', runIntervalMinutes],
+			['reconcileIntervalMinutes', reconcileIntervalMinutes],
+			['tmdbRefreshIntervalMinutes', tmdbRefreshIntervalMinutes],
+			['apiPort', apiPort]
+		] as const) {
+			const result = validateRuntimeBounds(field, value);
+			if (!result.ok) {
+				return fail(400, { message: result.message });
+			}
 		}
 
 		const payload = {
@@ -100,7 +153,7 @@ export const actions: Actions = {
 
 			return {
 				success: true,
-				message: 'Settings saved.',
+				message: 'Settings saved. Restart the daemon for changes to take effect.',
 				etag: response.headers.get('etag')
 			};
 		} catch (error) {
