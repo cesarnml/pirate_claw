@@ -22,4 +22,6 @@ Config read responses expose revision metadata suitable for optimistic concurren
 
 ## Rationale
 
-To be completed during implementation with behavior/tradeoff notes.
+- Added an `ETag` response header on `GET /api/config` so later write operations can perform optimistic concurrency checks without changing the JSON payload contract.
+- The revision value is computed from the redacted config payload, keeping secret values out of the hash input while still producing stable revisions for unchanged readable config state.
+- Tests now assert header presence and unchanged-read stability to lock the contract before write-path tickets consume it.

@@ -561,6 +561,7 @@ describe('GET /api/config', () => {
       'http://localhost:9091/transmission/rpc',
     );
     expect(body.runtime.apiWriteToken).toBe('[redacted]');
+    expect(response.headers.get('etag')).toMatch(/^"[0-9a-f]{64}"$/);
   });
 
   it('does not mutate the original config object', async () => {
@@ -570,6 +571,20 @@ describe('GET /api/config', () => {
 
     expect(deps.config.transmission.username).toBe('user');
     expect(deps.config.transmission.password).toBe('pass');
+  });
+
+  it('returns a stable ETag across unchanged reads', async () => {
+    const deps = createDeps();
+    const handler = createApiFetch(deps);
+
+    const first = await handler(new Request('http://localhost/api/config'));
+    const second = await handler(new Request('http://localhost/api/config'));
+
+    const firstEtag = first.headers.get('etag');
+    const secondEtag = second.headers.get('etag');
+
+    expect(firstEtag).toBeTruthy();
+    expect(firstEtag).toBe(secondEtag);
   });
 });
 
