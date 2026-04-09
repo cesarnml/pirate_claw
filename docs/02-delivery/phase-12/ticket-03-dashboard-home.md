@@ -20,4 +20,4 @@ Home page renders correctly with API data and error paths; dashboard tests pass.
 
 ## Rationale
 
-_To be filled during implementation._
+Migrated the home dashboard to **shadcn-svelte** `Card` sections for daemon metadata and recent runs, `Table` for the run list (matching the candidates page pattern), and `Alert` + `AlertDescription` for the API error path. Quick links use `Button` with `href` (outline) for consistent focus and hit targets. Section titles remain semantic `h2` elements so existing Vitest queries for `heading` roles stay valid. Added an assertion for the **Movies** quick link to match the ticket’s “including to Movies” requirement.
