@@ -6,7 +6,7 @@ export const load: PageServerLoad = async () => {
 	try {
 		const [health, status] = await Promise.all([
 			apiFetch<DaemonHealth>('/api/health'),
-			apiFetch<{ runs: RunSummaryRecord[] }>('/api/status'),
+			apiFetch<{ runs: RunSummaryRecord[] }>('/api/status')
 		]);
 		return { health, runs: status.runs, error: null };
 	} catch (err) {
@@ -14,7 +14,7 @@ export const load: PageServerLoad = async () => {
 		return {
 			health: null as DaemonHealth | null,
 			runs: [] as RunSummaryRecord[],
-			error: 'Could not reach the API.',
+			error: 'Could not reach the API.'
 		};
 	}
 };

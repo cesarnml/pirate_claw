@@ -13,7 +13,7 @@
 </script>
 
 <h1 class="text-3xl font-bold tracking-tight">Movies</h1>
-<p class="mt-1 text-sm text-muted-foreground">
+<p class="text-muted-foreground mt-1 text-sm">
 	TMDB poster and rating appear when the daemon has a TMDB API key and metadata is available.
 </p>
 
@@ -25,7 +25,7 @@
 {:else if data.movies.length === 0}
 	<Card class="mt-6">
 		<CardContent class="pt-6">
-			<p class="text-sm text-muted-foreground">No movie candidates yet.</p>
+			<p class="text-muted-foreground text-sm">No movie candidates yet.</p>
 		</CardContent>
 	</Card>
 {:else}
@@ -43,7 +43,7 @@
 							/>
 						{:else}
 							<div
-								class="mx-auto flex h-48 w-32 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground sm:mx-0"
+								class="bg-muted text-muted-foreground mx-auto flex h-48 w-32 shrink-0 items-center justify-center rounded-md text-xs sm:mx-0"
 							>
 								No poster
 							</div>
@@ -66,23 +66,25 @@
 								{/if}
 							</div>
 							{#if movie.tmdb?.overview}
-								<p class="mt-2 text-sm leading-relaxed text-muted-foreground">{movie.tmdb.overview}</p>
+								<p class="text-muted-foreground mt-2 text-sm leading-relaxed">
+									{movie.tmdb.overview}
+								</p>
 							{/if}
-							<dl class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+							<dl class="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
 								<div>
 									<dt class="inline">Status:</dt>
-									<dd class="inline text-foreground">{movie.status}</dd>
+									<dd class="text-foreground inline">{movie.status}</dd>
 								</div>
 								{#if movie.resolution}
 									<div>
 										<dt class="inline">Resolution:</dt>
-										<dd class="inline text-foreground">{movie.resolution}</dd>
+										<dd class="text-foreground inline">{movie.resolution}</dd>
 									</div>
 								{/if}
 								{#if movie.codec}
 									<div>
 										<dt class="inline">Codec:</dt>
-										<dd class="inline text-foreground">{movie.codec}</dd>
+										<dd class="text-foreground inline">{movie.codec}</dd>
 									</div>
 								{/if}
 							</dl>

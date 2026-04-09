@@ -19,14 +19,14 @@
 
 <svelte:head>
 	<title>Pirate Claw</title>
-<meta
-  name="description"
-  content="Local read-only dashboard for Pirate Claw: candidates, shows, movies, and daemon status via the HTTP API."
-/>
+	<meta
+		name="description"
+		content="Local read-only dashboard for Pirate Claw: candidates, shows, movies, and daemon status via the HTTP API."
+	/>
 </svelte:head>
 
-<div class="dark min-h-screen bg-background text-foreground">
-	<header class="border-b border-border bg-card">
+<div class="dark bg-background text-foreground min-h-screen">
+	<header class="border-border bg-card border-b">
 		<nav
 			class="mx-auto flex max-w-5xl flex-wrap items-center gap-1 px-4 py-3"
 			aria-label="Main navigation"
@@ -34,7 +34,7 @@
 			<a
 				href="/"
 				aria-label="Home"
-				class="mr-2 flex shrink-0 items-center gap-3 rounded-lg focus-visible:outline focus-visible:ring-2 focus-visible:ring-ring"
+				class="focus-visible:ring-ring mr-2 flex shrink-0 items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:outline"
 			>
 				<img
 					src="/pirate-claw-logo.png"
@@ -43,7 +43,7 @@
 					height="40"
 					class="h-10 w-10 rounded-md object-cover"
 				/>
-				<span class="font-mono text-sm font-semibold tracking-wide text-primary">pirate-claw</span>
+				<span class="text-primary font-mono text-sm font-semibold tracking-wide">pirate-claw</span>
 			</a>
 			{#each nav as link}
 				<Button variant="ghost" size="sm" href={link.href}>{link.label}</Button>

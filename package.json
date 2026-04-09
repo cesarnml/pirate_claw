@@ -8,12 +8,17 @@
     "pirate-claw": "./bin/pirate-claw"
   },
   "scripts": {
+    "bootstrap:web": "bun install --cwd web --frozen-lockfile",
+    "check:web": "bun run bootstrap:web && bun run --cwd web check",
     "ci": "bun run verify && bun run test && bun run test:web",
     "deliver": "bun run ./scripts/deliver.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "format:check:web": "bun run bootstrap:web && bun run --cwd web format:check",
+    "format:web": "bun run bootstrap:web && bun run --cwd web format",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "eslint .",
+    "lint:web": "bun run bootstrap:web && bun run --cwd web lint",
     "run": "bun run ./src/cli.ts",
     "spellcheck": "cspell lint . --gitignore --no-progress",
     "spellcheck:words": "cspell lint . --gitignore --no-progress --no-summary --no-exit-code --words-only | bun run ./scripts/spellcheck-words.ts",
@@ -22,7 +27,8 @@
     "test:coverage": "bun test --coverage",
     "test:web": "bun install --cwd web --frozen-lockfile && bun run --cwd web test",
     "typecheck": "tsc --noEmit",
-    "verify": "bun run format:check && bun run typecheck && bun run lint && bun run spellcheck"
+    "verify": "bun run format:check && bun run typecheck && bun run lint && bun run spellcheck && bun run verify:web",
+    "verify:web": "bun run bootstrap:web && bun run --cwd web format:check && bun run --cwd web lint && bun run --cwd web check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

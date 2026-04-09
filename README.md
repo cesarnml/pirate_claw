@@ -302,7 +302,7 @@ Useful local commands:
 
 - `bun test`
 - `bun run test:coverage`
-- `bun run verify`
+- `bun run verify` (repo root checks plus `web/` format, ESLint, and `svelte-check`; use `bun run verify:web` or `bun run lint:web` to scope to the dashboard only)
 - `bun run ci`
 - `bun run deliver restack` to restack the current delivery ticket after its parent PR was squash-merged to `main`
 - `bun run closeout-stack --plan <plan-path>` to squash-merge a completed stacked delivery phase onto `main` in ticket order using forward `git merge --squash` (no rebase)

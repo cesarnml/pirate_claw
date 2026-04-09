@@ -7,7 +7,9 @@
 </script>
 
 <h1 class="text-3xl font-bold tracking-tight">Config</h1>
-<p class="mt-1 text-sm text-muted-foreground">Read-only effective configuration from the API (secrets redacted).</p>
+<p class="text-muted-foreground mt-1 text-sm">
+	Read-only effective configuration from the API (secrets redacted).
+</p>
 
 {#if data.error}
 	<Alert variant="destructive" class="mt-6">
@@ -24,13 +26,13 @@
 			</CardHeader>
 			<CardContent class="pt-0">
 				{#if config.feeds.length === 0}
-					<p class="text-sm text-muted-foreground">No feeds configured.</p>
+					<p class="text-muted-foreground text-sm">No feeds configured.</p>
 				{:else}
 					<ul class="list-none space-y-3">
 						{#each config.feeds as feed}
-							<li class="rounded-md border border-border bg-card/50 p-3 text-sm">
-								<div class="font-medium text-foreground">{feed.name}</div>
-								<div class="mt-1 text-muted-foreground">
+							<li class="border-border bg-card/50 rounded-md border p-3 text-sm">
+								<div class="text-foreground font-medium">{feed.name}</div>
+								<div class="text-muted-foreground mt-1">
 									<span class="mr-3">Type: {feed.mediaType}</span>
 									{#if feed.pollIntervalMinutes !== undefined}
 										<span class="mr-3">Poll: {feed.pollIntervalMinutes}m</span>
@@ -50,16 +52,18 @@
 			</CardHeader>
 			<CardContent class="pt-0">
 				{#if config.tv.length === 0}
-					<p class="text-sm text-muted-foreground">No TV rules configured.</p>
+					<p class="text-muted-foreground text-sm">No TV rules configured.</p>
 				{:else}
 					<ul class="list-none space-y-3">
 						{#each config.tv as rule}
-							<li class="rounded-md border border-border bg-card/50 p-3 text-sm">
-								<div class="font-medium text-foreground">{rule.name}</div>
-								<div class="mt-1 text-muted-foreground">
+							<li class="border-border bg-card/50 rounded-md border p-3 text-sm">
+								<div class="text-foreground font-medium">{rule.name}</div>
+								<div class="text-muted-foreground mt-1">
 									{#if rule.matchPattern}
 										<div>
-											Pattern: <code class="rounded bg-muted px-1 font-mono text-foreground">{rule.matchPattern}</code>
+											Pattern: <code class="bg-muted text-foreground rounded px-1 font-mono"
+												>{rule.matchPattern}</code
+											>
 										</div>
 									{/if}
 									<div>Resolutions: {rule.resolutions.join(', ')}</div>

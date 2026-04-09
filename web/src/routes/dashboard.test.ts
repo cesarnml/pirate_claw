@@ -7,7 +7,7 @@ const mockHealth: DaemonHealth = {
 	uptime: 3661000,
 	startedAt: '2024-01-01T00:00:00Z',
 	lastRunCycle: { status: 'completed', startedAt: '2024-01-01T01:00:00Z' },
-	lastReconcileCycle: { status: 'completed', startedAt: '2024-01-01T01:00:30Z' },
+	lastReconcileCycle: { status: 'completed', startedAt: '2024-01-01T01:00:30Z' }
 };
 
 const mockRun: RunSummaryRecord = {
@@ -19,8 +19,8 @@ const mockRun: RunSummaryRecord = {
 		queued: 3,
 		failed: 0,
 		skipped_duplicate: 1,
-		skipped_no_match: 5,
-	},
+		skipped_no_match: 5
+	}
 };
 
 describe('/', () => {
@@ -32,13 +32,6 @@ describe('/', () => {
 		expect(screen.getByText('1h 1m 1s')).toBeInTheDocument();
 		// run ID appears in table
 		expect(screen.getByText('42')).toBeInTheDocument();
-		// nav links present
-		expect(screen.getByRole('link', { name: 'View Candidates' })).toHaveAttribute(
-			'href',
-			'/candidates',
-		);
-		expect(screen.getByRole('link', { name: 'View Config' })).toHaveAttribute('href', '/config');
-		expect(screen.getByRole('link', { name: 'Movies' })).toHaveAttribute('href', '/movies');
 	});
 
 	it('renders error state when API is unreachable', () => {

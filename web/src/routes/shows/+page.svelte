@@ -20,7 +20,9 @@
 </script>
 
 <h1 class="text-3xl font-bold tracking-tight">Shows</h1>
-<p class="mt-1 text-sm text-muted-foreground">Tracked TV series from the daemon. Open a show for seasons and episodes.</p>
+<p class="text-muted-foreground mt-1 text-sm">
+	Tracked TV series from the daemon. Open a show for seasons and episodes.
+</p>
 
 {#if data.error}
 	<Alert variant="destructive" class="mt-6">
@@ -30,7 +32,7 @@
 {:else if data.shows.length === 0}
 	<Card class="mt-6">
 		<CardContent class="pt-6">
-			<p class="text-sm text-muted-foreground">No shows recorded yet.</p>
+			<p class="text-muted-foreground text-sm">No shows recorded yet.</p>
 		</CardContent>
 	</Card>
 {:else}
@@ -39,10 +41,10 @@
 			<li>
 				<a
 					href={showHref(show)}
-					class="group block h-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					class="group focus-visible:ring-ring block h-full rounded-xl outline-none focus-visible:ring-2"
 				>
 					<Card
-						class="h-full overflow-hidden transition-colors group-hover:border-primary/40 group-hover:bg-accent/30"
+						class="group-hover:border-primary/40 group-hover:bg-accent/30 h-full overflow-hidden transition-colors"
 					>
 						<CardContent class="flex gap-4 p-4">
 							{#if show.tmdb?.posterUrl}
@@ -54,16 +56,16 @@
 								/>
 							{:else}
 								<div
-									class="flex h-28 w-[4.5rem] shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground"
+									class="bg-muted text-muted-foreground flex h-28 w-[4.5rem] shrink-0 items-center justify-center rounded-md text-xs"
 								>
 									No poster
 								</div>
 							{/if}
 							<div class="min-w-0 flex-1">
-								<p class="font-medium leading-snug group-hover:text-primary">
+								<p class="group-hover:text-primary leading-snug font-medium">
 									{displayTitle(show)}
 								</p>
-								<div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+								<div class="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
 									{#if show.tmdb?.voteAverage !== undefined}
 										<Badge variant="secondary" title="TMDB vote average">
 											★ {formatRating(show.tmdb.voteAverage)}
@@ -71,9 +73,7 @@
 									{/if}
 									{#if show.tmdb?.numberOfSeasons !== undefined}
 										<span>
-											{show.tmdb.numberOfSeasons} season{show.tmdb.numberOfSeasons === 1
-												? ''
-												: 's'}
+											{show.tmdb.numberOfSeasons} season{show.tmdb.numberOfSeasons === 1 ? '' : 's'}
 										</span>
 									{/if}
 								</div>

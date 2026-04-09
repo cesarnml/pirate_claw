@@ -49,13 +49,13 @@
 {:else if !data.show}
 	<Card class="mt-4">
 		<CardContent class="pt-6">
-			<p class="text-sm text-muted-foreground">Show not found.</p>
+			<p class="text-muted-foreground text-sm">Show not found.</p>
 		</CardContent>
 	</Card>
 {:else}
 	{@const backdropUrl = safeHttpsBackgroundUrl(data.show.tmdb?.backdropUrl)}
 	<div
-		class="mb-8 flex flex-col gap-4 rounded-xl border border-border sm:flex-row sm:items-start"
+		class="border-border mb-8 flex flex-col gap-4 rounded-xl border sm:flex-row sm:items-start"
 		class:overflow-hidden={!!backdropUrl}
 		style={backdropUrl
 			? `background: linear-gradient(hsl(var(--background) / 0.92), hsl(var(--background) / 0.92)), url(${backdropUrl}) center/cover no-repeat`
@@ -71,7 +71,7 @@
 			/>
 		{:else}
 			<div
-				class="mx-auto flex h-56 w-40 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground sm:mx-0"
+				class="bg-muted text-muted-foreground mx-auto flex h-56 w-40 shrink-0 items-center justify-center rounded-md text-xs sm:mx-0"
 			>
 				No poster
 			</div>
@@ -90,15 +90,14 @@
 					</Badge>
 				{/if}
 				{#if data.show.tmdb?.numberOfSeasons !== undefined}
-					<span class="text-sm text-muted-foreground">
-						{data.show.tmdb.numberOfSeasons} season{data.show.tmdb.numberOfSeasons === 1
-							? ''
-							: 's'} (TMDB)
+					<span class="text-muted-foreground text-sm">
+						{data.show.tmdb.numberOfSeasons} season{data.show.tmdb.numberOfSeasons === 1 ? '' : 's'}
+						(TMDB)
 					</span>
 				{/if}
 			</div>
 			{#if data.show.tmdb?.overview}
-				<p class="mt-3 text-sm leading-relaxed text-muted-foreground">{data.show.tmdb.overview}</p>
+				<p class="text-muted-foreground mt-3 text-sm leading-relaxed">{data.show.tmdb.overview}</p>
 			{/if}
 		</div>
 	</div>
@@ -110,7 +109,7 @@
 					<h2 class="text-lg font-semibold tracking-tight">Season {season.season}</h2>
 				</CardHeader>
 				<CardContent class="pt-0">
-					<div class="rounded-md border border-border">
+					<div class="border-border rounded-md border">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -135,7 +134,7 @@
 													loading="lazy"
 												/>
 											{:else}
-												<div class="h-14 w-24 rounded-md bg-muted"></div>
+												<div class="bg-muted h-14 w-24 rounded-md"></div>
 											{/if}
 										</TableCell>
 										<TableCell class="align-top font-medium whitespace-nowrap">
@@ -145,7 +144,8 @@
 											{#if ep.tmdb?.name}
 												<span>{ep.tmdb.name}</span>
 												{#if ep.tmdb.airDate}
-													<span class="ml-1 text-xs text-muted-foreground">({ep.tmdb.airDate})</span>
+													<span class="text-muted-foreground ml-1 text-xs">({ep.tmdb.airDate})</span
+													>
 												{/if}
 											{:else}
 												<span class="text-muted-foreground">—</span>
@@ -154,10 +154,14 @@
 										<TableCell class="align-top">
 											{ep.status}
 											{#if ep.lifecycleStatus}
-												<span class="ml-1 text-xs text-muted-foreground">({ep.lifecycleStatus})</span>
+												<span class="text-muted-foreground ml-1 text-xs"
+													>({ep.lifecycleStatus})</span
+												>
 											{/if}
 										</TableCell>
-										<TableCell class="align-top text-muted-foreground">{ep.queuedAt ?? '—'}</TableCell>
+										<TableCell class="text-muted-foreground align-top"
+											>{ep.queuedAt ?? '—'}</TableCell
+										>
 									</TableRow>
 								{/each}
 							</TableBody>

@@ -24,10 +24,13 @@ export default [
 		plugins: { svelte },
 		languageOptions: {
 			parser: svelteParser,
-			parserOptions: { parser: tsParser }
+			parserOptions: { parser: tsParser },
+			globals: { ...globals.browser, ...globals.node }
 		},
 		rules: {
-			...svelte.configs.recommended.rules
+			...svelte.configs.recommended.rules,
+			// ESLint compiles Svelte independently; shadcn `$props()` + rest triggers benign custom-element warnings
+			'svelte/valid-compile': ['error', { ignoreWarnings: true }]
 		}
 	},
 	{

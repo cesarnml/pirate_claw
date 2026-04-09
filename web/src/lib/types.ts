@@ -152,11 +152,7 @@ export type AppConfig = {
 	runtime: RuntimeConfig;
 };
 
-export type FeedItemOutcomeStatus =
-	| 'queued'
-	| 'failed'
-	| 'skipped_duplicate'
-	| 'skipped_no_match';
+export type FeedItemOutcomeStatus = 'queued' | 'failed' | 'skipped_duplicate' | 'skipped_no_match';
 
 export type RunStatus = 'running' | 'completed' | 'failed';
 

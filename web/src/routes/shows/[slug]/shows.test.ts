@@ -13,17 +13,17 @@ const mockShow: ShowBreakdown = {
 					episode: 1,
 					identityKey: 'key-s01e01',
 					status: 'queued',
-					queuedAt: '2024-01-01T00:00:00Z',
+					queuedAt: '2024-01-01T00:00:00Z'
 				},
 				{
 					episode: 2,
 					identityKey: 'key-s01e02',
 					status: 'completed',
-					lifecycleStatus: 'seeding',
-				},
-			],
-		},
-	],
+					lifecycleStatus: 'seeding'
+				}
+			]
+		}
+	]
 };
 
 describe('/shows/[slug]', () => {

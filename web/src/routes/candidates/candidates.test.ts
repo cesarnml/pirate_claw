@@ -22,7 +22,7 @@ const mockCandidate: CandidateStateRecord = {
 	downloadUrl: 'https://example.com/dl',
 	firstSeenRunId: 1,
 	lastSeenRunId: 1,
-	updatedAt: '2024-01-01T01:00:00Z',
+	updatedAt: '2024-01-01T01:00:00Z'
 };
 
 describe('/candidates', () => {
@@ -32,8 +32,8 @@ describe('/candidates', () => {
 			tmdb: {
 				name: 'The Show TMDB',
 				posterUrl: 'https://example.com/poster.jpg',
-				voteAverage: 8.2,
-			},
+				voteAverage: 8.2
+			}
 		};
 		render(Page, { data: { candidates: [withTmdb], error: null } });
 		expect(screen.getByText('The Show TMDB')).toBeInTheDocument();

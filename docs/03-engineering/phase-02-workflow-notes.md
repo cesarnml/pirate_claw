@@ -9,7 +9,7 @@ These are candidate workflow improvements to review before phase 02 planning. Th
 - work is ticketed in small vertical slices
 - plans are created when needed, then implementation follows
 - PR and squash titles carry ticket linkage when clear; normal commits stay clean
-- CI runs `verify` and `test`
+- CI runs `verify` (including `web/` checks), `test`, and `test:web`
 - AI review comments are advisory, not authoritative
 - engineering lessons are documented once instead of rediscovered per ticket
 

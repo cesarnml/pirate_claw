@@ -14,8 +14,8 @@ const mockMovie: MovieBreakdown = {
 		title: 'Example Film',
 		posterUrl: 'https://example.com/poster.jpg',
 		overview: 'A test overview.',
-		voteAverage: 7.2,
-	},
+		voteAverage: 7.2
+	}
 };
 
 describe('/movies', () => {

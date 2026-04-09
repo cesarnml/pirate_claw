@@ -8,15 +8,15 @@ const mockShow: ShowBreakdown = {
 	seasons: [
 		{
 			season: 1,
-			episodes: [],
-		},
+			episodes: []
+		}
 	],
 	tmdb: {
 		name: 'The Example Show',
 		posterUrl: 'https://example.com/poster.jpg',
 		voteAverage: 8.1,
-		numberOfSeasons: 3,
-	},
+		numberOfSeasons: 3
+	}
 };
 
 describe('/shows', () => {
@@ -27,7 +27,7 @@ describe('/shows', () => {
 		expect(screen.getByTitle('TMDB vote average')).toHaveTextContent('★ 8.1');
 		expect(screen.getByRole('link', { name: /The Example Show/i })).toHaveAttribute(
 			'href',
-			'/shows/the%20example%20show',
+			'/shows/the%20example%20show'
 		);
 	});
 

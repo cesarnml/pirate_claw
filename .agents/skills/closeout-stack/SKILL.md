@@ -1,7 +1,8 @@
 ---
-name: closeout-stack
+
+## name: closeout-stack
+
 description: Merge a completed stacked PR phase onto main. Use when the developer approves closeout after a multi-ticket delivery is fully reviewed.
----
 
 # Closeout Stack
 
@@ -39,20 +40,18 @@ git remote prune origin
 If the closeout command fails mid-flight (merge conflict, GitHub API error, etc.), **do not retry the command**. Instead:
 
 1. **Check what made it to `main`.** `git log --oneline origin/main` and GitHub PR state.
-
 2. **Reset local to remote main.** `git checkout main && git reset --hard origin/main`
-
 3. **Resume manually.** For each remaining un-merged ticket, run the same merge --squash locally:
 
-   ```bash
-   git fetch origin <ticket-branch>
-   git merge --squash origin/<ticket-branch>
-   git commit -m "<PR title>"
-   git push origin main
-   gh pr close <number> --comment "Squash-merged manually" --delete-branch
-   ```
+```bash
+ git fetch origin <ticket-branch>
+ git merge --squash origin/<ticket-branch>
+ git commit -m "<PR title>"
+ git push origin main
+ gh pr close <number> --comment "Squash-merged manually" --delete-branch
+```
 
-4. **Clean up.** Close any remaining orphaned PRs and prune stale refs.
+1. **Clean up.** Close any remaining orphaned PRs and prune stale refs.
 
 ## Key Rules
 

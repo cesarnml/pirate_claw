@@ -10,7 +10,7 @@ export const load: PageServerLoad = async () => {
 		console.error('[shows list] failed to load /api/shows:', err);
 		return {
 			shows: [] as ShowBreakdown[],
-			error: 'Could not reach the API.',
+			error: 'Could not reach the API.'
 		};
 	}
 };

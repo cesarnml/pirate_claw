@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		Card,
-		CardContent,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import {
 		Table,
 		TableBody,
@@ -53,12 +48,12 @@
 		return c.normalizedTitle;
 	}
 
-		function displayStatus(status: string): string {
-		return status === "skipped_duplicate" ? "skipped" : status;
+	function displayStatus(status: string): string {
+		return status === 'skipped_duplicate' ? 'skipped' : status;
 	}
 
 	function displayLifeCycleStatus(lifeCycleStatus: string): string {
-		return lifeCycleStatus === "missing_from_transmission" ? "missing" : lifeCycleStatus;
+		return lifeCycleStatus === 'missing_from_transmission' ? 'missing' : lifeCycleStatus;
 	}
 
 	function displayDate(iso?: string): string {
@@ -66,7 +61,7 @@
 
 		return new Date(iso).toLocaleString('en-US', {
 			dateStyle: 'medium',
-			timeZone: 'UTC',
+			timeZone: 'UTC'
 		});
 	}
 
@@ -75,10 +70,10 @@
 
 		return new Date(iso).toLocaleString('en-US', {
 			timeStyle: 'short',
-			timeZone: 'UTC',
+			timeZone: 'UTC'
 		});
 	}
-		
+
 	const statusBadgeClass: Record<string, string> = {
 		queued: 'border-transparent bg-muted text-foreground',
 		skipped: 'border-transparent bg-muted/80 text-muted-foreground',
@@ -115,19 +110,23 @@
 		{:else if data.candidates.length === 0}
 			<p class="text-muted-foreground">No candidates found.</p>
 		{:else}
-			<div class="rounded-md border border-border">
+			<div class="border-border rounded-md border">
 				<Table>
 					<TableHeader>
 						<TableRow class="border-border hover:bg-transparent">
 							<TableHead class="w-14" aria-hidden="true"></TableHead>
 							<TableHead>Title</TableHead>
 							<TableHead
-								aria-sort={sortKey === 'mediaType' ? (sortAsc ? 'ascending' : 'descending') : 'none'}
+								aria-sort={sortKey === 'mediaType'
+									? sortAsc
+										? 'ascending'
+										: 'descending'
+									: 'none'}
 							>
 								<Button
 									variant="ghost"
 									size="sm"
-									class="-ml-2 h-8 text-muted-foreground hover:text-foreground"
+									class="text-muted-foreground hover:text-foreground -ml-2 h-8"
 									onclick={() => toggleSort('mediaType')}
 								>
 									Type{arrow('mediaType')}
@@ -142,7 +141,7 @@
 								<Button
 									variant="ghost"
 									size="sm"
-									class="-ml-2 h-8 text-muted-foreground hover:text-foreground"
+									class="text-muted-foreground hover:text-foreground -ml-2 h-8"
 									onclick={() => toggleSort('status')}
 								>
 									Status{arrow('status')}
@@ -165,7 +164,7 @@
 										/>
 									{:else}
 										<div
-											class="flex h-12 w-8 items-center justify-center rounded-md border border-border bg-muted text-[10px] text-muted-foreground"
+											class="border-border bg-muted text-muted-foreground flex h-12 w-8 items-center justify-center rounded-md border text-[10px]"
 										>
 											—
 										</div>
@@ -207,7 +206,7 @@
 										{displayStatus(candidate.status)}
 									</Badge>
 									{#if candidate.lifecycleStatus}
-										<div class="ml-1 text-xs text-muted-foreground">
+										<div class="text-muted-foreground ml-1 text-xs">
 											({displayLifeCycleStatus(candidate.lifecycleStatus)})
 										</div>
 									{/if}

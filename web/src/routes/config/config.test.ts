@@ -9,34 +9,34 @@ const mockConfig: AppConfig = {
 			name: 'TestFeed',
 			url: 'https://example.com/rss',
 			mediaType: 'tv',
-			pollIntervalMinutes: 30,
-		},
+			pollIntervalMinutes: 30
+		}
 	],
 	tv: [
 		{
 			name: 'hd-tv',
 			matchPattern: 'The Show',
 			resolutions: ['1080p'],
-			codecs: ['x265'],
-		},
+			codecs: ['x265']
+		}
 	],
 	movies: {
 		years: [2024],
 		resolutions: ['1080p'],
 		codecs: ['x265'],
-		codecPolicy: 'prefer',
+		codecPolicy: 'prefer'
 	},
 	transmission: {
 		url: 'http://localhost:9091',
 		username: '[redacted]',
-		password: '[redacted]',
+		password: '[redacted]'
 	},
 	runtime: {
 		runIntervalMinutes: 30,
 		reconcileIntervalMinutes: 1,
 		artifactDir: '.pirate-claw/runtime',
-		artifactRetentionDays: 7,
-	},
+		artifactRetentionDays: 7
+	}
 };
 
 describe('/config', () => {
@@ -60,8 +60,8 @@ describe('/config', () => {
 		render(Page, {
 			data: {
 				config: { ...mockConfig, feeds: [], tv: [] },
-				error: null,
-			},
+				error: null
+			}
 		});
 		expect(screen.getByText('No feeds configured.')).toBeInTheDocument();
 		expect(screen.getByText('No TV rules configured.')).toBeInTheDocument();

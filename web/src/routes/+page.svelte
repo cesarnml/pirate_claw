@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
-	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
 	import {
 		Table,
@@ -28,7 +27,7 @@
 		return new Date(iso).toLocaleString('en-US', {
 			dateStyle: 'medium',
 			timeStyle: 'short',
-			timeZone: 'UTC',
+			timeZone: 'UTC'
 		});
 	}
 </script>
@@ -81,9 +80,9 @@
 			</CardHeader>
 			<CardContent>
 				{#if runs.length === 0}
-					<p class="text-sm text-muted-foreground">No runs recorded yet.</p>
+					<p class="text-muted-foreground text-sm">No runs recorded yet.</p>
 				{:else}
-					<div class="rounded-md border border-border">
+					<div class="border-border rounded-md border">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -116,8 +115,7 @@
 			</CardContent>
 		</Card>
 	</section>
-	
 {:else}
 	<!-- Defensive: load currently returns either health or error, not both null -->
-	<p class="mt-6 text-sm text-muted-foreground">Loading…</p>
+	<p class="text-muted-foreground mt-6 text-sm">Loading…</p>
 {/if}
