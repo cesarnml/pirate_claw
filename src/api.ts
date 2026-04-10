@@ -10,6 +10,7 @@ import {
   ConfigError,
   validateCompactTvDefaults,
   validateConfig,
+  validateFeed,
   validateMoviePolicy,
 } from './config';
 import type { MovieBreakdown } from './movie-api-types';
@@ -475,6 +476,94 @@ export function createApiFetch(
             codecs: movies.codecs,
             codecPolicy: movies.codecPolicy,
           },
+        };
+
+        const validated = validateConfig(merged, 'config');
+        writeConfigAtomically(configPath, merged);
+        activeConfig = validated;
+        if (configHolder) {
+          configHolder.current = validated;
+        }
+
+        const redacted = redactConfig(activeConfig);
+        return Response.json(redacted, {
+          headers: { ETag: buildConfigEtag(redacted) },
+        });
+      } catch (error) {
+        if (error instanceof ConfigError) {
+          return Response.json({ error: error.message }, { status: 400 });
+        }
+        return json500();
+      }
+    }
+
+    if (path === '/api/config/feeds' && request.method === 'PUT') {
+      const authError = checkWriteAuth(request, activeConfig);
+      if (authError) return authError;
+
+      const etagError = checkEtag(request, activeConfig);
+      if (etagError) return etagError;
+
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json({ error: 'invalid json body' }, { status: 400 });
+      }
+
+      try {
+        if (!Array.isArray(body)) {
+          throw new ConfigError(
+            'Config file "request body feeds" must be an array.',
+          );
+        }
+
+        const feeds = body.map((entry, index) =>
+          validateFeed(entry, 'request body', index),
+        );
+
+        const baseOnDisk = await readConfigFileRecord(configPath);
+        const feedsOnDisk = Array.isArray(baseOnDisk.feeds)
+          ? (baseOnDisk.feeds as Array<{ url?: unknown }>)
+          : [];
+        const existingUrls = new Set(
+          feedsOnDisk.map((f) => (typeof f.url === 'string' ? f.url : '')),
+        );
+
+        for (const feed of feeds) {
+          if (existingUrls.has(feed.url)) continue;
+          let fetchOk = false;
+          try {
+            const res = await fetch(feed.url, {
+              signal: AbortSignal.timeout(10_000),
+            });
+            fetchOk = res.ok;
+          } catch {
+            fetchOk = false;
+          }
+          if (!fetchOk) {
+            return Response.json(
+              {
+                error: `feed URL did not return a successful response: ${feed.url}`,
+              },
+              { status: 400 },
+            );
+          }
+        }
+
+        const merged = {
+          ...baseOnDisk,
+          feeds: feeds.map((f) => {
+            const entry: Record<string, unknown> = {
+              name: f.name,
+              url: f.url,
+              mediaType: f.mediaType,
+            };
+            if (f.parserHints !== undefined) entry.parserHints = f.parserHints;
+            if (f.pollIntervalMinutes !== undefined)
+              entry.pollIntervalMinutes = f.pollIntervalMinutes;
+            return entry;
+          }),
         };
 
         const validated = validateConfig(merged, 'config');

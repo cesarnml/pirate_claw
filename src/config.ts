@@ -156,7 +156,7 @@ function validateTvConfig(input: unknown, path: string): TvRule[] {
   );
 }
 
-function validateFeed(input: unknown, path: string, index: number): FeedConfig {
+export function validateFeed(input: unknown, path: string, index: number): FeedConfig {
   const feed = expectRecord(input, `${path} feeds[${index}]`);
 
   return {
