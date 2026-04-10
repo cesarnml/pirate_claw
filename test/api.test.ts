@@ -1574,7 +1574,9 @@ describe('PUT /api/config/feeds', () => {
             'if-match': etag,
           },
           // missing required mediaType field
-          body: JSON.stringify([{ name: 'Bad Feed', url: 'https://example.test/rss' }]),
+          body: JSON.stringify([
+            { name: 'Bad Feed', url: 'https://example.test/rss' },
+          ]),
         }),
       );
       expect(res.status).toBe(400);
