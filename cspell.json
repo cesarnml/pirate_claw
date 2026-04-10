@@ -51,7 +51,8 @@
     "TMDB",
     "unvalidated",
     "HEALTHCHECK",
-    "unconfigured"
+    "unconfigured",
+    "cesarnml"
   ],
   "ignoreWords": [],
   "import": []

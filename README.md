@@ -218,24 +218,24 @@ When `runtime.apiPort` is omitted, no HTTP listener starts.
 
 ### Endpoints
 
-| Endpoint                         | Description                                                    |
-| -------------------------------- | -------------------------------------------------------------- |
-| `GET /api/health`                | Uptime, start time, and last run/reconcile cycle snapshots     |
-| `GET /api/status`                | Recent run summaries from the local database                   |
-| `GET /api/candidates`            | All tracked candidate state records                            |
-| `GET /api/shows`                 | TV candidates grouped by show → season → episode               |
-| `GET /api/movies`                | Movie candidates sorted by title                               |
-| `GET /api/feeds`                 | Feed config with poll state and `isDue` status                 |
-| `GET /api/config`                | Effective config with credentials redacted; returns `ETag`     |
-| `PUT /api/config`                | Bounded runtime + tv.shows write (token + `If-Match` required) |
-| `PUT /api/config/feeds`          | Replace feeds array (token + `If-Match` required)              |
-| `PUT /api/config/movies`         | Replace movie policy (token + `If-Match` required)             |
-| `PUT /api/config/tv/defaults`    | Replace TV global defaults (token + `If-Match` required)       |
-| `GET /api/transmission/session`  | Transmission version + session DL/UL stats (Phase 15)          |
-| `GET /api/transmission/torrents` | Active torrent list with progress + speed + ETA (Phase 15)     |
-| `GET /api/outcomes`              | Feed item outcomes; `?status=skipped_no_match` (Phase 15)      |
-| `POST /api/transmission/ping`    | Test Transmission connectivity (Phase 16)                      |
-| `POST /api/daemon/restart`       | SIGTERM self after config save; requires supervisor (Phase 16) |
+| Endpoint                         | Description                                                        |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `GET /api/health`                | Uptime, start time, and last run/reconcile cycle snapshots         |
+| `GET /api/status`                | Recent run summaries from the local database                       |
+| `GET /api/candidates`            | All tracked candidate state records                                |
+| `GET /api/shows`                 | TV candidates grouped by show → season → episode                   |
+| `GET /api/movies`                | Movie candidates sorted by title                                   |
+| `GET /api/feeds`                 | Feed config with poll state and `isDue` status                     |
+| `GET /api/config`                | Effective config with credentials redacted; returns `ETag`         |
+| `PUT /api/config`                | Bounded runtime + tv.shows write (token + `If-Match` required)     |
+| `PUT /api/config/feeds`          | Replace feeds array (Phase 14; token + `If-Match` required)        |
+| `PUT /api/config/movies`         | Replace movie policy (Phase 14; token + `If-Match` required)       |
+| `PUT /api/config/tv/defaults`    | Replace TV global defaults (Phase 14; token + `If-Match` required) |
+| `GET /api/transmission/session`  | Transmission version + session DL/UL stats (Phase 15)              |
+| `GET /api/transmission/torrents` | Active torrent list with progress + speed + ETA (Phase 15)         |
+| `GET /api/outcomes`              | Feed item outcomes; `?status=skipped_no_match` (Phase 15)          |
+| `POST /api/transmission/ping`    | Test Transmission connectivity (Phase 16)                          |
+| `POST /api/daemon/restart`       | SIGTERM self after config save; requires supervisor (Phase 16)     |
 
 ### Example
 
@@ -339,6 +339,6 @@ If you are working on the repo rather than just using the CLI, start with [`docs
 
 ## License
 
-Licensed under the GNU General Public License v3.0 or later. See [LICENSE](./LICENSE).
+Licensed under the MIT License. See [LICENSE](./LICENSE).
 
-This project is intended to be free as in freedom, not merely free of charge.
+This project is intended to be free as in freedom, with required attribution in derivative works.
