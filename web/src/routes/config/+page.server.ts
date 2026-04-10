@@ -309,15 +309,20 @@ export const actions: Actions = {
 			return fail(400, { feedsMessage: 'Missing config revision. Reload and try again.' });
 		}
 
-		const feedNames = formData.getAll('feedName').map(String);
-		const feedUrls = formData.getAll('feedUrl').map(String);
-		const feedMediaTypes = formData.getAll('feedMediaType').map(String);
-
-		const feeds: { name: string; url: string; mediaType: string }[] = feedNames.map((name, i) => ({
-			name,
-			url: feedUrls[i] ?? '',
-			mediaType: feedMediaTypes[i] ?? 'tv'
-		}));
+		const existingFeedsJson = String(formData.get('existingFeedsJson') ?? '[]');
+		let feeds: {
+			name: string;
+			url: string;
+			mediaType: string;
+			pollIntervalMinutes?: number;
+			parserHints?: Record<string, unknown>;
+		}[];
+		try {
+			const parsed = JSON.parse(existingFeedsJson);
+			feeds = Array.isArray(parsed) ? parsed : [];
+		} catch {
+			feeds = [];
+		}
 
 		const newName = String(formData.get('newFeedName') ?? '').trim();
 		const newUrl = String(formData.get('newFeedUrl') ?? '').trim();

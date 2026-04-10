@@ -158,11 +158,7 @@
 			class="space-y-6"
 		>
 			<input type="hidden" name="feedsIfMatch" value={currentEtag ?? ''} />
-			{#each feedsList as feed}
-				<input type="hidden" name="feedName" value={feed.name} />
-				<input type="hidden" name="feedUrl" value={feed.url} />
-				<input type="hidden" name="feedMediaType" value={feed.mediaType} />
-			{/each}
+			<input type="hidden" name="existingFeedsJson" value={JSON.stringify(feedsList)} />
 			<Card>
 				<CardHeader class="pb-3">
 					<h2 class="text-lg font-semibold tracking-tight">Feeds</h2>
@@ -192,7 +188,7 @@
 									<button
 										type="button"
 										class="text-muted-foreground hover:text-foreground shrink-0 disabled:opacity-40"
-										disabled={!canWrite}
+										disabled={!canWrite || feedsSubmitting}
 										aria-label="Remove feed {feed.name}"
 										onclick={() => removeFeed(i)}
 									>
@@ -215,7 +211,7 @@
 								type="text"
 								placeholder="Feed name"
 								bind:value={newFeedName}
-								disabled={!canWrite}
+								disabled={!canWrite || feedsSubmitting}
 								class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
 							/>
 							<div class="space-y-1">
@@ -224,7 +220,7 @@
 									type="url"
 									placeholder="https://example.com/feed.rss"
 									bind:value={newFeedUrl}
-									disabled={!canWrite}
+									disabled={!canWrite || feedsSubmitting}
 									class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
 								/>
 								{#if form?.feedsUrlError}
@@ -234,7 +230,7 @@
 							<select
 								name="newFeedMediaType"
 								bind:value={newFeedMediaType}
-								disabled={!canWrite}
+								disabled={!canWrite || feedsSubmitting}
 								class="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
 							>
 								<option value="tv">TV</option>
