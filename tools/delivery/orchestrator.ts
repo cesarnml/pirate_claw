@@ -991,28 +991,26 @@ export async function openPullRequest(
   });
 
   // Detect doc-only PRs to skip the external AI review window.
-  const openedTicket = nextState.tickets.find(
-    (t) =>
-      t.status === 'in_review' &&
-      t.prNumber !== undefined &&
-      state.tickets.find((prev) => prev.id === t.id)?.status !== 'in_review',
-  );
+  // Recompute on every open-pr call so that a PR that gains code changes
+  // after an initial docs-only push has its docOnly flag cleared.
+  const reviewTicket =
+    (ticketId
+      ? nextState.tickets.find((t) => t.id === ticketId)
+      : nextState.tickets.find((t) => t.status === 'in_review')) ?? undefined;
 
-  if (openedTicket?.prNumber) {
+  if (reviewTicket?.prNumber) {
     const docOnly = isPlatformPrDocOnly(
-      openedTicket.worktreePath,
-      openedTicket.prNumber,
+      reviewTicket.worktreePath,
+      reviewTicket.prNumber,
       _config.runtime,
     );
 
-    if (docOnly) {
-      return {
-        ...nextState,
-        tickets: nextState.tickets.map((t) =>
-          t.id === openedTicket.id ? { ...t, docOnly: true } : t,
-        ),
-      };
-    }
+    return {
+      ...nextState,
+      tickets: nextState.tickets.map((t) =>
+        t.id === reviewTicket.id ? { ...t, docOnly: docOnly || undefined } : t,
+      ),
+    };
   }
 
   return nextState;

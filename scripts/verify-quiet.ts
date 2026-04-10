@@ -16,8 +16,10 @@ const result = spawnSync('bun', ['run', 'verify'], {
 const stdout = result.stdout?.toString() ?? '';
 const stderr = result.stderr?.toString() ?? '';
 const combined = [stdout, stderr].filter(Boolean).join('\n');
+// Use 1 as fallback: null status means signal-terminated, which is a failure.
+const exitCode = result.status ?? 1;
 
-if (result.status !== 0) {
+if (exitCode !== 0) {
   const FAILURE_PATTERN = /error|warn|\[warn\]|FAIL|✗|exit code/i;
   const failureLines = combined
     .split('\n')
@@ -25,10 +27,13 @@ if (result.status !== 0) {
 
   if (failureLines.length > 0) {
     console.error(failureLines.join('\n'));
+  } else if (result.error) {
+    // Spawn failed (e.g. command not found) — surface the error message.
+    console.error(result.error.message);
   } else {
     // No matching lines — print full output so the failure is not silent.
     console.error(combined.trim());
   }
 }
 
-process.exit(result.status ?? 0);
+process.exit(exitCode);
