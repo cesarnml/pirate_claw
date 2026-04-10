@@ -68,3 +68,33 @@ Verdict: yes, the promise held. The critical data-loss bug was caught by the ext
 **Start from `existingFeedsJson` for any section with optional fields.** Per-field hidden inputs require explicit enumeration and will silently drop fields added later. The full-object JSON round-trip pattern is safer by default for any form section where the underlying type has optional fields. Document this in `phase-implementation-guidance.md` as a form serialization principle.
 
 **Surface pre-existing test failures earlier.** A `bun test` dry-run at the start of each ticket's worktree would surface inherited regressions before the first push, giving the implementing ticket the opportunity to fix them in-place rather than deferring to a later ticket. The P14.04 fix was correct but the failures were visible in CI for three PRs before landing.
+
+---
+
+## Token Minimization Learnings
+
+Phase 14 consumed ~84% of the 5-hour context limit in ~72 minutes of wall time — roughly one phase per session at the current rate. At that burn rate the context window is the binding constraint, not the work itself. Three orchestrator-dictated patterns drove the majority of token spend.
+
+**Pain point 1: `bun run verify` output is a token sponge (estimated ~15% of total spend)**
+
+Every ticket ran `bun run verify` at least twice (post-implementation + post-format). The command pipes the full bun install log, every file prettier checks by name, the full svelte-check startup header, and all passing output before the failure line. A single verify invocation produces 60–120 lines of noise for every 1–5 lines of signal. Across six tickets with multiple verify passes each, this added up to hundreds of lines of captured output that carried no implementation information.
+
+Fix: wrap verify calls with noise suppression — `bun run verify 2>&1 | grep -E "(error|warn|\[warn\]|FAIL|✗|exit code)" || true` — or add a `verify:quiet` script alias to `package.json` that only emits failures. The pre-push hook already runs the full suite; the session only needs the signal.
+
+**Pain point 2: Full re-reads of growing aggregate files at every ticket boundary (estimated ~20% of total spend)**
+
+The handoff model requires re-reading "required docs" at each ticket boundary. For Phase 14, that included `+page.svelte` and `+page.server.ts` at the start of each UI ticket. `+page.svelte` grew from ~200 lines (start of phase) to ~650 lines (end of P14.05), and was read in full at least once per ticket — sometimes twice when edits required re-orientation. Reading a 650-line file four times across four tickets is 2,600 lines of context for a file that changes ~100 lines per ticket.
+
+Fix: handoffs should specify _which sections_ are being modified (start/end line ranges or named section anchors) so the implementing ticket reads targeted slices rather than full files. The delivery orchestrator already writes handoff artifacts — adding a `modified_sections` field per-ticket is low-overhead. Alternatively, Grep over the file to find the relevant section, then Read only that offset range.
+
+**Pain point 3: `poll-review` state dumps and review artifact reads (estimated ~10% of total spend)**
+
+The `poll-review` command prints the full orchestrator state (all ticket metadata) on every poll interval — typically 5–6 checks per ticket × all prior ticket state. By P14.05 that was five prior tickets' full metadata block per check. The final review artifact (`.txt`) is also read into context and can be 2–4KB of structured prose including full coderabbit comment text.
+
+Fix: `poll-review` output should emit only the current ticket's state and the poll check result, not the full stack. The review artifact summary piped into the session should be condensed to finding titles + severity + file, not full prose — the full artifact stays on disk for the developer to read; the session only needs to triage it.
+
+**On the advisor tool: use sparingly**
+
+One advisor call in this phase cost ~10 minutes of wall time and substantial context overhead to catch a single-line oversight (roadmap first bullet still saying "01–11" instead of "01–14") that a careful self-read would have caught. For document updates and scoped edits where the change surface is fully visible, advisor adds latency without proportional signal. Reserve it for genuine architectural ambiguity — cases where the implementation approach is in question, not cases where the question is "did I miss a sentence."
+
+The advisor tool's value is front-loaded: it prevents wrong approaches from crystallizing. Its value after implementation is much lower unless the change surface is large enough that self-review misses structural gaps. A rule of thumb: if you can state exactly what each changed line does, you don't need advisor at the end.
