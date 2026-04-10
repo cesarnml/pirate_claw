@@ -1417,6 +1417,286 @@ describe('buildMovieBreakdowns', () => {
   });
 });
 
+describe('PUT /api/config/feeds', () => {
+  const validFeedsBody = [
+    { name: 'TV Feed', url: 'https://example.test/tv.rss', mediaType: 'tv' },
+  ];
+
+  async function makeFeedsHandler() {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-feeds-'));
+    const configPath = join(directory, 'pirate-claw.config.json');
+    await writeCompactTvConfigFile(configPath);
+    const loaded = await loadConfig(configPath);
+    const holder = {
+      current: {
+        ...loaded,
+        runtime: { ...loaded.runtime, apiWriteToken: 'write-token' },
+      },
+    };
+    const deps = createDeps();
+    deps.config = holder.current;
+    deps.configHolder = holder;
+    deps.configPath = configPath;
+    const handler = createApiFetch(deps);
+    const get = await handler(new Request('http://localhost/api/config'));
+    const etag = get.headers.get('etag')!;
+    return { handler, holder, configPath, etag, prevWrite };
+  }
+
+  it('returns 403 when writes are disabled', async () => {
+    const deps = createDeps();
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/config/feeds', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', 'if-match': '"any"' },
+        body: JSON.stringify(validFeedsBody),
+      }),
+    );
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error?: string };
+    expect(body.error).toContain('disabled');
+  });
+
+  it('returns 401 when bearer token is missing', async () => {
+    const { handler, etag, prevWrite } = await makeFeedsHandler();
+    try {
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json', 'if-match': etag },
+          body: JSON.stringify(validFeedsBody),
+        }),
+      );
+      expect(res.status).toBe(401);
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+
+  it('returns 403 when bearer token is wrong', async () => {
+    const { handler, etag, prevWrite } = await makeFeedsHandler();
+    try {
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer wrong-token',
+            'if-match': etag,
+          },
+          body: JSON.stringify(validFeedsBody),
+        }),
+      );
+      expect(res.status).toBe(403);
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+
+  it('returns 428 when If-Match header is missing', async () => {
+    const { handler, prevWrite } = await makeFeedsHandler();
+    try {
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+          },
+          body: JSON.stringify(validFeedsBody),
+        }),
+      );
+      expect(res.status).toBe(428);
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+
+  it('returns 409 on stale ETag', async () => {
+    const { handler, prevWrite } = await makeFeedsHandler();
+    try {
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+            'if-match': '"stale-etag"',
+          },
+          body: JSON.stringify(validFeedsBody),
+        }),
+      );
+      expect(res.status).toBe(409);
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+
+  it('returns 400 on validation failure (malformed feed entry)', async () => {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    try {
+      const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-feeds-'));
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+      const loaded = await loadConfig(configPath);
+      const holder = {
+        current: {
+          ...loaded,
+          runtime: { ...loaded.runtime, apiWriteToken: 'write-token' },
+        },
+      };
+      const deps = createDeps();
+      deps.config = holder.current;
+      deps.configHolder = holder;
+      deps.configPath = configPath;
+      const handler = createApiFetch(deps);
+      const get = await handler(new Request('http://localhost/api/config'));
+      const etag = get.headers.get('etag')!;
+
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+            'if-match': etag,
+          },
+          // missing required mediaType field
+          body: JSON.stringify([
+            { name: 'Bad Feed', url: 'https://example.test/rss' },
+          ]),
+        }),
+      );
+      expect(res.status).toBe(400);
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+
+  it('returns 400 when new URL returns non-2xx', async () => {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    try {
+      const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-feeds-'));
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+      const loaded = await loadConfig(configPath);
+      const holder = {
+        current: {
+          ...loaded,
+          runtime: { ...loaded.runtime, apiWriteToken: 'write-token' },
+        },
+      };
+      const deps = createDeps();
+      deps.config = holder.current;
+      deps.configHolder = holder;
+      deps.configPath = configPath;
+      const handler = createApiFetch(deps);
+      const get = await handler(new Request('http://localhost/api/config'));
+      const etag = get.headers.get('etag')!;
+
+      // Use a URL that will fail DNS resolution (new URL, not on disk)
+      const failingUrl = 'https://this-domain-does-not-exist.invalid/rss';
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+            'if-match': etag,
+          },
+          body: JSON.stringify([
+            {
+              name: 'New Feed',
+              url: failingUrl,
+              mediaType: 'tv',
+            },
+          ]),
+        }),
+      );
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error?: string };
+      expect(body.error).toContain(failingUrl);
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+
+  it('skips re-fetch for existing URLs and updates config', async () => {
+    // The existing TV Feed URL is already on disk — should not be fetched.
+    // No outbound request means test won't hang or fail even without a real server.
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    try {
+      const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-feeds-'));
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+      const loaded = await loadConfig(configPath);
+      const holder = {
+        current: {
+          ...loaded,
+          runtime: { ...loaded.runtime, apiWriteToken: 'write-token' },
+        },
+      };
+      const deps = createDeps();
+      deps.config = holder.current;
+      deps.configHolder = holder;
+      deps.configPath = configPath;
+      const handler = createApiFetch(deps);
+      const get = await handler(new Request('http://localhost/api/config'));
+      const etag = get.headers.get('etag')!;
+
+      // Same URL as on disk — no outbound fetch should occur
+      const existingUrl = 'https://example.test/tv.rss';
+      const res = await handler(
+        new Request('http://localhost/api/config/feeds', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+            'if-match': etag,
+          },
+          body: JSON.stringify([
+            { name: 'TV Feed Renamed', url: existingUrl, mediaType: 'tv' },
+          ]),
+        }),
+      );
+      expect(res.status).toBe(200);
+      const newEtag = res.headers.get('etag');
+      expect(newEtag).not.toBe(etag);
+
+      // Disk updated
+      const disk = await Bun.file(configPath).json();
+      expect(disk.feeds).toHaveLength(1);
+      expect(disk.feeds[0].name).toBe('TV Feed Renamed');
+      expect(disk.feeds[0].url).toBe(existingUrl);
+
+      // configHolder updated
+      expect(holder.current.feeds[0].name).toBe('TV Feed Renamed');
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      else delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    }
+  });
+});
+
 describe('buildFeedStatuses', () => {
   it('marks feed as due when poll interval exceeded', () => {
     const feeds = [
