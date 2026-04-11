@@ -57,6 +57,30 @@ export type Downloader = {
   lookupTorrents?(input: LookupTorrentsInput): Promise<LookupTorrentsResult>;
 };
 
+export type TorrentStatSnapshot = {
+  hash: string;
+  name: string;
+  status: 'downloading' | 'seeding' | 'stopped' | 'error';
+  percentDone: number;
+  rateDownload: number;
+  eta: number;
+};
+
+export type FetchTorrentStatsResult =
+  | { ok: true; torrents: TorrentStatSnapshot[] }
+  | SubmissionFailure;
+
+export type SessionInfo = {
+  version: string;
+  downloadSpeed: number;
+  uploadSpeed: number;
+  activeTorrentCount: number;
+};
+
+export type FetchSessionInfoResult =
+  | { ok: true; session: SessionInfo }
+  | SubmissionFailure;
+
 export type DownloaderOptions = {
   warn?: (message: string) => void;
 };
@@ -171,6 +195,165 @@ async function lookupTorrentsInTransmission(
   }
 
   return parseLookupTorrentsResult(parsed);
+}
+
+export async function fetchTorrentStats(
+  config: TransmissionConfig,
+  hashes: string[],
+): Promise<FetchTorrentStatsResult> {
+  const body = {
+    method: 'torrent-get',
+    arguments: {
+      ids: hashes,
+      fields: [
+        'id',
+        'name',
+        'hashString',
+        'status',
+        'percentDone',
+        'rateDownload',
+        'eta',
+      ],
+    },
+  };
+
+  const firstResponse = await sendRpcRequest(config, body);
+  if (!firstResponse.ok) {
+    return firstResponse.error;
+  }
+
+  let response = firstResponse.response;
+
+  if (response.status === 409) {
+    const sessionId = response.headers.get('x-transmission-session-id');
+    if (!sessionId) {
+      return {
+        ok: false,
+        code: 'session_error',
+        message:
+          'Transmission session negotiation failed: missing X-Transmission-Session-Id header.',
+      };
+    }
+    const retryResponse = await sendRpcRequest(config, body, sessionId);
+    if (!retryResponse.ok) {
+      return retryResponse.error;
+    }
+    response = retryResponse.response;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      code: 'http_error',
+      message: `Transmission RPC request failed with HTTP ${response.status}.`,
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = await response.json();
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC response was not valid JSON.',
+    };
+  }
+
+  return parseTorrentStatsResult(parsed);
+}
+
+export async function fetchSessionInfo(
+  config: TransmissionConfig,
+): Promise<FetchSessionInfoResult> {
+  const [sessionGetResult, sessionStatsResult] = await Promise.all([
+    sendRpcRequest(config, { method: 'session-get', arguments: {} }),
+    sendRpcRequest(config, { method: 'session-stats', arguments: {} }),
+  ]);
+
+  if (!sessionGetResult.ok) {
+    return sessionGetResult.error;
+  }
+  if (!sessionStatsResult.ok) {
+    return sessionStatsResult.error;
+  }
+
+  const resolveResponse = async (
+    result: { ok: true; response: Response },
+    config: TransmissionConfig,
+    body: unknown,
+  ): Promise<
+    { ok: true; parsed: unknown } | { ok: false; error: SubmissionFailure }
+  > => {
+    let response = result.response;
+
+    if (response.status === 409) {
+      const sessionId = response.headers.get('x-transmission-session-id');
+      if (!sessionId) {
+        return {
+          ok: false,
+          error: {
+            ok: false,
+            code: 'session_error',
+            message:
+              'Transmission session negotiation failed: missing X-Transmission-Session-Id header.',
+          },
+        };
+      }
+      const retryResult = await sendRpcRequest(config, body, sessionId);
+      if (!retryResult.ok) {
+        return { ok: false, error: retryResult.error };
+      }
+      response = retryResult.response;
+    }
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: {
+          ok: false,
+          code: 'http_error',
+          message: `Transmission RPC request failed with HTTP ${response.status}.`,
+        },
+      };
+    }
+
+    try {
+      return { ok: true, parsed: await response.json() };
+    } catch {
+      return {
+        ok: false,
+        error: {
+          ok: false,
+          code: 'invalid_response',
+          message: 'Transmission RPC response was not valid JSON.',
+        },
+      };
+    }
+  };
+
+  const [sessionGetParsed, sessionStatsParsed] = await Promise.all([
+    resolveResponse(sessionGetResult, config, {
+      method: 'session-get',
+      arguments: {},
+    }),
+    resolveResponse(sessionStatsResult, config, {
+      method: 'session-stats',
+      arguments: {},
+    }),
+  ]);
+
+  if (!sessionGetParsed.ok) {
+    return sessionGetParsed.error;
+  }
+  if (!sessionStatsParsed.ok) {
+    return sessionStatsParsed.error;
+  }
+
+  return parseSessionInfoResult(
+    sessionGetParsed.parsed,
+    sessionStatsParsed.parsed,
+  );
 }
 
 async function sendRpcRequest(
@@ -563,3 +746,192 @@ type TransmissionTorrentGetResponse = {
     torrents: TransmissionTorrent[];
   };
 };
+
+type TransmissionStatTorrent = {
+  id?: number;
+  name?: string;
+  hashString?: string;
+  status?: number;
+  percentDone?: number;
+  rateDownload?: number;
+  eta?: number;
+};
+
+type TransmissionTorrentStatResponse = {
+  result: string;
+  arguments: {
+    torrents: TransmissionStatTorrent[];
+  };
+};
+
+type TransmissionSessionGetResponse = {
+  result: string;
+  arguments: {
+    version?: string;
+  };
+};
+
+type TransmissionSessionStatsResponse = {
+  result: string;
+  arguments: {
+    'download-speed'?: number;
+    'upload-speed'?: number;
+    'active-torrent-count'?: number;
+  };
+};
+
+function mapStatusCode(
+  code: number | undefined,
+): TorrentStatSnapshot['status'] {
+  if (code === 4) return 'downloading';
+  if (code === 6) return 'seeding';
+  if (code === 7) return 'error';
+  return 'stopped';
+}
+
+function parseTorrentStatsResult(parsed: unknown): FetchTorrentStatsResult {
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    !('result' in parsed) ||
+    !('arguments' in parsed)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message:
+        'Transmission RPC torrent-get response was missing required fields.',
+    };
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const args = record.arguments;
+
+  if (
+    !args ||
+    typeof args !== 'object' ||
+    !('torrents' in (args as object)) ||
+    !Array.isArray((args as Record<string, unknown>).torrents)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message:
+        'Transmission RPC torrent-get response was missing required fields.',
+    };
+  }
+
+  const typed = parsed as TransmissionTorrentStatResponse;
+
+  if (typed.result !== 'success') {
+    return {
+      ok: false,
+      code: 'rpc_error',
+      message: `Transmission rejected torrent-get: ${typed.result}.`,
+      rpcResult: typed.result,
+    };
+  }
+
+  const torrents: TorrentStatSnapshot[] = [];
+
+  for (const torrent of typed.arguments.torrents) {
+    if (
+      typeof torrent.hashString !== 'string' ||
+      typeof torrent.name !== 'string'
+    ) {
+      return {
+        ok: false,
+        code: 'invalid_response',
+        message:
+          'Transmission RPC torrent-get response contained a torrent missing hashString or name.',
+      };
+    }
+
+    torrents.push({
+      hash: torrent.hashString,
+      name: torrent.name,
+      status: mapStatusCode(
+        typeof torrent.status === 'number' ? torrent.status : undefined,
+      ),
+      percentDone:
+        typeof torrent.percentDone === 'number' ? torrent.percentDone : 0,
+      rateDownload:
+        typeof torrent.rateDownload === 'number' ? torrent.rateDownload : 0,
+      eta: typeof torrent.eta === 'number' ? torrent.eta : -1,
+    });
+  }
+
+  return { ok: true, torrents };
+}
+
+function parseSessionInfoResult(
+  sessionGet: unknown,
+  sessionStats: unknown,
+): FetchSessionInfoResult {
+  if (
+    !sessionGet ||
+    typeof sessionGet !== 'object' ||
+    !('result' in sessionGet) ||
+    !('arguments' in sessionGet)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission session-get response was malformed.',
+    };
+  }
+
+  if (
+    !sessionStats ||
+    typeof sessionStats !== 'object' ||
+    !('result' in sessionStats) ||
+    !('arguments' in sessionStats)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission session-stats response was malformed.',
+    };
+  }
+
+  const get = sessionGet as TransmissionSessionGetResponse;
+  const stats = sessionStats as TransmissionSessionStatsResponse;
+
+  if (get.result !== 'success') {
+    return {
+      ok: false,
+      code: 'rpc_error',
+      message: `Transmission session-get failed: ${get.result}.`,
+      rpcResult: get.result,
+    };
+  }
+
+  if (stats.result !== 'success') {
+    return {
+      ok: false,
+      code: 'rpc_error',
+      message: `Transmission session-stats failed: ${stats.result}.`,
+      rpcResult: stats.result,
+    };
+  }
+
+  return {
+    ok: true,
+    session: {
+      version:
+        typeof get.arguments.version === 'string' ? get.arguments.version : '',
+      downloadSpeed:
+        typeof stats.arguments['download-speed'] === 'number'
+          ? stats.arguments['download-speed']
+          : 0,
+      uploadSpeed:
+        typeof stats.arguments['upload-speed'] === 'number'
+          ? stats.arguments['upload-speed']
+          : 0,
+      activeTorrentCount:
+        typeof stats.arguments['active-torrent-count'] === 'number'
+          ? stats.arguments['active-torrent-count']
+          : 0,
+    },
+  };
+}

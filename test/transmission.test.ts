@@ -3,8 +3,11 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import type { TransmissionConfig } from '../src/config';
 import {
   createTransmissionDownloader,
+  fetchSessionInfo,
+  fetchTorrentStats,
   type SubmissionFailure,
   type SubmissionFailureCode,
+  type TorrentStatSnapshot,
 } from '../src/transmission';
 
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
@@ -600,6 +603,209 @@ describe('Transmission adapter', () => {
         ],
       },
     });
+  });
+});
+
+describe('fetchTorrentStats', () => {
+  afterEach(() => {
+    while (servers.length > 0) {
+      servers.pop()?.stop(true);
+    }
+    globalThis.fetch = originalFetch;
+  });
+
+  it('returns mapped TorrentStatSnapshot[] on success', async () => {
+    const server = startTransmissionServer(() =>
+      Response.json({
+        result: 'success',
+        arguments: {
+          torrents: [
+            {
+              id: 1,
+              hashString: 'abc123',
+              name: 'Breaking.Bad.S01E01',
+              status: 4,
+              percentDone: 0.42,
+              rateDownload: 1048576,
+              eta: 3600,
+            },
+          ],
+        },
+      }),
+    );
+
+    const result = await fetchTorrentStats(
+      createTransmissionConfig(server.url.origin),
+      ['abc123'],
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      torrents: [
+        {
+          hash: 'abc123',
+          name: 'Breaking.Bad.S01E01',
+          status: 'downloading',
+          percentDone: 0.42,
+          rateDownload: 1048576,
+          eta: 3600,
+        },
+      ],
+    });
+  });
+
+  it('maps status codes correctly', async () => {
+    const statusCases: Array<{
+      code: number;
+      expected: TorrentStatSnapshot['status'];
+    }> = [
+      { code: 4, expected: 'downloading' },
+      { code: 6, expected: 'seeding' },
+      { code: 7, expected: 'error' },
+      { code: 0, expected: 'stopped' },
+      { code: 1, expected: 'stopped' },
+      { code: 5, expected: 'stopped' },
+    ];
+
+    for (const { code, expected } of statusCases) {
+      const server = startTransmissionServer(() =>
+        Response.json({
+          result: 'success',
+          arguments: {
+            torrents: [
+              {
+                id: 1,
+                hashString: 'hash1',
+                name: 'Test Torrent',
+                status: code,
+                percentDone: 0,
+                rateDownload: 0,
+                eta: -1,
+              },
+            ],
+          },
+        }),
+      );
+
+      const result = await fetchTorrentStats(
+        createTransmissionConfig(server.url.origin),
+        ['hash1'],
+      );
+
+      expect(result).toMatchObject({ ok: true });
+      if (result.ok) {
+        expect(result.torrents[0].status).toBe(expected);
+      }
+    }
+  });
+
+  it('handles 409 session negotiation', async () => {
+    let requestCount = 0;
+    const server = startTransmissionServer(() => {
+      requestCount += 1;
+      if (requestCount === 1) {
+        return new Response(null, {
+          status: 409,
+          headers: { 'x-transmission-session-id': 'session-abc' },
+        });
+      }
+      return Response.json({
+        result: 'success',
+        arguments: {
+          torrents: [
+            {
+              id: 1,
+              hashString: 'hash1',
+              name: 'Test',
+              status: 4,
+              percentDone: 0.5,
+              rateDownload: 512000,
+              eta: 1800,
+            },
+          ],
+        },
+      });
+    });
+
+    const result = await fetchTorrentStats(
+      createTransmissionConfig(server.url.origin),
+      ['hash1'],
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    expect(requestCount).toBe(2);
+  });
+
+  it('returns SubmissionFailure when Transmission is unreachable', async () => {
+    globalThis.fetch = (() =>
+      Promise.reject(new Error('ECONNREFUSED'))) as unknown as typeof fetch;
+
+    const result = await fetchTorrentStats(
+      {
+        url: 'http://127.0.0.1:1/transmission/rpc',
+        username: 'u',
+        password: 'p',
+      },
+      ['hash1'],
+    );
+
+    expect(result).toMatchObject({ ok: false, code: 'network_error' });
+  });
+});
+
+describe('fetchSessionInfo', () => {
+  afterEach(() => {
+    while (servers.length > 0) {
+      servers.pop()?.stop(true);
+    }
+    globalThis.fetch = originalFetch;
+  });
+
+  it('merges session-get and session-stats into SessionInfo', async () => {
+    const server = startTransmissionServer(async (request) => {
+      const body = (await request.json()) as { method: string };
+      if (body.method === 'session-get') {
+        return Response.json({
+          result: 'success',
+          arguments: { version: '3.00 (bb6b5a062ef)' },
+        });
+      }
+      return Response.json({
+        result: 'success',
+        arguments: {
+          'download-speed': 2097152,
+          'upload-speed': 524288,
+          'active-torrent-count': 3,
+        },
+      });
+    });
+
+    const result = await fetchSessionInfo(
+      createTransmissionConfig(server.url.origin),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      session: {
+        version: '3.00 (bb6b5a062ef)',
+        downloadSpeed: 2097152,
+        uploadSpeed: 524288,
+        activeTorrentCount: 3,
+      },
+    });
+  });
+
+  it('returns SubmissionFailure when Transmission is unreachable', async () => {
+    globalThis.fetch = (() =>
+      Promise.reject(new Error('ECONNREFUSED'))) as unknown as typeof fetch;
+
+    const result = await fetchSessionInfo({
+      url: 'http://127.0.0.1:1/transmission/rpc',
+      username: 'u',
+      password: 'p',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'network_error' });
   });
 });
 
