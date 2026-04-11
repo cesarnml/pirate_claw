@@ -22,8 +22,8 @@ export type ShowEpisode = {
   status: string;
   lifecycleStatus?: string;
   queuedAt?: string;
-  transmissionPercentDone?: number;      // last reconciled percent (0–1)
-  transmissionTorrentHash?: string;      // join key for live Transmission stats
+  transmissionPercentDone?: number; // last reconciled percent (0–1)
+  transmissionTorrentHash?: string; // join key for live Transmission stats
   tmdb?: TmdbTvEpisodeMeta;
 };
 ```
@@ -81,6 +81,7 @@ return {
 ### `web/src/routes/shows/+page.svelte`
 
 **Show grid cards** — add sort control:
+
 - Sort options: "Title (A–Z)" (default) and "Progress" (descending by max episode `transmissionPercentDone` across all seasons)
 - Sort is client-side, reactive state with `$state()`
 - Each card shows: TMDB poster (placeholder when unavailable), show title, episode count, completion % (completed episodes ÷ total episodes tracked; label omitted when 0 episodes tracked)
@@ -92,6 +93,7 @@ Same pattern: load `/api/shows` and `/api/transmission/torrents` in parallel. Pa
 ### `web/src/routes/shows/[slug]/+page.svelte`
 
 **Season accordion / episode rows**:
+
 - For episodes where `lifecycleStatus === 'downloading'` (or `status === 'queued'` and `transmissionPercentDone > 0`): show progress bar using `transmissionPercentDone`
 - For live speed: join `episode.transmissionTorrentHash` to `torrents` array from `GET /api/transmission/torrents`. Display `rateDownload` formatted as MB/s or KB/s, and ETA as "Xh Ym" or "—"
 - TMDB still image thumbnail per episode when `episode.tmdb?.stillUrl` is available

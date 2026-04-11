@@ -14,6 +14,7 @@ Add a read-only Unmatched Candidates view at `/candidates/unmatched` sourced fro
 ### New Route: `web/src/routes/candidates/unmatched/`
 
 Create:
+
 - `+page.server.ts`
 - `+page.svelte`
 - `unmatched.test.ts`
@@ -28,16 +29,20 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async () => {
   try {
     const data = await apiFetch<{ outcomes: SkippedOutcomeRecord[] }>(
-      '/api/outcomes?status=skipped_no_match'
+      '/api/outcomes?status=skipped_no_match',
     );
     return { outcomes: data.outcomes, error: null };
   } catch {
-    return { outcomes: [] as SkippedOutcomeRecord[], error: 'Could not reach the API.' };
+    return {
+      outcomes: [] as SkippedOutcomeRecord[],
+      error: 'Could not reach the API.',
+    };
   }
 };
 ```
 
 **`+page.svelte`**:
+
 - Heading: "Unmatched Candidates"
 - Subheading: "Feed items from the last 30 days that matched no policy rule."
 - Client-side title search: `<input>` filters `outcomes` by `title` (case-insensitive contains). Reactive with `$state()`.
@@ -72,6 +77,7 @@ Add "Unmatched" link to the navigation in `web/src/routes/+layout.svelte` under 
 ### `web/src/routes/candidates/unmatched/unmatched.test.ts`
 
 Tests anchored to `fixtures/api/outcomes-skipped-no-match.json`:
+
 - Renders table with correct columns
 - Null title/feedName renders as "—"
 - Title search filters rows by partial match (case-insensitive)

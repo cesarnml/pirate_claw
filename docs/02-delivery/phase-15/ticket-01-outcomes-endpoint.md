@@ -17,7 +17,7 @@ Add `GET /api/outcomes` to the daemon API, returning `feed_item_outcomes` record
     runId: number;
     status: 'skipped_no_match';
     recordedAt: string;
-    title: string | null;    // null when feed_item_id is NULL on the outcome row
+    title: string | null; // null when feed_item_id is NULL on the outcome row
     feedName: string | null; // null when feed_item_id is NULL on the outcome row
   };
   ```

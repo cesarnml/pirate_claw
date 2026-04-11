@@ -27,6 +27,7 @@ const [health, transmissionSession, transmissionTorrents, candidates] =
 ```
 
 Return:
+
 - `health: DaemonHealth | null`
 - `transmissionSession: SessionInfo | null`
 - `transmissionTorrents: TorrentStatSnapshot[]`
@@ -60,10 +61,12 @@ export type SessionInfo = {
 Replace the current Daemon card + Recent Runs table with the full dashboard layout:
 
 **Header strip** (always shown when health loads):
+
 - Daemon: uptime, startedAt, lastRunCycle, lastReconcileCycle (existing fields)
 - Transmission: version, downloadSpeed, uploadSpeed, activeTorrentCount — from `transmissionSession`; render "Transmission unavailable" when `transmissionSession` is null
 
 **Active Downloads section**:
+
 - Filter `transmissionTorrents` where `status === 'downloading'`
 - Show max 5 rows. Each row: TMDB poster thumbnail (from matching candidate's `tmdb?.posterUrl`; fallback: colored initial box using normalizedTitle first char), title (from matching candidate's `normalizedTitle`), progress bar (`percentDone * 100`%), download speed (`rateDownload` formatted as KB/s or MB/s), ETA (formatted as "Xh Ym" or "—" when eta is -1)
 - Match torrents to candidates: `torrent.hash === candidate.transmissionTorrentHash`
@@ -71,18 +74,21 @@ Replace the current Daemon card + Recent Runs table with the full dashboard layo
 - Section hidden when `transmissionTorrents` is empty
 
 **Event Log**:
+
 - Last 10 candidates from `candidates` sorted by `updatedAt` desc
 - Table: title | status chip | updatedAt
 - Status chip colors: `queued` → blue, `completed` → green, `failed` → red, `skipped_duplicate` → slate, `skipped_no_match` → gray, `downloading` → cyan
 - "No candidates yet" placeholder when empty
 
 **Stats row** (derived client-side from `candidates`):
+
 - Total tracked: `candidates.length`
 - Completed this week: candidates where `lifecycleStatus === 'completed'` and `transmissionDoneDate` is within the last 7 calendar days (UTC)
 - Failed: candidates where `status === 'failed'`
 - Skipped (no match): `candidates.filter(c => c.status === 'skipped_no_match').length` — note: skipped_no_match candidates are not currently stored in candidate_state (they go to feed_item_outcomes); if this count is always 0, omit the stat rather than show misleading zeros. Document in rationale.
 
 **Archive Commit grid**:
+
 - Filter `candidates` where `lifecycleStatus === 'completed'`
 - Sort by `transmissionDoneDate` desc
 - Take 6
@@ -92,6 +98,7 @@ Replace the current Daemon card + Recent Runs table with the full dashboard layo
 ### `web/src/routes/dashboard.test.ts`
 
 Update existing test file with new mock shapes anchored to the fixture snapshots. Add tests for:
+
 - Renders Transmission header strip when `transmissionSession` is populated
 - Renders "Transmission unavailable" when `transmissionSession` is null
 - Active Downloads renders max 5 rows; renders "View all" link to `/candidates`

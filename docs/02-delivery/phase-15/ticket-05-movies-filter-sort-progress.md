@@ -25,8 +25,8 @@ export type MovieBreakdown = {
   status: string;
   lifecycleStatus?: string;
   queuedAt?: string;
-  transmissionPercentDone?: number;      // last reconciled percent (0–1)
-  transmissionTorrentHash?: string;      // join key for live Transmission stats
+  transmissionPercentDone?: number; // last reconciled percent (0–1)
+  transmissionTorrentHash?: string; // join key for live Transmission stats
   tmdb?: TmdbMoviePublic;
 };
 ```
@@ -90,6 +90,7 @@ return {
 ### `web/src/routes/movies/+page.svelte`
 
 **Filter tabs** (client-side, reactive with `$state()`):
+
 - All | Downloading | Completed | Failed | Missing
 - "Missing" tab: `lifecycleStatus === 'missing_from_transmission'`
 - "Downloading": `lifecycleStatus === 'downloading'`
@@ -98,18 +99,21 @@ return {
 - Tab counts shown in parentheses
 
 **Genre filter dropdown**:
+
 - Populated from `movies.flatMap(m => m.tmdb?.genres ?? [])` — deduplicated, sorted
 - Visible only when at least one movie has TMDB genre data
 - "All genres" default; client-side filter applied on top of tab filter
 - `TmdbMoviePublic` currently does not include a `genres` field — check `src/movie-api-types.ts`. If absent, skip the genre filter in P15 and note it in rationale. Do not add TMDB fields not already in the type.
 
 **Sort** (client-side, reactive with `$state()`):
+
 - Date added (default, desc by `queuedAt`)
 - Title (A–Z)
 - Year (desc)
 - Resolution
 
 **Movie cards** — add to existing card layout:
+
 - Progress bar when `transmissionPercentDone > 0 && transmissionPercentDone < 1`
 - Live speed: join `movie.transmissionTorrentHash` to `torrents` from the page data. Display `rateDownload` as MB/s or KB/s when `status === 'downloading'`
 - ETA: formatted as "Xh Ym" or "—" when eta is -1
@@ -119,6 +123,7 @@ return {
 ### `web/src/routes/movies/movies.test.ts`
 
 Update tests to cover:
+
 - Filter tabs render correct counts; tab click filters the movie list
 - Sort options reorder cards correctly
 - Progress bar and speed rendered for downloading movie

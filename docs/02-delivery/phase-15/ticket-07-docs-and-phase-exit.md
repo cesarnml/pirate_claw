@@ -17,6 +17,7 @@ Update `Delivery status` section from "Planning/decomposition only" to "Delivere
 ### Example config / runbook (if one exists in `docs/`)
 
 If any existing runbook or API reference lists endpoints, add:
+
 - `GET /api/outcomes?status=skipped_no_match`
 - `GET /api/transmission/torrents`
 - `GET /api/transmission/session`
@@ -26,6 +27,7 @@ with a one-line description each.
 ### Retrospective
 
 Create `notes/public/p15-retrospective.md` with:
+
 - What shipped
 - Any explicit deferrals encountered during implementation (beyond those listed in the plan)
 - Any tradeoffs or surprises worth recording

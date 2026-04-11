@@ -15,7 +15,7 @@ export type TorrentStatSnapshot = {
   status: 'downloading' | 'seeding' | 'stopped' | 'error';
   percentDone: number;
   rateDownload: number; // bytes/second
-  eta: number;          // seconds; -1 when unknown
+  eta: number; // seconds; -1 when unknown
 };
 
 export type FetchTorrentStatsResult =
@@ -24,8 +24,8 @@ export type FetchTorrentStatsResult =
 
 export type SessionInfo = {
   version: string;
-  downloadSpeed: number;  // bytes/second
-  uploadSpeed: number;    // bytes/second
+  downloadSpeed: number; // bytes/second
+  uploadSpeed: number; // bytes/second
   activeTorrentCount: number;
 };
 
@@ -40,12 +40,12 @@ Do **not** modify `TorrentSnapshot`, `LookupTorrentsResult`, or `lookupTorrentsI
 
 Transmission integer `status` → string:
 
-| Code | Mapped to |
-|------|-----------|
-| 4    | `'downloading'` |
-| 6    | `'seeding'` |
-| 7    | `'error'` |
-| 0, 1, 2, 3, 5, other | `'stopped'` |
+| Code                 | Mapped to       |
+| -------------------- | --------------- |
+| 4                    | `'downloading'` |
+| 6                    | `'seeding'`     |
+| 7                    | `'error'`       |
+| 0, 1, 2, 3, 5, other | `'stopped'`     |
 
 ### New Functions in `src/transmission.ts`
 
@@ -90,6 +90,7 @@ Both endpoints read `config.transmission` from the existing `ApiFetchDeps.config
 Commit before P15.03 begins:
 
 **`fixtures/api/transmission-torrents.json`**
+
 ```json
 {
   "torrents": [
@@ -114,6 +115,7 @@ Commit before P15.03 begins:
 ```
 
 **`fixtures/api/transmission-session.json`**
+
 ```json
 {
   "version": "3.00 (bb6b5a062ef)",

@@ -10,10 +10,10 @@ Single PR on branch `engineering/ee05-orchestrator-context-minimization` coverin
 
 1. `verify:quiet` script
 2. `modified_sections` handoff field
-3a. Suppress orchestrator poll stdout per check (`formatCurrentTicketStatus`)
-3b. Condense session-side review extract (via `formatCurrentTicketStatus` + triager summaries)
-4. Poll timing 6/12 + doc-only skip + no read-ahead directive
-5. Session compaction directive at `advance`
+   3a. Suppress orchestrator poll stdout per check (`formatCurrentTicketStatus`)
+   3b. Condense session-side review extract (via `formatCurrentTicketStatus` + triager summaries)
+3. Poll timing 6/12 + doc-only skip + no read-ahead directive
+4. Session compaction directive at `advance`
 
 ---
 
