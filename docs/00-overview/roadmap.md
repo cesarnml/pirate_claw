@@ -411,7 +411,7 @@ Goal:
 
 Current status:
 
-- product definition only; see [`docs/01-product/phase-15-rich-visual-state-and-activity-views.md`](../01-product/phase-15-rich-visual-state-and-activity-views.md)
+- implemented on `main` via `P15.01`–`P15.07` stacked delivery; see [`docs/02-delivery/phase-15/implementation-plan.md`](../02-delivery/phase-15/implementation-plan.md) and [`docs/01-product/phase-15-rich-visual-state-and-activity-views.md`](../01-product/phase-15-rich-visual-state-and-activity-views.md)
 
 ## Phase 16: Config Editing, Hot Reload, and Daemon Controls
 
@@ -467,8 +467,9 @@ The following items are **mapped** to numbered phases (no longer “unbounded”
 
 ## Current Planning Posture
 
-- product phases `01`–`14` and engineering epics `01`–`04` are complete on `main`
-- product phases `12`–`18` are defined in `docs/01-product/`; **Phase 12** is delivered; **Phase 13** is delivered via `P13.01`–`P13.07`; **Phase 14** is delivered via `P14.01`–`P14.06`; **Phases 15–18** are product-definition only until tickets are approved
+- product phases `01`–`15` are implemented on `main`; **Phase 15** is delivered via `P15.01`–`P15.07` stacked delivery
+- product phases `12`–`18` are defined in `docs/01-product/`; **Phases 16–18** remain product-definition-first until their tickets are approved and implemented
+- engineering epic write-ups **`EE01`–`EE06`** live under `docs/03-engineering/` (orchestrator, PR hygiene, and delivery workflow tooling)
 - each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
 - smaller bounded changes can still proceed as standalone PR work without inventing a new phase
 
@@ -486,4 +487,4 @@ Working notes:
 - promote durable technical choices into ADRs
 - numbered phases are planning buckets, not a promise of strict implementation sequence when dependencies allow independent work
 
-Last verified against `README.md` and active delivery plans: 2026-04-10 (Phase 14 delivered).
+Last verified against `README.md` and active delivery plans: 2026-04-12 (Phase 15 delivered).

@@ -10,7 +10,7 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through **Phase 14** on `main` (product phases 01–14; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–14 live under [`docs/02-delivery/`](../02-delivery/). Product definitions for **Phases 15–18** live under [`docs/01-product/`](../01-product/). Phases **15–18** are **not yet implemented** in code.
+Pirate Claw is implemented through **Phase 15** on `main` (product phases 01–15; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–15 live under [`docs/02-delivery/`](../02-delivery/). Product definitions for **Phases 16–18** live under [`docs/01-product/`](../01-product/) ahead of implementation; the Phase 15 product spec remains the contract reference for what shipped. Phases **16–18** are **not yet implemented** in code.
 
 Current delivered surface:
 
@@ -29,6 +29,7 @@ Current delivered surface:
 - queue-time Transmission `movie` / `tv` labels with warning+retry fallback when labels are unsupported
 - per-media-type Transmission download directories via `transmission.downloadDirs`
 - SvelteKit dashboard in `web/` that consumes the daemon HTTP API, including bounded runtime Settings writes and full feed and target management (add/remove feeds, TV defaults, movie policy, TV show targets) through server-side actions
+- Phase 15 dashboard visibility: home overview (Transmission session strip, active downloads, recent outcomes, archive grid), TV and movie library views with live transfer stats where a `transmissionTorrentHash` joins to Transmission, skipped-no-match outcomes, and `/candidates/unmatched` — refresh on page reload only (no WebSocket/SSE push)
 - optional TMDB enrichment: `tmdb` config block and/or `PIRATE_CLAW_TMDB_API_KEY`, SQLite-backed cache, lazy enrichment on API reads, and an optional daemon background refresh cadence via `runtime.tmdbRefreshIntervalMinutes` (default 6 hours; set `0` to disable)
 
 Current product boundary:
@@ -42,12 +43,11 @@ Current product boundary:
 - per-feed polling cadence with persistent poll state
 - shared runtime lock prevents overlapping cycles
 - machine-readable and human-readable cycle artifacts with bounded retention
-- read-only daemon HTTP API (`/api/health`, `/api/status`, `/api/candidates`, `/api/shows`, `/api/movies`, `/api/feeds`, `/api/config`) when `runtime.apiPort` is configured
+- read-only daemon HTTP API (`/api/health`, `/api/status`, `/api/candidates`, `/api/shows`, `/api/movies`, `/api/feeds`, `/api/config`, plus Phase 15 `/api/transmission/session`, `/api/transmission/torrents`, `/api/outcomes`) when `runtime.apiPort` is configured
 - TMDB metadata is display-only and does not gate RSS intake
 
-Still deferred (Phases 15–18):
+Still deferred (Phases 16–18):
 
-- live Transmission download progress and unmatched candidate views (Phase 15)
 - unified config editing, hot reload, and daemon controls from the browser (Phase 16)
 - onboarding wizard and per-section empty states (Phase 17)
 - v1.0.0 release and config/DB schema versioning (Phase 18)
@@ -57,7 +57,7 @@ Still deferred (Phases 15–18):
 - Synology archiving
 - ingestion redesign beyond the local SQLite model
 
-Last verified against `README.md` and CLI commands: 2026-04-10 (Phase 14 delivered).
+Last verified against `README.md` and CLI commands: 2026-04-12 (Phase 15 delivered).
 
 Current planning focus:
 
