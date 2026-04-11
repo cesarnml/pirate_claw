@@ -1,39 +1,28 @@
 # Repo Rules
 
 - If the user says `triage`, use `.agents/skills/ai-code-review/SKILL.md`.
-- For phase work, first read `docs/00-overview/start-here.md` and `docs/03-engineering/delivery-orchestrator.md`, then surface the orchestrator path before coding.
-- Use `.agents/skills/son-of-anton-ethos/SKILL.md` automatically when a user asks to execute, begin, start, deliver, implement, continue, resume, run, drive, carry, or work on an approved multi-ticket phase or epic, or uses equivalent wording that clearly means end-to-end orchestrated execution. Also use it when the user explicitly mentions `son of anton`, `son-of-anton`, `son of anton ethos`, or `son-of-anton ethos`. **Standalone (non-ticketed) PRs:** use the same skill when the work is a standalone PR (no ticket stack for this change)—including running the orchestrator `ai-review` path, verify-first discipline, and post-verify self-audit before external agent review. See **Standalone (non-ticketed) PRs** in that skill. Do not wait for the skill to be named explicitly. That skill is authoritative for execution mechanics, continuation bias, stop conditions, polling behavior, and review outcome recording — do not rely on this file for those.
-- For new product feature-set expansion, phase shaping, or epic decomposition work, run an explicit planning pass and use `grill-me` before accepting a plan or ticket breakdown. In this repo, son-of-anton treats developer engagement in ideation, decomposition approval, and final delivered-slice approval as required control points rather than optional ceremony. Plan Mode is optional workflow support, not a repo policy requirement.
-- The delivery orchestrator reads `orchestrator.config.json` at the repo root for default branch, plan root, runtime internals, and package-manager-aware bootstrap defaults. See `docs/03-engineering/delivery-orchestrator.md` for field details and scope.
-- Prefer `bun run deliver --plan ...` over ad hoc implementation. In this repo, `bun run deliver` remains the supported operator entrypoint even though the orchestrator internals are more configurable.
-- For orchestrated ticket work, the handoff under `.agents/delivery/<plan-key>/handoffs/` is required input alongside the plan and ticket docs.
-- New product phase/epic implementation starts only after the developer has reviewed and approved the delivery decomposition into thin, reviewable tickets.
-- New product-scope expansion requires a planning pass and developer-approved ticket decomposition before implementation begins. When those are missing, surface the gap, point to the required planning docs, and wait. Docs-only, cleanup-only, and tooling-only changes that do not expand the product surface skip this requirement.
-- Smaller bounded product changes can proceed as standalone PRs without a new phase/epic. Use the orchestrator's standalone `ai-review` path for those rather than the ticketed stacked flow. Follow `.agents/skills/son-of-anton-ethos/SKILL.md` (**Standalone (non-ticketed) PRs**).
-- Final merge or advance of delivered stacked PR slices remains a developer approval step.
-- After developer approval of a completed stacked phase, close it with `bun run closeout-stack --plan <plan-path>` rather than manual merge/cherry-pick steps.
-- `pr`: if a delivery ticket is clear from branch/docs/diff, use a human-readable Conventional-Commit-style subject plus the active ticket suffix, for example `[P3.02]`. Otherwise omit the suffix.
-- Any PR creation or PR-body drafting should follow the same `pr` conventions even when the user did not literally type `pr`.
+- For phase work, read `docs/00-overview/start-here.md` and `docs/03-engineering/delivery-orchestrator.md` first, then surface the orchestrator path before coding.
+- Use `.agents/skills/son-of-anton-ethos/SKILL.md` automatically when executing any approved multi-ticket phase/epic or standalone (non-ticketed) PR — including when the user says execute, begin, start, deliver, implement, continue, resume, run, drive, carry, work on, or explicitly mentions `son of anton` / `son-of-anton ethos`. That skill owns execution mechanics, stop conditions, polling, and review outcome recording.
+- For new product feature-set expansion, phase shaping, or epic decomposition: run a planning pass and use `grill-me` before accepting any plan. Developer approval of ticket decomposition is required before implementation.
+- Prefer `bun run deliver --plan ...` over ad hoc implementation. The delivery orchestrator reads `orchestrator.config.json` at repo root; see `docs/03-engineering/delivery-orchestrator.md`. For orchestrated ticket work, the handoff under `.agents/delivery/<plan-key>/handoffs/` is required input alongside plan and ticket docs.
+- New product phase/epic starts only after developer-approved ticket decomposition. Docs-only, cleanup-only, and tooling-only changes skip this. Smaller bounded changes may ship as standalone PRs using the orchestrator's `ai-review` path.
+- Final merge of stacked PR slices requires developer approval. Close completed phases with `bun run closeout-stack --plan <plan-path>`.
+- PR titles: Conventional-Commit-style subject + active ticket suffix (e.g. `[P3.02]`) when the ticket is clear from branch/docs/diff. Apply even when the user did not type `pr`.
 
 ## Pre-Commit
 
-Before an AI agent creates a commit:
-
-- if it changed files covered by Prettier, run `bun run format` or `bun run format:check` and fix any failures before committing; if it changed `web/`, also run `bun run format:check:web` or `bun run format:web` (root `format` / `format:check` still exclude `web/` via `.prettierignore.root`); or run `bun run verify` to cover root checks plus `verify:web`
-- if it changed docs, Markdown, config examples, PR text, or other user-facing copy, run `bun run spellcheck` and fix any failures before committing
+Before committing: run `bun run format` for touched files (for `web/` also `bun run format:web`; or `bun run verify` covers both). Run `bun run spellcheck` when docs, Markdown, config examples, PR text, or user-facing copy changed.
 
 ## Ticket Completion Checklist
 
-Before calling a delivery ticket complete:
-
-- update the delivery ticket doc itself with a `## Rationale` section when the ticket introduces or changes behavior; do not treat PR bodies, review notes, or chat as the source of truth for rationale
-- append later non-redundant review, validation, or implementation findings to that same `## Rationale` section instead of creating a parallel rationale artifact
-- check whether `README.md` needs an update when user-visible behavior, command surface, or project status changed
-- check whether `docs/00-overview/start-here.md` needs an update when a phase or ticket changes delivered scope, current commands, delivered status, or deferrals
-- check whether `docs/00-overview/roadmap.md` needs an update when a phase or ticket changes delivered scope, delivered status, active phase state, working notes, or deferrals
-- check whether `docs/README.md` needs an update when a new phase plan, delivery doc, or durable doc path was added
-- verify the relevant tests or checks for the completed work
+Before closing a delivery ticket:
+- Add/update `## Rationale` in the ticket doc when behavior or trade-offs changed; append later findings there — not in PR bodies or chat.
+- Check `README.md` when user-visible behavior, commands, or project status changed.
+- Check `docs/00-overview/start-here.md` when delivered scope, commands, status, or deferrals changed.
+- Check `docs/00-overview/roadmap.md` when delivered scope, status, active phase, notes, or deferrals changed.
+- Check `docs/README.md` when a new phase plan, delivery doc, or durable doc path was added.
+- Verify the relevant tests or checks for the completed work.
 
 ## On Phase or Epic Completion
 
-- Before marking the phase complete: write `notes/public/<plan-path>-retrospective.md` (what went well, pain points, improvements) (e.g. `phase-12-retrospective.md` vs `epic-03-retrospective.md`).
+Write `notes/public/<plan-path>-retrospective.md` using `.agents/skills/write-retrospective/SKILL.md` for section structure and placement conventions.

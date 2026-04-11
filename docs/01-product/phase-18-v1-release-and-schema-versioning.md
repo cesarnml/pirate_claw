@@ -2,6 +2,16 @@
 
 **Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-18/` implementation plan until tickets are approved.
 
+## TL;DR
+
+**Goal:** Stamp v1.0.0 — config schema version, DB schema version, tagged release, and documented breaking change policy. No new features.
+
+**Ships:** Optional `schemaVersion` field in config; `PRAGMA user_version` in SQLite DB; `package.json` bumped to `1.0.0`; tagged release with CHANGELOG; `VERSIONING.md` with breaking change policy.
+
+**Defers:** Automated cross-version migration; new auth beyond Phase 13; audit logs; any user-visible features.
+
+---
+
 Phase 18 is the formal v1.0.0 milestone. It stamps the config and database with versioning, establishes the breaking change policy, and cuts the first tagged release. No new features, no new API endpoints, no new auth enforcement — Phase 13 already delivered the security model.
 
 ## Phase Goal

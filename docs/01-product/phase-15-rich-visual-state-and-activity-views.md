@@ -2,6 +2,16 @@
 
 **Delivery status:** Delivered — P15.07
 
+## TL;DR
+
+**Goal:** Make the running system observable — active downloads, candidate state, unmatched items — without touching the terminal.
+
+**Ships:** Dashboard overview (active downloads, event log, stats, archive grid); TV Shows view with per-episode progress and sort; Movies view with filter tabs and sort; Unmatched Candidates view with title search; two Transmission RPC proxy endpoints; `GET /api/outcomes`.
+
+**Defers:** Real-time/auto-refresh (WebSocket/SSE); server-side filtering on candidates/outcomes; audio format metadata; Transmission session writes.
+
+---
+
 Phase 15 adds the visibility layer that makes pirate-claw useful to monitor day-to-day. Phase 13 and 14 unlock config writes; Phase 15 answers "what is it actually doing right now?" by surfacing live Transmission state alongside pirate-claw's own candidate and lifecycle data.
 
 ## Phase Goal

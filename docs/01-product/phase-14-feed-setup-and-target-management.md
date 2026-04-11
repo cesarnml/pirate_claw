@@ -2,6 +2,16 @@
 
 **Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-14/` implementation plan until tickets are approved.
 
+## TL;DR
+
+**Goal:** Enable operators to manage RSS feeds and media targets (TV defaults, movie policy) via the web UI, with feed-URL validation and ETag-safe writes.
+
+**Ships:** Add/remove feeds (TV/movie); manage TV global defaults and show targets; manage movie years, codecs, codecPolicy; three dedicated write endpoints (`PUT /api/config/feeds`, `/tv/defaults`, `/movies`); read-only UI when write token absent.
+
+**Defers:** Per-feed poll interval editing; per-show codec overrides; advanced movie policy (per-feed rules); TLS or auth beyond Phase 13 bearer model.
+
+---
+
 Phase 14 extends the Phase 13 write path to cover the remaining structural config sections — feeds, movies, and TV defaults — via the web UI. Phase 13 delivered the write token, ETag/If-Match, atomic write, and tv.shows management. Phase 14 builds directly on that infrastructure without touching its contracts.
 
 ## Phase Goal

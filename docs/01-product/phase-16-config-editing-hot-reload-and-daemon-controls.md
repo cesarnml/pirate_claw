@@ -2,6 +2,16 @@
 
 **Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-16/` implementation plan until tickets are approved.
 
+## TL;DR
+
+**Goal:** Unify all writable config sections into a single Config page with inline validation, toast feedback, and in-context daemon restart — eliminating the SSH → edit JSON → restart workflow.
+
+**Ships:** Single `/config` route with four section cards (Transmission display, RSS Feeds, TV Configuration, Movie Policy); inline field validation; success/error toasts with restart offer; `POST /api/daemon/restart`; disabled controls with tooltips in read-only mode.
+
+**Defers:** Hot reload of polling intervals without restart; standalone daemon restart button; raw JSON config editor; Transmission credential editing in UI; new writable fields beyond Phase 13/14 surface.
+
+---
+
 Phase 16 is the UX integration phase for config editing. Phases 13 and 14 delivered individual write endpoints per config section. Phase 16 unifies them into a coherent Config page with inline validation, toast feedback, and a post-save daemon restart offer — eliminating the SSH-into-NAS-and-edit-JSON-then-restart workflow entirely.
 
 ## Phase Goal
