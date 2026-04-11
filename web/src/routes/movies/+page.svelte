@@ -61,11 +61,16 @@
 		}
 	}
 
+	/** Unified downloading predicate used in tab counts, filtering, and row rendering. */
+	function isMovieDownloading(m: MovieBreakdown): boolean {
+		return m.status === 'downloading' || m.lifecycleStatus === 'active';
+	}
+
 	function tabCount(tab: FilterTab): number {
 		const movies = data.movies;
 		switch (tab) {
 			case 'downloading':
-				return movies.filter((m) => m.lifecycleStatus === 'active').length;
+				return movies.filter(isMovieDownloading).length;
 			case 'completed':
 				return movies.filter((m) => m.status === 'completed').length;
 			case 'failed':
@@ -89,7 +94,7 @@
 			.filter((m) => {
 				switch (activeTab) {
 					case 'downloading':
-						return m.lifecycleStatus === 'active';
+						return isMovieDownloading(m);
 					case 'completed':
 						return m.status === 'completed';
 					case 'failed':
@@ -199,9 +204,7 @@
 			{#each filteredMovies as movie (movie.identityKey)}
 				{@const live = liveTorrent(movie)}
 				{@const pct = live ? live.percentDone * 100 : (movie.transmissionPercentDone ?? 0) * 100}
-				{@const isDownloading = live
-					? live.status === 'downloading'
-					: movie.status === 'downloading'}
+				{@const isDownloading = live ? live.status === 'downloading' : isMovieDownloading(movie)}
 				{@const showProgress = live !== undefined || pct > 0}
 				<li>
 					<Card>
