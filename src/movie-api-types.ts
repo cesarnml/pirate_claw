@@ -18,5 +18,7 @@ export type MovieBreakdown = {
   status: string;
   lifecycleStatus?: string;
   queuedAt?: string;
+  transmissionPercentDone?: number;
+  transmissionTorrentHash?: string;
   tmdb?: TmdbMoviePublic;
 };

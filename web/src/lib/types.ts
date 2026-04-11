@@ -105,6 +105,8 @@ export type MovieBreakdown = {
 	status: CandidateStatus;
 	lifecycleStatus?: string;
 	queuedAt?: string;
+	transmissionPercentDone?: number;
+	transmissionTorrentHash?: string;
 	tmdb?: TmdbMoviePublic;
 };
 

@@ -1432,6 +1432,21 @@ describe('buildMovieBreakdowns', () => {
     expect(movies[0].normalizedTitle).toBe('a movie');
     expect(movies[1].normalizedTitle).toBe('z movie');
   });
+
+  it('passes through transmissionPercentDone and transmissionTorrentHash', () => {
+    const candidates = [
+      {
+        ...movieCandidate({ identityKey: 'k1' }),
+        transmissionPercentDone: 0.55,
+        transmissionTorrentHash: 'abc123',
+      },
+    ];
+
+    const movies = buildMovieBreakdowns(candidates as never);
+
+    expect(movies[0].transmissionPercentDone).toBe(0.55);
+    expect(movies[0].transmissionTorrentHash).toBe('abc123');
+  });
 });
 
 describe('PUT /api/config/feeds', () => {

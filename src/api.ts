@@ -706,6 +706,8 @@ export function buildMovieBreakdowns(
       status: c.status,
       lifecycleStatus: c.lifecycleStatus,
       queuedAt: c.queuedAt,
+      transmissionPercentDone: c.transmissionPercentDone,
+      transmissionTorrentHash: c.transmissionTorrentHash,
     }))
     .sort((a, b) => a.normalizedTitle.localeCompare(b.normalizedTitle));
 }
