@@ -1,6 +1,6 @@
 # Phase 15: Rich Visual State and Activity Views
 
-**Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-15/` implementation plan until tickets are approved.
+**Delivery status:** Delivered — P15.07
 
 Phase 15 adds the visibility layer that makes pirate-claw useful to monitor day-to-day. Phase 13 and 14 unlock config writes; Phase 15 answers "what is it actually doing right now?" by surfacing live Transmission state alongside pirate-claw's own candidate and lifecycle data.
 

@@ -888,6 +888,12 @@ docker logs pirate-claw --tail 5
 
 Expected: a line reading `api listening on port 3000`. Since pirate-claw runs on host networking, the endpoints are immediately reachable from any browser on the LAN at `http://<NAS-LAN-IP>:3000/api/health`, `/api/status`, `/api/candidates`, `/api/shows`, and `/api/movies`. No port mapping or container recreation is required.
 
+Phase 15 added three additional read endpoints:
+
+- `GET /api/outcomes?status=skipped_no_match` — outcomes for feed items that were skipped because no candidate matched the policy
+- `GET /api/transmission/torrents` — live torrent stats for pirate-claw-managed torrents (proxied from Transmission RPC)
+- `GET /api/transmission/session` — Transmission session metadata including download/upload speed limits (proxied from Transmission RPC; returns 502 if Transmission is unreachable)
+
 ## 8. Fresh End-To-End Validation
 
 Purpose:
