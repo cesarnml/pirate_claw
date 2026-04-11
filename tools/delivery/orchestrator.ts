@@ -1409,6 +1409,8 @@ export function formatCurrentTicketStatus(
     (ticketId
       ? state.tickets.find((t) => t.id === ticketId)
       : (state.tickets.find((t) => t.status === 'in_review') ??
+        state.tickets.find((t) => t.status === 'needs_patch') ??
+        state.tickets.find((t) => t.status === 'operator_input_needed') ??
         state.tickets.find((t) => t.status === 'reviewed'))) ?? undefined;
 
   const header = [
@@ -1422,7 +1424,7 @@ export function formatCurrentTicketStatus(
   }
 
   const actionableFindings = (ticket.reviewComments ?? []).filter(
-    (c) => c.kind === 'finding' && !c.isOutdated && !c.isResolved,
+    (c) => c.kind !== 'summary' && !c.isOutdated && !c.isResolved,
   );
 
   const findingsBlock =

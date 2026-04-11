@@ -3874,5 +3874,51 @@ describe('delivery orchestrator', () => {
         '[sonarqube] tools/delivery/orchestrator.ts:100 — This function has cognitive complexity',
       );
     });
+
+    it('includes kind:unknown comments (e.g. SonarQube annotations) as actionable', () => {
+      const stateUnknown: DeliveryState = {
+        ...baseState,
+        tickets: baseState.tickets.map((t) => ({
+          ...t,
+          reviewComments: [
+            {
+              authorLogin: 'sonarqubecloud',
+              authorType: 'Bot',
+              vendor: 'sonarqube',
+              kind: 'unknown' as const,
+              channel: 'issue_comment' as const,
+              body: '**Cognitive complexity too high.**\n\nThis function has cognitive complexity of 19.',
+              path: 'tools/delivery/orchestrator.ts',
+              line: 100,
+              isOutdated: false,
+              isResolved: false,
+            },
+          ],
+        })),
+      };
+
+      const output = formatCurrentTicketStatus(stateUnknown, 'P15.06');
+
+      expect(output).toContain('findings (1):');
+      expect(output).toContain(
+        '[sonarqube] tools/delivery/orchestrator.ts:100 — Cognitive complexity too high.',
+      );
+    });
+
+    it('renders findings block when ticket status is needs_patch', () => {
+      const stateNeedsPatch: DeliveryState = {
+        ...baseState,
+        tickets: baseState.tickets.map((t) => ({
+          ...t,
+          status: 'needs_patch' as const,
+        })),
+      };
+
+      // no ticketId — selector must find needs_patch ticket
+      const output = formatCurrentTicketStatus(stateNeedsPatch);
+
+      expect(output).toContain('findings (2):');
+      expect(output).toContain('[coderabbit]');
+    });
   });
 });
