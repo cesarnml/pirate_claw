@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { renameSync, writeFileSync } from 'node:fs';
+import { fetchSessionInfo, fetchTorrentStats } from './transmission';
 import type {
   AppConfig,
   CompactTvDefaults,
@@ -596,6 +597,43 @@ export function createApiFetch(
       return safeJson(() => ({
         outcomes: repository.listSkippedNoMatchOutcomes(30),
       }));
+    }
+
+    if (path === '/api/transmission/torrents' && request.method === 'GET') {
+      const candidates = repository.listCandidateStates();
+      const hashes = candidates
+        .map((c) => c.transmissionTorrentHash)
+        .filter((h): h is string => h !== undefined);
+
+      if (hashes.length === 0) {
+        return Response.json({ torrents: [] });
+      }
+
+      const result = await fetchTorrentStats(activeConfig.transmission, hashes);
+
+      if (!result.ok) {
+        return Response.json(
+          { error: 'transmission unavailable', detail: result.message },
+          { status: 502 },
+        );
+      }
+
+      const hashSet = new Set(hashes);
+      const torrents = result.torrents.filter((t) => hashSet.has(t.hash));
+      return Response.json({ torrents });
+    }
+
+    if (path === '/api/transmission/session' && request.method === 'GET') {
+      const result = await fetchSessionInfo(activeConfig.transmission);
+
+      if (!result.ok) {
+        return Response.json(
+          { error: 'transmission unavailable', detail: result.message },
+          { status: 502 },
+        );
+      }
+
+      return Response.json(result.session);
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });

@@ -1,0 +1,20 @@
+{
+  "torrents": [
+    {
+      "hash": "abc123def456abc123def456abc123def456abc1",
+      "name": "Breaking.Bad.S01E01.720p.BluRay.x264",
+      "status": "downloading",
+      "percentDone": 0.42,
+      "rateDownload": 1048576,
+      "eta": 3600
+    },
+    {
+      "hash": "bcd234ef0567bcd234ef0567bcd234ef0567bcd2",
+      "name": "The.Shawshank.Redemption.1994.1080p.x265",
+      "status": "seeding",
+      "percentDone": 1.0,
+      "rateDownload": 0,
+      "eta": -1
+    }
+  ]
+}

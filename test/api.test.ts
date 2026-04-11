@@ -1822,6 +1822,89 @@ describe('GET /api/outcomes', () => {
   });
 });
 
+describe('GET /api/transmission/torrents', () => {
+  it('returns empty torrents when no candidates have a hash', async () => {
+    const deps = createDeps({
+      listCandidateStates: () => [],
+    });
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/transmission/torrents'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ torrents: [] });
+  });
+
+  it('returns 502 when Transmission is unreachable', async () => {
+    const mockCandidate = {
+      identityKey: 'tv:breaking bad|s01e01',
+      mediaType: 'tv' as const,
+      status: 'queued' as const,
+      transmissionTorrentHash: 'abc123',
+      ruleName: 'Breaking Bad',
+      score: 10,
+      reasons: [],
+      rawTitle: 'Breaking.Bad.S01E01',
+      normalizedTitle: 'Breaking Bad',
+      feedName: 'tv-feed',
+      guidOrLink: 'https://example.test/1',
+      publishedAt: '2026-04-01T00:00:00Z',
+      downloadUrl: 'https://example.test/1.torrent',
+      firstSeenRunId: 1,
+      lastSeenRunId: 1,
+      updatedAt: '2026-04-01T00:00:00Z',
+    };
+
+    const deps = createDeps({
+      listCandidateStates: () => [mockCandidate],
+    });
+
+    deps.config = {
+      ...deps.config,
+      transmission: {
+        url: 'http://127.0.0.1:1/transmission/rpc',
+        username: 'u',
+        password: 'p',
+      },
+    };
+
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/transmission/torrents'),
+    );
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({
+      error: 'transmission unavailable',
+    });
+  });
+});
+
+describe('GET /api/transmission/session', () => {
+  it('returns 502 when Transmission is unreachable', async () => {
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      transmission: {
+        url: 'http://127.0.0.1:1/transmission/rpc',
+        username: 'u',
+        password: 'p',
+      },
+    };
+
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/transmission/session'),
+    );
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({
+      error: 'transmission unavailable',
+    });
+  });
+});
+
 describe('redactConfig', () => {
   it('redacts transmission username and password', () => {
     const config = stubConfig();
