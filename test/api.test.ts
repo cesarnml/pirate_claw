@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 
 import {
   type ApiFetchDeps,
@@ -1933,6 +1933,159 @@ describe('GET /api/transmission/session', () => {
     expect(await response.json()).toMatchObject({
       error: 'transmission unavailable',
     });
+  });
+});
+
+describe('POST /api/daemon/restart', () => {
+  it('returns 403 when writes are disabled', async () => {
+    const deps = createDeps();
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/daemon/restart', { method: 'POST' }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 401 when bearer token is missing', async () => {
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+    };
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/daemon/restart', { method: 'POST' }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when bearer token is wrong', async () => {
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+    };
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/daemon/restart', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer wrong' },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 200 ok and queues SIGTERM on valid auth', async () => {
+    const killSpy = spyOn(process, 'kill').mockImplementation(
+      () => undefined as never,
+    );
+    try {
+      const deps = createDeps();
+      deps.config = {
+        ...deps.config,
+        runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+      };
+      const handler = createApiFetch(deps);
+      const res = await handler(
+        new Request('http://localhost/api/daemon/restart', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer tok' },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+    } finally {
+      killSpy.mockRestore();
+    }
+  });
+});
+
+describe('POST /api/transmission/ping', () => {
+  it('returns 403 when writes are disabled', async () => {
+    const deps = createDeps();
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/transmission/ping', { method: 'POST' }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 401 when bearer token is missing', async () => {
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+    };
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/transmission/ping', { method: 'POST' }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when bearer token is wrong', async () => {
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+    };
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/transmission/ping', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer wrong' },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 502 when Transmission is unreachable', async () => {
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+      transmission: {
+        url: 'http://127.0.0.1:1/transmission/rpc',
+        username: 'u',
+        password: 'p',
+      },
+    };
+    const handler = createApiFetch(deps);
+    const res = await handler(
+      new Request('http://localhost/api/transmission/ping', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+    expect(res.status).toBe(502);
+    expect(await res.json()).toMatchObject({ ok: false });
+  });
+});
+
+describe('GET /api/config — tvDefaults', () => {
+  it('includes tvDefaults in response when config uses compact tv format', async () => {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    try {
+      const dir = await mkdtemp(join(tmpdir(), 'pirate-claw-test-'));
+      const configPath = join(dir, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+      const loaded = await loadConfig(configPath);
+      const deps = createDeps();
+      deps.config = loaded;
+      deps.configPath = configPath;
+      const handler = createApiFetch(deps);
+      const res = await handler(new Request('http://localhost/api/config'));
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.tvDefaults).toEqual({
+        resolutions: ['1080p'],
+        codecs: ['x265'],
+      });
+    } finally {
+      if (prevWrite !== undefined)
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+    }
   });
 });
 

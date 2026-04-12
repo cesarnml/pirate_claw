@@ -596,6 +596,7 @@ describe('pirate-claw config show', () => {
           codecs: ['x265'],
         },
       ],
+      tvDefaults: { resolutions: ['1080p'], codecs: ['x265'] },
       movies: {
         years: [2024],
         resolutions: ['1080p'],
