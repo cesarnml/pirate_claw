@@ -97,7 +97,7 @@ export const actions: Actions = {
 					authorization: `Bearer ${writeToken}`,
 					'if-match': ifMatch
 				},
-				body: JSON.stringify({ tv: { shows: showNames } })
+				body: JSON.stringify({ runtime: {}, tv: { shows: showNames } })
 			});
 
 			if (!response.ok) {
@@ -134,6 +134,14 @@ export const actions: Actions = {
 			return fail(400, { runtimeMessage: 'Missing config revision. Reload and try again.' });
 		}
 
+		const currentShows = formData
+			.getAll('currentShow')
+			.map((v) => String(v).trim())
+			.filter(Boolean);
+		if (currentShows.length < 1) {
+			return fail(400, { runtimeMessage: 'Missing current TV shows. Reload and try again.' });
+		}
+
 		const runIntervalMinutes = parseOptionalInt(formData.get('runIntervalMinutes'));
 		const reconcileIntervalMinutes = parseOptionalInt(formData.get('reconcileIntervalMinutes'));
 		const tmdbRefreshIntervalMinutes = parseOptionalInt(formData.get('tmdbRefreshIntervalMinutes'));
@@ -167,7 +175,8 @@ export const actions: Actions = {
 				reconcileIntervalMinutes,
 				tmdbRefreshIntervalMinutes: tmdbRefreshIntervalMinutes ?? 0,
 				...(apiPort === undefined ? {} : { apiPort })
-			}
+			},
+			tv: { shows: currentShows }
 		};
 
 		try {

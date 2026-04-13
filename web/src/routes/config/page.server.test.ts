@@ -212,7 +212,7 @@ describe('config page server actions', () => {
 				'/api/config',
 				expect.objectContaining({
 					method: 'PUT',
-					body: JSON.stringify({ tv: { shows: ['Breaking Bad'] } })
+					body: JSON.stringify({ runtime: {}, tv: { shows: ['Breaking Bad'] } })
 				})
 			);
 		});
@@ -252,6 +252,7 @@ describe('config page server actions', () => {
 			const body = new URLSearchParams();
 			body.set('runtimeIfMatch', '"rev-1"');
 			body.set('runIntervalMinutes', '0');
+			body.append('currentShow', 'Test Show');
 
 			const result = await actions.saveRuntime({
 				request: new Request('http://localhost/config', {
@@ -282,6 +283,8 @@ describe('config page server actions', () => {
 			body.set('runIntervalMinutes', '30');
 			body.set('reconcileIntervalMinutes', '60');
 			body.set('tmdbRefreshIntervalMinutes', '0');
+			body.append('currentShow', 'Breaking Bad');
+			body.append('currentShow', 'Better Call Saul');
 
 			const result = await actions.saveRuntime({
 				request: new Request('http://localhost/config', {
@@ -295,8 +298,36 @@ describe('config page server actions', () => {
 			expect((result as { runtimeEtag?: string }).runtimeEtag).toBe('"rev-2"');
 			expect(apiRequestMock).toHaveBeenCalledWith(
 				'/api/config',
-				expect.objectContaining({ method: 'PUT' })
+				expect.objectContaining({
+					method: 'PUT',
+					body: expect.stringContaining('"shows":["Breaking Bad","Better Call Saul"]')
+				})
 			);
+		});
+
+		it('returns fail(400) when no currentShow values provided', async () => {
+			vi.doMock('$env/dynamic/private', () => ({
+				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
+			}));
+			const { actions } = await import('./+page.server');
+
+			const body = new URLSearchParams();
+			body.set('runtimeIfMatch', '"rev-1"');
+			body.set('runIntervalMinutes', '30');
+
+			const result = await actions.saveRuntime({
+				request: new Request('http://localhost/config', {
+					method: 'POST',
+					headers: { 'content-type': 'application/x-www-form-urlencoded' },
+					body
+				})
+			} as never);
+
+			expect((result as { status?: number }).status).toBe(400);
+			expect((result as { data?: { runtimeMessage?: string } }).data?.runtimeMessage).toContain(
+				'Missing current TV shows'
+			);
+			expect(apiRequestMock).not.toHaveBeenCalled();
 		});
 	});
 

@@ -689,7 +689,8 @@
 						<button
 							type="submit"
 							class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium disabled:opacity-50"
-							disabled={!currentEtag}
+							disabled={!canWrite || !currentEtag}
+							title={!canWrite ? WRITE_DISABLED_TOOLTIP : undefined}
 						>
 							Save shows
 						</button>
@@ -719,6 +720,9 @@
 			class="space-y-6"
 		>
 			<input type="hidden" name="runtimeIfMatch" value={currentEtag ?? ''} />
+			{#each showRows as name}
+				<input type="hidden" name="currentShow" value={name} />
+			{/each}
 
 			<Card>
 				<CardHeader class="pb-3">
@@ -799,8 +803,9 @@
 						<div class="flex flex-wrap items-center gap-3">
 							<button
 								type="submit"
-								class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium"
-								disabled={!currentEtag}
+								class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-4 text-sm font-medium disabled:opacity-50"
+								disabled={!canWrite || !currentEtag}
+								title={!canWrite ? WRITE_DISABLED_TOOLTIP : undefined}
 							>
 								Save runtime
 							</button>
