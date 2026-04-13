@@ -28,9 +28,9 @@ behavior, and review policy are not hardcoded:
   "packageManager": "bun",
   "ticketBoundaryMode": "cook",
   "reviewPolicy": {
-    "selfAudit": "required",
-    "codexPreflight": "disabled",
-    "externalReview": "required"
+    "selfAudit": "skip_doc_only",
+    "codexPreflight": "skip_doc_only",
+    "externalReview": "skip_doc_only"
   }
 }
 ```
@@ -42,9 +42,9 @@ All fields are optional. When the file is absent, the orchestrator infers sensib
 - `runtime`: `"bun"` (`"bun"` uses `Bun.spawnSync`, `"node"` uses `child_process.spawnSync` inside the orchestrator implementation)
 - `packageManager`: inferred from lockfile (`bun.lock` → `"bun"`, `pnpm-lock.yaml` → `"pnpm"`, `yarn.lock` → `"yarn"`, `package-lock.json` → `"npm"`, fallback `"npm"`) for worktree bootstrap behavior
 - `ticketBoundaryMode`: `"cook"`
-- `reviewPolicy.selfAudit`: `"required"`
-- `reviewPolicy.codexPreflight`: `"disabled"` — Codex preflight is off by default; set to `"required"` after a successful trial run
-- `reviewPolicy.externalReview`: `"required"`
+- `reviewPolicy.selfAudit`: `"skip_doc_only"`
+- `reviewPolicy.codexPreflight`: `"skip_doc_only"`
+- `reviewPolicy.externalReview`: `"skip_doc_only"`
 
 Valid `reviewPolicy` stage values are:
 
@@ -132,7 +132,7 @@ For `sonarqube`, the repo-local fetcher reads GitHub check-run annotations rathe
 
 The absence of `ai-code-review` comments after the final 12-minute polling check is not itself a blocker. In that case, the orchestrator records the review as `clean`, updates the PR metadata, and continues unless another real ambiguity or prerequisite issue exists.
 
-Doc-only PRs (where the diff touches only `.md` files) skip the review window entirely. External AI agents review code; the developer reads docs. When `open-pr` detects a doc-only diff, it sets a `doc_only` flag in state and `poll-review` auto-records `clean` immediately without waiting.
+Doc-only PRs (where the diff touches only `.md` files) skip the review window only when `reviewPolicy.externalReview` is `"skip_doc_only"` (or the stage is fully `"disabled"` for all PRs). External AI agents review code; the developer reads docs. When `open-pr` detects a doc-only diff, it sets a `doc_only` flag in state, and `poll-review` uses the configured policy to decide whether to auto-record `clean` immediately or wait through the normal review window.
 
 When the triager hook resolves to `clean` or `patched`, `poll-review` records that result immediately. When it resolves to `needs_patch`, the ticket moves into an intermediate `needs_patch` state with the saved artifacts and triage note. From there the follow-up must conclude as either `patched` or `operator_input_needed`. PR body updates remain best-effort in either case.
 
