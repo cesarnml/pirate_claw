@@ -70,6 +70,10 @@ like `syncStateWithPlan(undefined, plan, now)` is compact but hides intent in a
 sentinel argument. Thin wrappers keep the implementation centralized while
 making the two modes explicit to reviewers and future maintainers.
 
+The shipped change keeps `syncStateWithPlan` private inside `state.ts` and
+routes both repo call sites plus the test surface through explicit
+`syncStateFromScratch` and `syncStateFromExisting` names.
+
 ## Notes
 
 - Keep this ticket behavior-neutral. Do not combine it with review-policy

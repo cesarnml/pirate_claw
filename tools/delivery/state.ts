@@ -103,8 +103,7 @@ export async function loadState(
     await loadPlanContext(cwd, options, dependencies);
 
   if (!existsSync(absoluteStatePath)) {
-    return syncStateWithPlan(
-      undefined,
+    return syncStateFromScratch(
       ticketDefinitions,
       options,
       inferred,
@@ -116,7 +115,7 @@ export async function loadState(
     JSON.parse(await readFile(absoluteStatePath, 'utf8')),
   );
 
-  return syncStateWithPlan(
+  return syncStateFromExisting(
     existing,
     ticketDefinitions,
     options,
@@ -140,8 +139,7 @@ export async function repairState(
   const hadExistingState = existsSync(absoluteStatePath);
 
   if (!hadExistingState) {
-    const repairedState = syncStateWithPlan(
-      undefined,
+    const repairedState = syncStateFromScratch(
       ticketDefinitions,
       options,
       inferred,
@@ -161,7 +159,7 @@ export async function repairState(
   const existing = normalizeDeliveryStateFromPersisted(
     JSON.parse(await readFile(absoluteStatePath, 'utf8')),
   );
-  const repairedState = syncStateWithPlan(
+  const repairedState = syncStateFromExisting(
     existing,
     ticketDefinitions,
     options,
@@ -203,7 +201,38 @@ export async function saveState(
   );
 }
 
-export function syncStateWithPlan(
+export function syncStateFromScratch(
+  ticketDefinitions: TicketDefinition[],
+  options: OrchestratorOptions,
+  inferred: DeliveryState | undefined,
+  dependencies: SyncStateDependencies,
+): DeliveryState {
+  return syncStateWithPlan(
+    undefined,
+    ticketDefinitions,
+    options,
+    inferred,
+    dependencies,
+  );
+}
+
+export function syncStateFromExisting(
+  existing: DeliveryState,
+  ticketDefinitions: TicketDefinition[],
+  options: OrchestratorOptions,
+  inferred: DeliveryState | undefined,
+  dependencies: SyncStateDependencies,
+): DeliveryState {
+  return syncStateWithPlan(
+    existing,
+    ticketDefinitions,
+    options,
+    inferred,
+    dependencies,
+  );
+}
+
+function syncStateWithPlan(
   existing: DeliveryState | undefined,
   ticketDefinitions: TicketDefinition[],
   options: OrchestratorOptions,
