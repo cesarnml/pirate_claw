@@ -6,6 +6,7 @@
 		ref = $bindable(null),
 		class: className,
 		children,
+		style: styleValue,
 		...restProps
 	}: WithoutChild<AccordionPrimitive.ContentProps> = $props();
 </script>
@@ -14,6 +15,7 @@
 	bind:ref
 	data-slot="accordion-content"
 	class="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden text-sm"
+	style={`${styleValue ? `${styleValue}; ` : ''}--radix-accordion-content-height: var(--bits-accordion-content-height);`}
 	{...restProps}
 >
 	<div
