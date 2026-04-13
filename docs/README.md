@@ -52,6 +52,7 @@ Execution plans, issue conventions, and ticket breakdowns.
 - `engineering-epic-02/implementation-plan.md`: runnable ticket stack for post-PR review-flow convergence in the delivery orchestrator
 - `engineering-epic-03/implementation-plan.md`: runnable ticket stack for delivery orchestrator modularity and concern separation
 - `engineering-epic-04/implementation-plan.md`: runnable ticket stack for reviewer-facing PR body and thread hygiene polish in delivery tooling
+- `engineering-epic-07/implementation-plan.md`: runnable ticket stack for configurable ticket-boundary modes in Son-of-Anton delivery
 - `phase-01/implementation-plan.md`: ordered delivery plan for phase 01
 - `phase-01/ticket-*.md`: one file per ticket
 - `phase-01/*-rationale.md`: rationale notes for tickets and the post-phase polish pass
