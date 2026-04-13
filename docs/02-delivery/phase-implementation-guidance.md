@@ -18,6 +18,7 @@ For implementation itself:
 - keep each ticket end to end — it should touch the full vertical stack, not just a layer
 - test what the user can observe through public interfaces, not internal structure
 - avoid side quests; record useful refactors as follow-ups rather than widening the current ticket
+- end multi-ticket product phases with a docs/phase-exit slice unless the phase is itself docs-only or there is a good reason not to
 
 ## Using `grill-me`
 
