@@ -151,7 +151,7 @@
 						newFeedMediaType = 'tv';
 						toast('Saved', 'success');
 					} else if (result.type === 'failure') {
-						if (result.data?.status === 409 || result.status === 409) {
+						if (result.status === 409) {
 							toast('Config changed elsewhere — reload and try again', 'error');
 						} else {
 							toast('Save failed — see errors above', 'error');
