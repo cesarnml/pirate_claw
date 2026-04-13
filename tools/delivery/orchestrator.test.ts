@@ -4313,7 +4313,8 @@ describe('EE8.01 — self-audit observability and reviewPolicy config', () => {
         ticketFile:
           'docs/02-delivery/phase-03/ticket-01-persist-transmission-identity-for-queued-torrents.md',
         status: 'in_progress',
-        branch: 'agents/p3-01-persist-transmission-identity-for-queued-torrents',
+        branch:
+          'agents/p3-01-persist-transmission-identity-for-queued-torrents',
         baseBranch: 'main',
         worktreePath: '/tmp/p3_01',
       },
@@ -4327,7 +4328,9 @@ describe('EE8.01 — self-audit observability and reviewPolicy config', () => {
       'clean',
     );
     expect(nextState.tickets[0]?.selfAuditOutcome).toBe('clean');
-    expect(nextState.tickets[0]?.status).toBe('post_verify_self_audit_complete');
+    expect(nextState.tickets[0]?.status).toBe(
+      'post_verify_self_audit_complete',
+    );
   });
 
   it('records selfAuditOutcome: patched when outcome arg is "patched"', async () => {
@@ -4337,13 +4340,17 @@ describe('EE8.01 — self-audit observability and reviewPolicy config', () => {
       'patched',
     );
     expect(nextState.tickets[0]?.selfAuditOutcome).toBe('patched');
-    expect(nextState.tickets[0]?.status).toBe('post_verify_self_audit_complete');
+    expect(nextState.tickets[0]?.status).toBe(
+      'post_verify_self_audit_complete',
+    );
   });
 
   it('defaults selfAuditOutcome to clean when no outcome arg is passed', async () => {
     const nextState = await recordPostVerifySelfAudit(baseInProgressState);
     expect(nextState.tickets[0]?.selfAuditOutcome).toBe('clean');
-    expect(nextState.tickets[0]?.status).toBe('post_verify_self_audit_complete');
+    expect(nextState.tickets[0]?.status).toBe(
+      'post_verify_self_audit_complete',
+    );
   });
 
   it('renders selfAuditOutcome in formatStatus alongside timestamp', async () => {
@@ -4360,7 +4367,9 @@ describe('EE8.01 — self-audit observability and reviewPolicy config', () => {
       ticketBoundaryMode: 'cook',
     });
     const output = formatStatus(state);
-    expect(output).toMatch(/post_verify_self_audit=completed at .+ \(patched\)/);
+    expect(output).toMatch(
+      /post_verify_self_audit=completed at .+ \(patched\)/,
+    );
   });
 
   it('renders effective reviewPolicy in formatStatus', () => {

@@ -285,7 +285,10 @@ export function resolveOrchestratorConfig(
   return resolveOrchestratorConfigImpl(raw, cwd);
 }
 
-export { inferPackageManager, VALID_REVIEW_POLICY_STAGE_VALUES } from './config';
+export {
+  inferPackageManager,
+  VALID_REVIEW_POLICY_STAGE_VALUES,
+} from './config';
 
 export function generateRunDeliverInvocation(
   packageManager: ResolvedOrchestratorConfig['packageManager'],

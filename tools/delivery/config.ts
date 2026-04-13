@@ -104,9 +104,10 @@ export async function loadOrchestratorConfig(
     'orchestrator.config.json',
   );
 
-  const reviewPolicy = raw.reviewPolicy !== undefined
-    ? parseReviewPolicy(raw.reviewPolicy)
-    : undefined;
+  const reviewPolicy =
+    raw.reviewPolicy !== undefined
+      ? parseReviewPolicy(raw.reviewPolicy)
+      : undefined;
 
   return {
     defaultBranch,
@@ -168,7 +169,11 @@ function parseReviewPolicy(raw: unknown): ReviewPolicy {
   const obj = raw as Record<string, unknown>;
   const result: ReviewPolicy = {};
 
-  for (const key of ['selfAudit', 'codexPreflight', 'externalReview'] as const) {
+  for (const key of [
+    'selfAudit',
+    'codexPreflight',
+    'externalReview',
+  ] as const) {
     const value = obj[key];
 
     if (value === undefined) {

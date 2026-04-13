@@ -4,11 +4,7 @@ import { dirname, resolve } from 'node:path';
 
 import type { PullRequestSummary } from './platform';
 import type { ReviewActionCommit } from './pr-metadata';
-import type {
-  DeliveryState,
-  ReviewOutcome,
-  TicketState,
-} from './orchestrator';
+import type { DeliveryState, ReviewOutcome, TicketState } from './orchestrator';
 
 export function findNextPendingTicket(
   state: DeliveryState,
