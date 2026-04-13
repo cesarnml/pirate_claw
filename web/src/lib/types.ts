@@ -161,6 +161,8 @@ export type RuntimeConfig = {
 export type AppConfig = {
 	feeds: FeedConfig[];
 	tv: TvRule[];
+	/** Present when the config file uses compact tv format with explicit defaults. */
+	tvDefaults?: { resolutions: string[]; codecs: string[] };
 	movies: MoviePolicy;
 	transmission: TransmissionConfig;
 	runtime: RuntimeConfig;

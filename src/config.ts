@@ -77,6 +77,8 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
 export type AppConfig = {
   feeds: FeedConfig[];
   tv: TvRule[];
+  /** Present when the config file uses compact tv format with explicit defaults. */
+  tvDefaults?: CompactTvDefaults;
   movies: MoviePolicy;
   transmission: TransmissionConfig;
   runtime: RuntimeConfig;
@@ -135,6 +137,7 @@ export function validateConfig(
   return {
     feeds: feeds.map((entry, index) => validateFeed(entry, path, index)),
     tv: validateTvConfig(input.tv, path),
+    tvDefaults: extractTvDefaults(input.tv, path),
     movies: validateMoviePolicy(movies, path),
     transmission: validateTransmission(transmission, path, env),
     runtime: validateRuntime(input.runtime, path, env),
@@ -154,6 +157,15 @@ function validateTvConfig(input: unknown, path: string): TvRule[] {
   return shows.map((entry, index) =>
     validateCompactTvRule(entry, defaults, `${path} tv shows[${index}]`),
   );
+}
+
+function extractTvDefaults(
+  input: unknown,
+  path: string,
+): CompactTvDefaults | undefined {
+  if (Array.isArray(input)) return undefined;
+  if (!isRecord(input)) return undefined;
+  return validateCompactTvDefaults(input.defaults, path);
 }
 
 export function validateFeed(

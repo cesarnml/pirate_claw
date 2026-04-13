@@ -33,3 +33,7 @@ These are intentionally outside Phase 06:
 ## Why The Scope Stays Narrow
 
 The immediate value is repeatable operator setup with low ambiguity. Tooling automation can follow once the runbook path is proven stable.
+
+## Supervisor Restart Requirement
+
+The daemon must run under a process supervisor (Synology Task Scheduler, systemd, or equivalent) configured to **auto-restart on exit**. This is required for `POST /api/daemon/restart` to work correctly: the endpoint calls `SIGTERM` on itself, which triggers a graceful shutdown; the supervisor then restarts the process. Without auto-restart, a restart request leaves the daemon permanently stopped.
