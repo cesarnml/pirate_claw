@@ -2,12 +2,16 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
+export const VALID_TICKET_BOUNDARY_MODES = ['cook', 'gated', 'glide'] as const;
+
+export type TicketBoundaryMode = (typeof VALID_TICKET_BOUNDARY_MODES)[number];
+
 export type OrchestratorConfig = {
   defaultBranch?: string;
   planRoot?: string;
   runtime?: 'bun' | 'node';
   packageManager?: 'bun' | 'npm' | 'pnpm' | 'yarn';
-  ticketBoundaryMode?: 'cook' | 'gated' | 'glide';
+  ticketBoundaryMode?: TicketBoundaryMode;
 };
 
 export type ResolvedOrchestratorConfig = {
@@ -15,12 +19,11 @@ export type ResolvedOrchestratorConfig = {
   planRoot: string;
   runtime: 'bun' | 'node';
   packageManager: 'bun' | 'npm' | 'pnpm' | 'yarn';
-  ticketBoundaryMode: 'cook' | 'gated' | 'glide';
+  ticketBoundaryMode: TicketBoundaryMode;
 };
 
 const VALID_RUNTIMES = ['bun', 'node'] as const;
 const VALID_PACKAGE_MANAGERS = ['bun', 'npm', 'pnpm', 'yarn'] as const;
-const VALID_TICKET_BOUNDARY_MODES = ['cook', 'gated', 'glide'] as const;
 
 export async function loadOrchestratorConfig(
   cwd: string,

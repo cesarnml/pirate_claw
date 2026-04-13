@@ -1,3 +1,4 @@
+import { VALID_TICKET_BOUNDARY_MODES, type TicketBoundaryMode } from './config';
 import type { OrchestratorOptions } from './orchestrator';
 
 export type ParsedCliArgs = {
@@ -6,8 +7,12 @@ export type ParsedCliArgs = {
   flags: Set<string>;
   planPath?: string;
   prNumber?: number;
-  boundaryMode?: 'cook' | 'gated' | 'glide';
+  boundaryMode?: TicketBoundaryMode;
 };
+
+function isValidBoundaryMode(mode: unknown): mode is TicketBoundaryMode {
+  return VALID_TICKET_BOUNDARY_MODES.includes(mode as TicketBoundaryMode);
+}
 
 export function getUsage(runDeliverInvocation: string): string {
   return [
@@ -64,8 +69,16 @@ export function parseCliArgs(argv: string[], usage: string): ParsedCliArgs {
     if (value === '--boundary-mode') {
       const rawMode = argv[index + 1];
 
-      if (rawMode !== 'cook' && rawMode !== 'gated' && rawMode !== 'glide') {
-        throw new Error('Pass --boundary-mode <cook|gated|glide>.');
+      if (rawMode === undefined) {
+        throw new Error(
+          `Missing value for --boundary-mode; pass one of <${VALID_TICKET_BOUNDARY_MODES.join('|')}>.`,
+        );
+      }
+
+      if (!isValidBoundaryMode(rawMode)) {
+        throw new Error(
+          `Pass --boundary-mode <${VALID_TICKET_BOUNDARY_MODES.join('|')}>.`,
+        );
       }
 
       boundaryMode = rawMode;

@@ -155,6 +155,19 @@ describe('delivery orchestrator', () => {
     ).toThrow(/Pass --boundary-mode <cook\|gated\|glide>/);
   });
 
+  it('rejects missing boundary-mode CLI value with a specific error', () => {
+    expect(() =>
+      parseCliArgs(
+        [
+          '--plan',
+          'docs/02-delivery/phase-03/implementation-plan.md',
+          '--boundary-mode',
+        ],
+        getUsage('bun run deliver'),
+      ),
+    ).toThrow(/Missing value for --boundary-mode/);
+  });
+
   it('formats status with the effective boundary mode', () => {
     initOrchestratorConfig({
       defaultBranch: 'main',

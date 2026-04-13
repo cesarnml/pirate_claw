@@ -8,6 +8,7 @@ import {
   resolveOrchestratorConfig as resolveOrchestratorConfigImpl,
   type OrchestratorConfig,
   type ResolvedOrchestratorConfig,
+  type TicketBoundaryMode,
 } from './config';
 import {
   addWorktree as addPlatformWorktree,
@@ -444,7 +445,7 @@ export async function runDeliveryOrchestrator(
         flags: Set<string>;
         planPath?: string;
         prNumber?: number;
-        boundaryMode?: 'cook' | 'gated' | 'glide';
+        boundaryMode?: TicketBoundaryMode;
       }
     | undefined;
 
