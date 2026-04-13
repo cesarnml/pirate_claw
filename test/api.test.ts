@@ -1994,6 +1994,9 @@ describe('POST /api/daemon/restart', () => {
       );
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ ok: true });
+      // Flush the microtask queue so queueMicrotask fires before we assert.
+      await Promise.resolve();
+      expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
     } finally {
       killSpy.mockRestore();
     }
