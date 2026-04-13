@@ -648,19 +648,15 @@ export function fetchOrigin(cwd: string, runtime: Runtime): void {
   runProcess(cwd, ['git', 'fetch', 'origin'], runtime);
 }
 
-/**
- * Returns true when every file touched by the PR is a Markdown file (.md).
- * Doc-only PRs skip the external AI review window.
- */
-export function isPrDocOnly(
+export function isLocalBranchDocOnly(
   cwd: string,
-  prNumber: number,
+  baseBranch: string,
   runtime: Runtime,
 ): boolean {
   try {
     const stdout = runProcess(
       cwd,
-      ['gh', 'pr', 'diff', String(prNumber), '--name-only'],
+      ['git', 'diff', `origin/${baseBranch}...HEAD`, '--name-only'],
       runtime,
     );
     const files = stdout

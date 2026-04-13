@@ -73,6 +73,10 @@ has no network dependency, and cannot silently return `false` due to auth failur
 Using the local diff for both callers eliminates the divergence risk with no
 behavioral change.
 
+Implemented as a shared `platform.ts` helper so `codex-preflight` and `open-pr`
+now exercise the same safe-fail logic instead of carrying parallel doc-only
+checks in different modules.
+
 ## Notes
 
 - `EE9.03` depends on this ticket. `post-verify-self-audit` auto-skip (when
