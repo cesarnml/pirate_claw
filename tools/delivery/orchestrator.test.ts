@@ -3891,14 +3891,14 @@ describe('delivery orchestrator', () => {
         },
         {
           id: 'EE7.02',
-          title: 'Cook continuation and glide fallback',
-          slug: 'cook-continuation-and-glide-fallback',
+          title: 'Gated boundary semantics and resume prompt',
+          slug: 'gated-boundary-semantics-and-resume-prompt',
           ticketFile:
-            'docs/02-delivery/engineering-epic-07/ticket-03-cook-continuation-and-glide-fallback.md',
+            'docs/02-delivery/engineering-epic-07/ticket-02-gated-boundary-semantics-and-resume-prompt.md',
           status: 'pending',
-          branch: 'agents/ee7-03-cook-continuation-and-glide-fallback',
+          branch: 'agents/ee7-02-gated-boundary-semantics-and-resume-prompt',
           baseBranch: 'agents/ee7-01-boundary-policy-plumbing-and-visibility',
-          worktreePath: '/tmp/ee7_03',
+          worktreePath: '/tmp/ee7_02',
         },
       ],
     };
@@ -3921,27 +3921,34 @@ describe('delivery orchestrator', () => {
         ),
       };
 
+      let startedTicketId: string | undefined;
+
       const nextState = await applyAdvanceBoundaryMode(
         baseState,
         advancedState,
         '/tmp',
         {
-          startTicket: async () => ({
-            ...advancedState,
-            tickets: advancedState.tickets.map((ticket) =>
-              ticket.id === 'EE7.02'
-                ? {
-                    ...ticket,
-                    status: 'in_progress' as const,
-                    handoffPath:
-                      '.agents/delivery/engineering-epic-07/handoffs/ee7-03-handoff.md',
-                  }
-                : ticket,
-            ),
-          }),
+          startTicket: async (_state, _cwd, ticketId) => {
+            startedTicketId = ticketId;
+
+            return {
+              ...advancedState,
+              tickets: advancedState.tickets.map((ticket) =>
+                ticket.id === 'EE7.02'
+                  ? {
+                      ...ticket,
+                      status: 'in_progress' as const,
+                      handoffPath:
+                        '.agents/delivery/engineering-epic-07/handoffs/ee7-02-handoff.md',
+                    }
+                  : ticket,
+              ),
+            };
+          },
         },
       );
 
+      expect(startedTicketId).toBe('EE7.02');
       expect(
         nextState.tickets.find((ticket) => ticket.id === 'EE7.02')?.status,
       ).toBe('in_progress');

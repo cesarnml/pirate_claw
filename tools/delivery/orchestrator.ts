@@ -1161,7 +1161,7 @@ export async function applyAdvanceBoundaryMode(
     return advancedState;
   }
 
-  return dependencies.startTicket(advancedState, cwd);
+  return dependencies.startTicket(advancedState, cwd, nextPending.id);
 }
 
 async function restackTicket(
