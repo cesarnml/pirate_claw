@@ -50,7 +50,13 @@ const mockConfig: AppConfig = {
 describe('/config', () => {
 	it('renders config sections with mock data', () => {
 		render(Page, {
-			data: { config: mockConfig, error: null, etag: '"rev-1"', canWrite: true, transmissionSession: null },
+			data: {
+				config: mockConfig,
+				error: null,
+				etag: '"rev-1"',
+				canWrite: true,
+				transmissionSession: null
+			},
 			form: undefined
 		});
 		expect(screen.getByRole('heading', { name: 'Feeds' })).toBeInTheDocument();
@@ -65,7 +71,13 @@ describe('/config', () => {
 
 	it('renders error state when API is unreachable', () => {
 		render(Page, {
-			data: { config: null, error: 'Could not reach the API.', etag: null, canWrite: false, transmissionSession: null },
+			data: {
+				config: null,
+				error: 'Could not reach the API.',
+				etag: null,
+				canWrite: false,
+				transmissionSession: null
+			},
 			form: undefined
 		});
 		expect(screen.getByRole('alert')).toHaveTextContent('Could not reach the API.');
@@ -88,7 +100,13 @@ describe('/config', () => {
 
 	it('does not render restart offer by default', () => {
 		render(Page, {
-			data: { config: mockConfig, error: null, etag: '"rev-1"', canWrite: true, transmissionSession: null },
+			data: {
+				config: mockConfig,
+				error: null,
+				etag: '"rev-1"',
+				canWrite: true,
+				transmissionSession: null
+			},
 			form: undefined
 		});
 		expect(screen.queryByRole('button', { name: /restart daemon/i })).not.toBeInTheDocument();

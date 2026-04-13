@@ -26,7 +26,12 @@ describe('config page server actions', () => {
 							tv: [],
 							movies: { years: [], resolutions: [], codecs: [], codecPolicy: 'prefer' },
 							transmission: { url: 'http://localhost:9091', username: '', password: '' },
-							runtime: { runIntervalMinutes: 60, reconcileIntervalMinutes: 60, artifactDir: '/tmp', artifactRetentionDays: 7 }
+							runtime: {
+								runIntervalMinutes: 60,
+								reconcileIntervalMinutes: 60,
+								artifactDir: '/tmp',
+								artifactRetentionDays: 7
+							}
 						}),
 						{ status: 200 }
 					)
@@ -51,7 +56,12 @@ describe('config page server actions', () => {
 							tv: [],
 							movies: { years: [], resolutions: [], codecs: [], codecPolicy: 'prefer' },
 							transmission: { url: 'http://localhost:9091', username: '', password: '' },
-							runtime: { runIntervalMinutes: 60, reconcileIntervalMinutes: 60, artifactDir: '/tmp', artifactRetentionDays: 7 }
+							runtime: {
+								runIntervalMinutes: 60,
+								reconcileIntervalMinutes: 60,
+								artifactDir: '/tmp',
+								artifactRetentionDays: 7
+							}
 						}),
 						{ status: 200 }
 					)
@@ -61,7 +71,9 @@ describe('config page server actions', () => {
 				);
 
 			const result = await load({} as never);
-			expect((result as { transmissionSession: unknown }).transmissionSession).toEqual({ version: '3.00 (bb6b5a062ef)' });
+			expect((result as { transmissionSession: unknown }).transmissionSession).toEqual({
+				version: '3.00 (bb6b5a062ef)'
+			});
 		});
 	});
 
