@@ -8,9 +8,6 @@ import {
   resolveOrchestratorConfig as resolveOrchestratorConfigImpl,
   type OrchestratorConfig,
   type ResolvedOrchestratorConfig,
-  type ResolvedReviewPolicy,
-  type ReviewPolicy,
-  type ReviewPolicyStageValue,
   type TicketBoundaryMode,
 } from './config';
 import {
