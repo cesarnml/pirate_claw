@@ -1,3 +1,4 @@
+import { VALID_TICKET_BOUNDARY_MODES, type TicketBoundaryMode } from './config';
 import type { OrchestratorOptions } from './orchestrator';
 
 export type ParsedCliArgs = {
@@ -6,7 +7,12 @@ export type ParsedCliArgs = {
   flags: Set<string>;
   planPath?: string;
   prNumber?: number;
+  boundaryMode?: TicketBoundaryMode;
 };
+
+function isValidBoundaryMode(mode: unknown): mode is TicketBoundaryMode {
+  return VALID_TICKET_BOUNDARY_MODES.includes(mode as TicketBoundaryMode);
+}
 
 export function getUsage(runDeliverInvocation: string): string {
   return [
@@ -26,12 +32,16 @@ export function getUsage(runDeliverInvocation: string): string {
     '  record-review <ticket-id> <clean|patched|operator_input_needed> [note]',
     '  advance',
     '  restack [ticket-id]',
+    '',
+    'Options:',
+    '  --boundary-mode <cook|gated|glide>',
   ].join('\n');
 }
 
 export function parseCliArgs(argv: string[], usage: string): ParsedCliArgs {
   let planPath: string | undefined;
   let prNumber: number | undefined;
+  let boundaryMode: ParsedCliArgs['boundaryMode'];
   const flags = new Set<string>();
   const positionals: string[] = [];
 
@@ -52,6 +62,26 @@ export function parseCliArgs(argv: string[], usage: string): ParsedCliArgs {
       }
 
       prNumber = Number(rawNumber);
+      index += 1;
+      continue;
+    }
+
+    if (value === '--boundary-mode') {
+      const rawMode = argv[index + 1];
+
+      if (rawMode === undefined) {
+        throw new Error(
+          `Missing value for --boundary-mode; pass one of <${VALID_TICKET_BOUNDARY_MODES.join('|')}>.`,
+        );
+      }
+
+      if (!isValidBoundaryMode(rawMode)) {
+        throw new Error(
+          `Pass --boundary-mode <${VALID_TICKET_BOUNDARY_MODES.join('|')}>.`,
+        );
+      }
+
+      boundaryMode = rawMode;
       index += 1;
       continue;
     }
@@ -82,6 +112,7 @@ export function parseCliArgs(argv: string[], usage: string): ParsedCliArgs {
     flags,
     planPath,
     prNumber,
+    boundaryMode,
   };
 }
 

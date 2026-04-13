@@ -55,8 +55,10 @@ import {
   syncStateWithPlan,
   runProcessResult,
   formatCurrentTicketStatus,
+  formatStatus,
   type DeliveryState,
 } from './orchestrator';
+import { getUsage, parseCliArgs } from './cli';
 import { advanceToNextTicket } from './ticket-flow';
 import { normalizeDeliveryStateFromPersisted } from './state';
 import { resolveNativeReviewThreads } from './review';
@@ -114,6 +116,79 @@ describe('delivery orchestrator', () => {
       reviewPollIntervalMinutes: 6,
       reviewPollMaxWaitMinutes: 12,
     });
+  });
+
+  it('parses boundary-mode CLI override', () => {
+    const parsed = parseCliArgs(
+      [
+        '--plan',
+        'docs/02-delivery/phase-03/implementation-plan.md',
+        '--boundary-mode',
+        'gated',
+        'status',
+      ],
+      getUsage('bun run deliver'),
+    );
+
+    expect(parsed).toEqual({
+      command: 'status',
+      positionals: [],
+      flags: new Set<string>(),
+      planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+      prNumber: undefined,
+      boundaryMode: 'gated',
+    });
+  });
+
+  it('rejects invalid boundary-mode CLI override', () => {
+    expect(() =>
+      parseCliArgs(
+        [
+          '--plan',
+          'docs/02-delivery/phase-03/implementation-plan.md',
+          '--boundary-mode',
+          'sprint',
+          'status',
+        ],
+        getUsage('bun run deliver'),
+      ),
+    ).toThrow(/Pass --boundary-mode <cook\|gated\|glide>/);
+  });
+
+  it('rejects missing boundary-mode CLI value with a specific error', () => {
+    expect(() =>
+      parseCliArgs(
+        [
+          '--plan',
+          'docs/02-delivery/phase-03/implementation-plan.md',
+          '--boundary-mode',
+        ],
+        getUsage('bun run deliver'),
+      ),
+    ).toThrow(/Missing value for --boundary-mode/);
+  });
+
+  it('formats status with the effective boundary mode', () => {
+    initOrchestratorConfig({
+      defaultBranch: 'main',
+      planRoot: 'docs',
+      runtime: 'bun',
+      packageManager: 'bun',
+      ticketBoundaryMode: 'glide',
+    });
+
+    expect(
+      formatStatus({
+        planKey: 'engineering-epic-07',
+        planPath: 'docs/02-delivery/engineering-epic-07/implementation-plan.md',
+        statePath: '.agents/delivery/engineering-epic-07/state.json',
+        reviewsDirPath: '.agents/delivery/engineering-epic-07/reviews',
+        handoffsDirPath: '.agents/delivery/engineering-epic-07/handoffs',
+        reviewPollIntervalMinutes: 6,
+        reviewPollMaxWaitMinutes: 12,
+        tickets: [],
+      }),
+    ).toContain('boundary_mode=glide');
   });
 
   it('syncs state while preserving runtime metadata and inferred branch chaining', () => {
@@ -3402,6 +3477,7 @@ describe('delivery orchestrator', () => {
           planRoot: undefined,
           runtime: 'node',
           packageManager: undefined,
+          ticketBoundaryMode: undefined,
         });
       } finally {
         await rm(tempDir, { recursive: true });
@@ -3434,6 +3510,22 @@ describe('delivery orchestrator', () => {
 
         await expect(loadOrchestratorConfig(tempDir)).rejects.toThrow(
           /Invalid packageManager "cargo"/,
+        );
+      } finally {
+        await rm(tempDir, { recursive: true });
+      }
+    });
+
+    it('throws on invalid ticketBoundaryMode value', async () => {
+      const tempDir = await mkdtemp(join(tmpdir(), 'orch-cfg-'));
+      try {
+        await writeFile(
+          join(tempDir, 'orchestrator.config.json'),
+          JSON.stringify({ ticketBoundaryMode: 'sprint' }),
+        );
+
+        await expect(loadOrchestratorConfig(tempDir)).rejects.toThrow(
+          /Invalid ticketBoundaryMode "sprint"/,
         );
       } finally {
         await rm(tempDir, { recursive: true });
@@ -3510,6 +3602,7 @@ describe('delivery orchestrator', () => {
           planRoot: 'docs',
           runtime: 'bun',
           packageManager: 'npm',
+          ticketBoundaryMode: 'cook',
         });
       } finally {
         await rm(tempDir, { recursive: true });
@@ -3527,6 +3620,20 @@ describe('delivery orchestrator', () => {
         expect(resolved.planRoot).toBe('specifications');
         expect(resolved.runtime).toBe('bun');
         expect(resolved.packageManager).toBe('npm');
+        expect(resolved.ticketBoundaryMode).toBe('cook');
+      } finally {
+        await rm(tempDir, { recursive: true });
+      }
+    });
+
+    it('preserves configured ticketBoundaryMode when resolving config', async () => {
+      const tempDir = await mkdtemp(join(tmpdir(), 'orch-cfg-resolve-'));
+      try {
+        const resolved = resolveOrchestratorConfig(
+          { ticketBoundaryMode: 'gated' },
+          tempDir,
+        );
+        expect(resolved.ticketBoundaryMode).toBe('gated');
       } finally {
         await rm(tempDir, { recursive: true });
       }
@@ -3587,6 +3694,7 @@ describe('delivery orchestrator', () => {
         planRoot: 'docs',
         runtime: 'bun',
         packageManager: 'bun',
+        ticketBoundaryMode: 'cook',
       });
 
       try {
@@ -3615,6 +3723,7 @@ describe('delivery orchestrator', () => {
           planRoot: 'docs',
           runtime: 'bun',
           packageManager: 'bun',
+          ticketBoundaryMode: 'cook',
         });
       }
     });
@@ -3632,6 +3741,7 @@ describe('delivery orchestrator', () => {
       planRoot: 'docs',
       runtime: 'node',
       packageManager: 'bun',
+      ticketBoundaryMode: 'cook',
     });
 
     try {
@@ -3647,6 +3757,7 @@ describe('delivery orchestrator', () => {
         planRoot: 'docs',
         runtime: 'bun',
         packageManager: 'bun',
+        ticketBoundaryMode: 'cook',
       });
     }
   });

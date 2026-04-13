@@ -8,6 +8,7 @@ import {
   resolveOrchestratorConfig as resolveOrchestratorConfigImpl,
   type OrchestratorConfig,
   type ResolvedOrchestratorConfig,
+  type TicketBoundaryMode,
 } from './config';
 import {
   addWorktree as addPlatformWorktree,
@@ -237,6 +238,7 @@ let _config: ResolvedOrchestratorConfig = {
   planRoot: 'docs',
   runtime: 'bun',
   packageManager: 'npm',
+  ticketBoundaryMode: 'cook',
 };
 
 export function initOrchestratorConfig(
@@ -443,19 +445,27 @@ export async function runDeliveryOrchestrator(
         flags: Set<string>;
         planPath?: string;
         prNumber?: number;
+        boundaryMode?: TicketBoundaryMode;
       }
     | undefined;
 
   try {
     const rawConfig = await loadOrchestratorConfig(cwd);
-    _config = resolveOrchestratorConfig(rawConfig, cwd);
-
     await ensureEnvReady(cwd);
-    const notifier = resolveNotifier();
     const usage = getUsage(
-      generateRunDeliverInvocation(_config.packageManager),
+      generateRunDeliverInvocation(
+        resolveOrchestratorConfig(rawConfig, cwd).packageManager,
+      ),
     );
     parsed = parseCliArgs(argv, usage);
+    _config = resolveOrchestratorConfig(
+      {
+        ...rawConfig,
+        ticketBoundaryMode: parsed.boundaryMode ?? rawConfig.ticketBoundaryMode,
+      },
+      cwd,
+    );
+    const notifier = resolveNotifier();
     if (parsed.command === 'ai-review') {
       const result = await runStandaloneAiReview(
         cwd,
@@ -1362,6 +1372,7 @@ export function formatStatus(state: DeliveryState): string {
     `handoffs=${state.handoffsDirPath}`,
     `review_poll_interval_minutes=${state.reviewPollIntervalMinutes}`,
     `review_poll_max_wait_minutes=${state.reviewPollMaxWaitMinutes}`,
+    `boundary_mode=${_config.ticketBoundaryMode}`,
     '',
     ...state.tickets.map((ticket) =>
       [
@@ -1417,6 +1428,7 @@ export function formatCurrentTicketStatus(
     'Delivery Orchestrator',
     `plan_key=${state.planKey}`,
     `plan=${state.planPath}`,
+    `boundary_mode=${_config.ticketBoundaryMode}`,
   ].join('\n');
 
   if (!ticket) {
