@@ -367,8 +367,8 @@
 							toast('Config changed elsewhere — reload and try again', 'error');
 						} else {
 							const detail =
-								result.data && 'moviesMessage' in result.data
-									? String(result.data.moviesMessage)
+								typeof result.data?.moviesMessage === 'string'
+									? result.data.moviesMessage
 									: undefined;
 							toast('Save failed — see errors above', 'error', detail);
 						}
