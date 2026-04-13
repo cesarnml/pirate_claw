@@ -22,7 +22,7 @@ import {
   findOpenPullRequest as findPlatformOpenPullRequest,
   findPrimaryWorktreePath as findPlatformPrimaryWorktreePath,
   hasMergedPullRequestForBranch as hasPlatformMergedPullRequestForBranch,
-  isPrDocOnly as isPlatformPrDocOnly,
+  isLocalBranchDocOnly as isPlatformLocalBranchDocOnly,
   listCommitSubjectsBetween as listPlatformCommitSubjectsBetween,
   readCurrentBranch as readPlatformCurrentBranch,
   readHeadSha as readPlatformHeadSha,
@@ -589,25 +589,13 @@ export async function runDeliveryOrchestrator(
         const preflightTarget = state.tickets.find(
           (t) => t.status === 'post_verify_self_audit_complete',
         );
-        let isDocOnly = !!preflightTarget?.docOnly;
-        if (preflightTarget && !isDocOnly) {
-          const diffResult = runPlatformProcessResult(
-            preflightTarget.worktreePath,
-            [
-              'git',
-              'diff',
-              `origin/${preflightTarget.baseBranch}...HEAD`,
-              '--name-only',
-            ],
-            _config.runtime,
-          );
-          if (diffResult.exitCode === 0) {
-            const changedFiles = diffResult.stdout.split('\n').filter(Boolean);
-            isDocOnly =
-              changedFiles.length > 0 &&
-              changedFiles.every((f) => f.endsWith('.md'));
-          }
-        }
+        const isDocOnly = preflightTarget
+          ? isPlatformLocalBranchDocOnly(
+              preflightTarget.worktreePath,
+              preflightTarget.baseBranch,
+              _config.runtime,
+            )
+          : false;
         const nextState = recordCodexPreflight(
           state,
           preflightOutcome,
@@ -1101,10 +1089,10 @@ export async function openPullRequest(
       ? nextState.tickets.find((t) => t.id === ticketId)
       : nextState.tickets.find((t) => t.status === 'in_review')) ?? undefined;
 
-  if (reviewTicket?.prNumber) {
-    const docOnly = isPlatformPrDocOnly(
+  if (reviewTicket) {
+    const docOnly = isPlatformLocalBranchDocOnly(
       reviewTicket.worktreePath,
-      reviewTicket.prNumber,
+      reviewTicket.baseBranch,
       _config.runtime,
     );
 
