@@ -50,7 +50,8 @@ import {
   repairState as repairStateImpl,
   saveState as saveStateImpl,
   summarizeStateDifferences as summarizeStateDifferencesImpl,
-  syncStateWithPlan as syncStateWithPlanImpl,
+  syncStateFromExisting as syncStateFromExistingImpl,
+  syncStateFromScratch as syncStateFromScratchImpl,
 } from './state';
 import {
   buildRunBlockedEvent,
@@ -865,19 +866,39 @@ export function parsePlan(
   return parsePlanImpl(markdown, planPath);
 }
 
-export function syncStateWithPlan(
-  existing: DeliveryState | undefined,
+export function syncStateFromScratch(
   ticketDefinitions: TicketDefinition[],
   cwd: string,
   options: OrchestratorOptions,
   inferred?: DeliveryState,
 ): DeliveryState {
-  return syncStateWithPlanImpl(existing, ticketDefinitions, options, inferred, {
+  return syncStateFromScratchImpl(ticketDefinitions, options, inferred, {
     cwd,
     defaultBranch: _config.defaultBranch,
     deriveBranchName,
     deriveWorktreePath,
   });
+}
+
+export function syncStateFromExisting(
+  existing: DeliveryState,
+  ticketDefinitions: TicketDefinition[],
+  cwd: string,
+  options: OrchestratorOptions,
+  inferred?: DeliveryState,
+): DeliveryState {
+  return syncStateFromExistingImpl(
+    existing,
+    ticketDefinitions,
+    options,
+    inferred,
+    {
+      cwd,
+      defaultBranch: _config.defaultBranch,
+      deriveBranchName,
+      deriveWorktreePath,
+    },
+  );
 }
 
 export function deriveBranchName(

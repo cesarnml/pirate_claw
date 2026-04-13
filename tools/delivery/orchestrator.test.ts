@@ -55,7 +55,8 @@ import {
   resolveReviewTriager,
   runStandaloneAiReview,
   summarizeStateDifferences,
-  syncStateWithPlan,
+  syncStateFromExisting,
+  syncStateFromScratch,
   runProcessResult,
   formatCurrentTicketStatus,
   formatAdvanceBoundaryGuidance,
@@ -228,7 +229,7 @@ describe('delivery orchestrator', () => {
       ],
     };
 
-    const synced = syncStateWithPlan(
+    const synced = syncStateFromExisting(
       existing,
       [
         {
@@ -3649,7 +3650,7 @@ describe('delivery orchestrator', () => {
       }
     });
 
-    it('syncStateWithPlan uses configured defaultBranch for first ticket baseBranch', () => {
+    it('syncStateFromScratch uses configured defaultBranch for first ticket baseBranch', () => {
       initOrchestratorConfig({
         defaultBranch: 'develop',
         planRoot: 'docs',
@@ -3663,8 +3664,7 @@ describe('delivery orchestrator', () => {
           planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
         });
 
-        const synced = syncStateWithPlan(
-          undefined,
+        const synced = syncStateFromScratch(
           [
             {
               id: 'P3.01',
@@ -4526,7 +4526,7 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
   });
 
   it('statusRank orders: post_verify_self_audit_complete < codex_preflight_complete < in_review', () => {
-    // Verify via syncStateWithPlan status selection: higher rank wins
+    // Verify via syncStateFromExisting status selection: higher rank wins
     const options = createOptions({
       planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
     });
@@ -4556,7 +4556,7 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
         status: 'post_verify_self_audit_complete' as const,
       })),
     };
-    const synced = syncStateWithPlan(
+    const synced = syncStateFromExisting(
       existing,
       existing.tickets,
       '/tmp',
