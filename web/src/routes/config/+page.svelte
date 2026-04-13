@@ -545,7 +545,9 @@
 					</div>
 					<div class="flex flex-wrap gap-2">
 						<dt class="text-muted-foreground">Password:</dt>
-						<dd class="text-foreground">[redacted]</dd>
+						<dd class="text-foreground">
+							{config.transmission.password ? '[redacted]' : '[not set]'}
+						</dd>
 					</div>
 					{#if config.transmission.downloadDir}
 						<div class="flex flex-wrap gap-2">
