@@ -128,6 +128,11 @@
 		writeOnboardingDismissed(true);
 		onboardingDismissed = readOnboardingDismissed();
 	}
+
+	const showResumeCopy = $derived(
+		data.onboarding?.state === 'partial_setup' ||
+			(data.onboarding?.state === 'initial_empty' && onboardingDismissed)
+	);
 </script>
 
 <h1 class="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -135,24 +140,20 @@
 {#if data.onboarding && data.onboarding.state !== 'ready'}
 	<Alert class="mt-6">
 		<AlertTitle>
-			{data.onboarding.state === 'partial_setup' || onboardingDismissed
-				? 'Resume onboarding'
-				: 'Finish first-time setup'}
+			{showResumeCopy ? 'Resume onboarding' : 'Finish first-time setup'}
 		</AlertTitle>
 		<AlertDescription class="flex flex-wrap items-center gap-3">
 			<span>
 				{#if data.onboarding.state === 'writes_disabled'}
 					Enable config writes before using onboarding.
-				{:else if data.onboarding.state === 'partial_setup' || onboardingDismissed}
+				{:else if showResumeCopy}
 					Continue the guided setup flow from where you left off.
 				{:else}
 					Start with your first feed, then continue into guided setup.
 				{/if}
 			</span>
 			<a href="/onboarding" class="text-primary text-sm font-medium hover:underline">
-				{data.onboarding.state === 'partial_setup' || onboardingDismissed
-					? 'Resume onboarding'
-					: 'Start onboarding'}
+				{showResumeCopy ? 'Resume onboarding' : 'Start onboarding'}
 			</a>
 			{#if data.onboarding.state === 'initial_empty' && !onboardingDismissed}
 				<button
