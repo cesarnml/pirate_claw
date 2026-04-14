@@ -109,6 +109,23 @@ describe('/', () => {
 		);
 	});
 
+	it('links writes-disabled onboarding banner back to config', () => {
+		render(Page, {
+			data: {
+				...baseData,
+				onboarding: {
+					state: 'writes_disabled',
+					hasFeeds: false,
+					hasTvTargets: false,
+					hasMovieTargets: false,
+					minimumComplete: false
+				}
+			}
+		});
+		expect(screen.getByRole('link', { name: 'Open config' })).toHaveAttribute('href', '/config');
+		expect(screen.queryByRole('link', { name: /onboarding/i })).not.toBeInTheDocument();
+	});
+
 	it('respects dismissal suppression by switching to resume onboarding copy', () => {
 		writeOnboardingDismissed(true);
 		render(Page, {
@@ -146,9 +163,12 @@ describe('/', () => {
 		expect(screen.queryByRole('link', { name: /onboarding/i })).not.toBeInTheDocument();
 	});
 
-	it('Active Downloads hidden when transmissionTorrents is empty', () => {
+	it('renders explicit Active Downloads empty state when transmissionTorrents is empty', () => {
 		render(Page, { data: { ...baseData, transmissionTorrents: [] } });
-		expect(screen.queryByRole('heading', { name: 'Active Downloads' })).not.toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Active Downloads' })).toBeInTheDocument();
+		expect(
+			screen.getByText(/No active downloads yet\. Queued torrents will appear here/)
+		).toBeInTheDocument();
 	});
 
 	it('Active Downloads renders max 5 rows and View all link', () => {
@@ -202,11 +222,13 @@ describe('/', () => {
 		expect(screen.getByText('Failed').parentElement).toHaveTextContent('1');
 	});
 
-	it('Archive Commit grid renders top 6 completed, hidden when none', () => {
-		const { unmount } = render(Page, { data: baseData });
-		expect(screen.queryByText('Recently Completed')).not.toBeInTheDocument();
-		unmount();
+	it('renders explicit Recently Completed empty state when there is no archive data', () => {
+		render(Page, { data: baseData });
+		expect(screen.getByText('Recently Completed')).toBeInTheDocument();
+		expect(screen.getByText(/Nothing has finished downloading yet\./)).toBeInTheDocument();
+	});
 
+	it('Archive Commit grid renders top 6 completed items', () => {
 		const completed = Array.from({ length: 8 }, (_, i) =>
 			mockCandidate({
 				identityKey: `done${i}`,

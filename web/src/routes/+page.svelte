@@ -133,6 +133,7 @@
 		data.onboarding?.state === 'partial_setup' ||
 			(data.onboarding?.state === 'initial_empty' && onboardingDismissed)
 	);
+	const showOnboardingLink = $derived(data.onboarding?.state !== 'writes_disabled');
 </script>
 
 <h1 class="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -145,16 +146,21 @@
 		<AlertDescription class="flex flex-wrap items-center gap-3">
 			<span>
 				{#if data.onboarding.state === 'writes_disabled'}
-					Enable config writes before using onboarding.
+					Config writes are disabled, so guided setup is unavailable until write access is enabled.
 				{:else if showResumeCopy}
-					Continue the guided setup flow from where you left off.
+					Continue the guided setup flow from where you left off, or keep configuring manually.
 				{:else}
-					Start with your first feed, then continue into guided setup.
+					Start onboarding to save your first feed and finish the rest of setup without editing
+					JSON.
 				{/if}
 			</span>
-			<a href="/onboarding" class="text-primary text-sm font-medium hover:underline">
-				{showResumeCopy ? 'Resume onboarding' : 'Start onboarding'}
-			</a>
+			{#if showOnboardingLink}
+				<a href="/onboarding" class="text-primary text-sm font-medium hover:underline">
+					{showResumeCopy ? 'Resume onboarding' : 'Start onboarding'}
+				</a>
+			{:else}
+				<a href="/config" class="text-primary text-sm font-medium hover:underline"> Open config </a>
+			{/if}
 			{#if data.onboarding.state === 'initial_empty' && !onboardingDismissed}
 				<button
 					type="button"
@@ -268,22 +274,26 @@
 		</div>
 
 		<!-- Active Downloads -->
-		{#if activeDownloads.length > 0}
-			<Card>
-				<CardHeader class="pb-3">
-					<div class="flex items-center justify-between">
-						<h2 class="text-lg font-semibold tracking-tight">Active Downloads</h2>
-						<a href="/candidates" class="text-primary text-sm hover:underline">View all</a>
-					</div>
-				</CardHeader>
-				<CardContent>
+		<Card>
+			<CardHeader class="pb-3">
+				<div class="flex items-center justify-between">
+					<h2 class="text-lg font-semibold tracking-tight">Active Downloads</h2>
+					<a href="/candidates" class="text-primary text-sm hover:underline">View all</a>
+				</div>
+			</CardHeader>
+			<CardContent>
+				{#if activeDownloads.length === 0}
+					<p class="text-muted-foreground text-sm">
+						No active downloads yet. Queued torrents will appear here while Transmission is pulling
+						them down.
+					</p>
+				{:else}
 					<ul class="space-y-4">
 						{#each activeDownloads as { torrent, candidate }}
 							{@const title = candidate?.normalizedTitle ?? torrent.name}
 							{@const posterUrl =
 								candidate?.tmdb && 'posterUrl' in candidate.tmdb ? candidate.tmdb.posterUrl : null}
 							<li class="flex items-center gap-3">
-								<!-- Poster / initial box -->
 								{#if posterUrl}
 									<img src={posterUrl} alt={title} class="h-12 w-8 shrink-0 rounded object-cover" />
 								{:else}
@@ -293,7 +303,6 @@
 										{initialBox(title)}
 									</div>
 								{/if}
-								<!-- Info -->
 								<div class="min-w-0 flex-1">
 									<p class="truncate text-sm font-medium">{title}</p>
 									<div class="mt-1 flex items-center gap-3 text-xs">
@@ -308,7 +317,6 @@
 										>
 									</div>
 								</div>
-								<!-- Speed + ETA -->
 								<div class="text-muted-foreground shrink-0 text-right text-xs">
 									<p>{formatSpeed(torrent.rateDownload)}</p>
 									<p>{formatEta(torrent.eta)}</p>
@@ -316,9 +324,9 @@
 							</li>
 						{/each}
 					</ul>
-				</CardContent>
-			</Card>
-		{/if}
+				{/if}
+			</CardContent>
+		</Card>
 
 		<!-- Event Log -->
 		<Card>
@@ -327,7 +335,10 @@
 			</CardHeader>
 			<CardContent>
 				{#if recentCandidates.length === 0}
-					<p class="text-muted-foreground text-sm">No candidates yet.</p>
+					<p class="text-muted-foreground text-sm">
+						No activity yet. Recent queue, skip, and completion events will show up here after the
+						first successful cycles run.
+					</p>
 				{:else}
 					<div class="border-border rounded-md border">
 						<Table>
@@ -366,9 +377,14 @@
 		</Card>
 
 		<!-- Archive Commit grid -->
-		{#if archiveItems.length > 0}
-			<section data-testid="archive-grid">
-				<h2 class="mb-4 text-lg font-semibold tracking-tight">Recently Completed</h2>
+		<section data-testid="archive-grid">
+			<h2 class="mb-4 text-lg font-semibold tracking-tight">Recently Completed</h2>
+			{#if archiveItems.length === 0}
+				<p class="text-muted-foreground text-sm">
+					Nothing has finished downloading yet. Completed items will collect here once Pirate Claw
+					starts finding matches.
+				</p>
+			{:else}
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
 					{#each archiveItems as item}
 						{@const posterUrl = item.tmdb && 'posterUrl' in item.tmdb ? item.tmdb.posterUrl : null}
@@ -395,8 +411,8 @@
 						</div>
 					{/each}
 				</div>
-			</section>
-		{/if}
+			{/if}
+		</section>
 	</section>
 {:else}
 	<!-- Defensive: load currently returns either health or error, not both null -->

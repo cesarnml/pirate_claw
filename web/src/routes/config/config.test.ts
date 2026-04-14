@@ -167,6 +167,33 @@ describe('/config', () => {
 		);
 	});
 
+	it('renders start onboarding banner for initial-empty setup', () => {
+		render(Page, {
+			data: {
+				config: { ...mockConfig, feeds: [], tv: [], movies: { ...mockConfig.movies, years: [] } },
+				error: null,
+				etag: '"rev-1"',
+				canWrite: true,
+				transmissionSession: null,
+				onboarding: {
+					state: 'initial_empty',
+					hasFeeds: false,
+					hasTvTargets: false,
+					hasMovieTargets: false,
+					minimumComplete: false
+				}
+			},
+			form: undefined
+		});
+		expect(screen.getByRole('link', { name: 'Start onboarding' })).toHaveAttribute(
+			'href',
+			'/onboarding'
+		);
+		expect(
+			screen.getByText(/If you want the guided setup path, start onboarding here/)
+		).toBeInTheDocument();
+	});
+
 	it('renders all accordion items open on load', () => {
 		render(Page, {
 			data: {

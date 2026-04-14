@@ -158,11 +158,13 @@
 		<AlertDescription class="flex flex-wrap items-center gap-3">
 			<span>
 				{#if data.onboarding.state === 'writes_disabled'}
-					Enable config writes before using onboarding.
+					Config writes are disabled, so guided onboarding is unavailable until write access is
+					enabled.
 				{:else if data.onboarding.state === 'partial_setup'}
-					Your setup is still incomplete. Resume the guided flow or keep configuring manually here.
+					Your setup is still incomplete. Resume onboarding or keep editing the config directly
+					here.
 				{:else}
-					No setup has been completed yet. Start onboarding for the guided path.
+					If you want the guided setup path, start onboarding here instead of editing JSON by hand.
 				{/if}
 			</span>
 			{#if data.onboarding.state !== 'writes_disabled'}
