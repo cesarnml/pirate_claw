@@ -34,3 +34,27 @@ Use `grill-me` to force clarity on:
 - the smallest acceptable slice
 - key tradeoffs and decision points
 - what should stay deferred
+
+## Phase Closeout Decision
+
+Before finalizing a phase plan, decide retrospective status explicitly.
+
+Record:
+
+- `Retrospective: required`
+- `Retrospective: skip`
+- `Why:` one sentence
+- `Trigger:` `product-impact`, `architecture/process impact`, `durable-learning risk`, or `none`
+
+Default:
+
+- engineering epics: `required`
+- product phases: `skip` unless the phase materially changes operator workflow, introduces a durable product/technical boundary, generates likely follow-up learning, or meaningfully changes later phase assumptions
+
+## Implementation Plan Contract
+
+Every new phase plan should include `## Phase Closeout`:
+
+- whether a retrospective is `required` or `skip`
+- where the artifact goes if required (`notes/public/<phase>-retrospective.md`)
+- whether the final docs/phase-exit ticket must include retrospective writing in scope

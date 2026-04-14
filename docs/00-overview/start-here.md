@@ -126,6 +126,7 @@ When shaping a new phase or revising an existing one:
 - keep the phase outcome-focused
 - break work into small end-to-end tickets
 - keep explicit deferrals in the phase plan
+- decide retrospective status during planning (`required` or `skip`) and record it in the implementation plan before ticket generation
 - prefer a thin real slice over broad setup work
 - use `grill-me` to pressure-test the plan before it is accepted
 - treat developer approval of the resulting ticket decomposition as required before implementation starts

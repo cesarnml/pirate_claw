@@ -22,6 +22,21 @@ Works in Plan Mode and Ask Mode. Prefer whichever the developer initiates from; 
 - If the codebase can answer a question, inspect it instead of asking.
 - Walk the decision tree: scope → dependencies → sequence → tradeoffs → edge cases → success criteria.
 
+## Required Phase-Closeout Decision
+
+For **product ideation → phases**, decide retrospective status before the plan is final:
+
+- `Retrospective: required | skip`
+- `Why:`
+- `Trigger:` product-impact | architecture/process impact | durable-learning risk | none
+
+Default:
+
+- **epics:** `required`
+- **phases:** `skip` unless the phase changes operator workflow, introduces a durable boundary, creates likely follow-up learning, or changes later phase assumptions
+
+Record it in the implementation plan. Add retrospective work to the final docs/exit ticket only when the plan says `required`.
+
 ## Hard Stop After Ticket Decomposition
 
 When used for use case 2, the output is the ticket breakdown — not the start of implementation.
