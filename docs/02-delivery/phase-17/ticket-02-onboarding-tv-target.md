@@ -53,3 +53,5 @@ An operator on the TV onboarding path can save TV defaults and at least one show
 TV target onboarding is separated because its preservation rule is easy to get wrong: the API accepts a full `tv.shows` array, so the onboarding implementation must carry forward the existing list explicitly.
 
 The onboarding route owns its save action instead of delegating through `/config` so the flow stays route-local and can sequence `PUT /api/config/tv/defaults` followed by `PUT /api/config` with the returned ETag. That keeps the default-save and show-append behavior incremental without clobbering existing TV targets.
+
+The UI only presents the TV-specific target step when the loaded config already includes a TV feed. Movie-only partial setups stay on a neutral handoff message so this ticket does not pretend to support the movie-target path before `P17.03`.

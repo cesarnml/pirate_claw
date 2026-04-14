@@ -12,6 +12,7 @@
 	let feedMediaType = $state<'tv' | 'movie'>('tv');
 	let tvResolutions = $state<string[]>([]);
 	let tvCodecs = $state<string[]>([]);
+	const hasTvFeed = $derived((data.config?.feeds ?? []).some((feed) => feed.mediaType === 'tv'));
 
 	$effect(() => {
 		feedMediaType = selectedPath === 'movie' ? 'movie' : 'tv';
@@ -175,7 +176,7 @@
 					</div>
 				</form>
 			</div>
-		{:else if !(data.onboarding?.hasTvTargets ?? false) && !(data.onboarding?.hasMovieTargets ?? false)}
+		{:else if !(data.onboarding?.hasTvTargets ?? false) && !(data.onboarding?.hasMovieTargets ?? false) && hasTvFeed}
 			<Alert>
 				<AlertTitle>Step 3 — Add a TV target</AlertTitle>
 				<AlertDescription>
@@ -220,6 +221,8 @@
 								)
 									? 'bg-primary text-primary-foreground border-primary'
 									: 'border-border bg-card hover:bg-muted/50'}"
+								aria-label={`Toggle ${resolution}`}
+								aria-pressed={tvResolutions.includes(resolution)}
 								onclick={() => toggleResolution(resolution)}
 							>
 								{resolution}
@@ -239,6 +242,8 @@
 								)
 									? 'bg-primary text-primary-foreground border-primary'
 									: 'border-border bg-card hover:bg-muted/50'}"
+								aria-label={`Toggle ${codec}`}
+								aria-pressed={tvCodecs.includes(codec)}
 								onclick={() => toggleCodec(codec)}
 							>
 								{codec}
@@ -266,13 +271,31 @@
 					>
 				</div>
 			</form>
-		{:else}
+		{:else if !(data.onboarding?.hasTvTargets ?? false) && !(data.onboarding?.hasMovieTargets ?? false)}
+			<Alert>
+				<AlertTitle>Target setup depends on your feed path</AlertTitle>
+				<AlertDescription>
+					Your first feed is saved. Continue in the
+					<a href="/config" class="text-primary font-medium hover:underline">Config page</a>
+					to finish target setup for this feed type.
+				</AlertDescription>
+			</Alert>
+		{:else if data.onboarding?.hasTvTargets}
 			<Alert>
 				<AlertTitle>TV target already saved</AlertTitle>
 				<AlertDescription>
 					Your feed and at least one target are already in place. Continue later from this route or
 					work directly in the
 					<a href="/config" class="text-primary font-medium hover:underline">Config page</a>.
+				</AlertDescription>
+			</Alert>
+		{:else}
+			<Alert>
+				<AlertTitle>Movie target already saved</AlertTitle>
+				<AlertDescription>
+					Your feed and at least one target are already in place. Continue in the
+					<a href="/config" class="text-primary font-medium hover:underline">Config page</a>
+					for any additional target setup.
 				</AlertDescription>
 			</Alert>
 		{/if}

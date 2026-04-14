@@ -152,6 +152,7 @@ export const actions: Actions = {
 			: [...existingShows, showName];
 		const resolutions = formData.getAll('tvResolution').map(String);
 		const codecs = formData.getAll('tvCodec').map(String);
+		let tvTargetEtag = ifMatch;
 
 		try {
 			const defaultsResponse = await apiRequest('/api/config/tv/defaults', {
@@ -178,13 +179,13 @@ export const actions: Actions = {
 				});
 			}
 
-			const defaultsEtag = defaultsResponse.headers.get('etag') ?? ifMatch;
+			tvTargetEtag = defaultsResponse.headers.get('etag') ?? ifMatch;
 			const showsResponse = await apiRequest('/api/config', {
 				method: 'PUT',
 				headers: {
 					'content-type': 'application/json',
 					authorization: `Bearer ${writeToken}`,
-					'if-match': defaultsEtag
+					'if-match': tvTargetEtag
 				},
 				body: JSON.stringify({ runtime: {}, tv: { shows: nextShows } })
 			});
@@ -199,7 +200,7 @@ export const actions: Actions = {
 				}
 				return fail(showsResponse.status, {
 					tvTargetMessage,
-					tvTargetEtag: showsResponse.headers.get('etag')
+					tvTargetEtag: showsResponse.headers.get('etag') ?? tvTargetEtag
 				});
 			}
 
@@ -210,7 +211,10 @@ export const actions: Actions = {
 			};
 		} catch (error) {
 			console.error('[onboarding] saveTvTarget failed:', error);
-			return fail(500, { tvTargetMessage: 'Could not save TV target.' });
+			return fail(500, {
+				tvTargetMessage: 'Could not save TV target.',
+				tvTargetEtag
+			});
 		}
 	}
 };

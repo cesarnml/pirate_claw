@@ -120,10 +120,12 @@ describe('/onboarding', () => {
 			form: undefined
 		});
 
-		const resolutionButton = screen.getByRole('button', { name: '1080p' });
-		const codecButton = screen.getByRole('button', { name: 'x265' });
+		const resolutionButton = screen.getByRole('button', { name: 'Toggle 1080p' });
+		const codecButton = screen.getByRole('button', { name: 'Toggle x265' });
 		expect(resolutionButton.className).toContain('bg-primary');
 		expect(codecButton.className).toContain('bg-primary');
+		expect(resolutionButton).toHaveAttribute('aria-pressed', 'true');
+		expect(codecButton).toHaveAttribute('aria-pressed', 'true');
 	});
 
 	it('toggles tv defaults chips in the tv target step', async () => {
@@ -144,8 +146,59 @@ describe('/onboarding', () => {
 			form: undefined
 		});
 
-		const resolutionButton = screen.getByRole('button', { name: '1080p' });
+		const resolutionButton = screen.getByRole('button', { name: 'Toggle 1080p' });
 		await fireEvent.click(resolutionButton);
 		expect(resolutionButton.className).toContain('bg-primary');
+		expect(resolutionButton).toHaveAttribute('aria-pressed', 'true');
+	});
+
+	it('avoids the tv-specific step for movie-only feeds', () => {
+		render(Page, {
+			data: {
+				config: {
+					...feedOnlyConfigFixture,
+					feeds: feedOnlyConfigFixture.feeds.map((feed) => ({
+						...feed,
+						mediaType: 'movie' as const
+					}))
+				},
+				etag: '"rev-2"',
+				canWrite: true,
+				onboarding: {
+					state: 'partial_setup',
+					hasFeeds: true,
+					hasTvTargets: false,
+					hasMovieTargets: false,
+					minimumComplete: false
+				},
+				error: null
+			},
+			form: undefined
+		});
+
+		expect(screen.queryByText('Step 3 — Add a TV target')).not.toBeInTheDocument();
+		expect(screen.getByText('Target setup depends on your feed path')).toBeInTheDocument();
+	});
+
+	it('uses movie-specific copy when a movie target already exists', () => {
+		render(Page, {
+			data: {
+				config: feedOnlyConfigFixture,
+				etag: '"rev-2"',
+				canWrite: true,
+				onboarding: {
+					state: 'partial_setup',
+					hasFeeds: true,
+					hasTvTargets: false,
+					hasMovieTargets: true,
+					minimumComplete: true
+				},
+				error: null
+			},
+			form: undefined
+		});
+
+		expect(screen.getByText('Movie target already saved')).toBeInTheDocument();
+		expect(screen.queryByText('TV target already saved')).not.toBeInTheDocument();
 	});
 });

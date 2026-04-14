@@ -262,6 +262,34 @@ describe('onboarding page server', () => {
 			);
 		});
 
+		it('returns the post-defaults etag when the show save fails', async () => {
+			vi.doMock('$env/dynamic/private', () => ({
+				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
+			}));
+			const { actions } = await import('./+page.server');
+			apiRequestMock
+				.mockResolvedValueOnce(new Response(null, { status: 200, headers: { etag: '"rev-2"' } }))
+				.mockResolvedValueOnce(
+					new Response(JSON.stringify({ error: 'stale revision' }), { status: 409 })
+				);
+
+			const body = new URLSearchParams();
+			body.set('ifMatch', '"rev-1"');
+			body.set('showName', 'Show Beta');
+			body.set('existingShowsJson', JSON.stringify(['Show Alpha']));
+
+			const result = await actions.saveTvTarget({
+				request: new Request('http://localhost/onboarding', {
+					method: 'POST',
+					headers: { 'content-type': 'application/x-www-form-urlencoded' },
+					body
+				})
+			} as never);
+
+			expect((result as { status?: number }).status).toBe(409);
+			expect((result as { data?: { tvTargetEtag?: string } }).data?.tvTargetEtag).toBe('"rev-2"');
+		});
+
 		it('surfaces tv defaults save errors', async () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
