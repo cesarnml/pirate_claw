@@ -79,7 +79,7 @@ describe('/onboarding', () => {
 		});
 
 		expect(screen.getByText('Resume onboarding')).toBeInTheDocument();
-		expect(screen.queryByText('Onboarding already complete')).not.toBeInTheDocument();
+		expect(screen.queryByText('Done')).not.toBeInTheDocument();
 	});
 
 	it('renders the TV target step for feed-only config', () => {
@@ -201,8 +201,8 @@ describe('/onboarding', () => {
 			form: undefined
 		});
 
-		expect(screen.getByText('Movie target already saved')).toBeInTheDocument();
-		expect(screen.queryByText('TV target already saved')).not.toBeInTheDocument();
+		expect(screen.getByText('Done')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Go to Dashboard' })).toHaveAttribute('href', '/');
 	});
 
 	it('shows the movie step after tv save in the both flow', () => {
@@ -232,7 +232,7 @@ describe('/onboarding', () => {
 		});
 
 		expect(screen.getByText('Step 4 — Add a movie target')).toBeInTheDocument();
-		expect(screen.queryByText('Onboarding already complete')).not.toBeInTheDocument();
+		expect(screen.queryByText('Done')).not.toBeInTheDocument();
 	});
 
 	it('preserves existing movie policy copy when present', () => {
@@ -262,5 +262,59 @@ describe('/onboarding', () => {
 		});
 
 		expect(screen.getByText(/Existing movie policy is already configured/)).toBeInTheDocument();
+	});
+
+	it('shows the done summary after feed and tv target are present', () => {
+		render(Page, {
+			data: {
+				config: {
+					...configWithMoviesFixture,
+					feeds: [{ name: 'TV Feed', url: 'https://example.com/tv.rss', mediaType: 'tv' }],
+					movies: { years: [], resolutions: [], codecs: [], codecPolicy: 'prefer' }
+				},
+				etag: '"rev-3"',
+				canWrite: true,
+				onboarding: {
+					state: 'ready',
+					hasFeeds: true,
+					hasTvTargets: true,
+					hasMovieTargets: false,
+					minimumComplete: true
+				},
+				error: null
+			},
+			form: undefined
+		});
+
+		expect(screen.getByText('Done')).toBeInTheDocument();
+		expect(screen.getByText('Setup summary')).toBeInTheDocument();
+		expect(screen.getByText('Added')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Go to Dashboard' })).toHaveAttribute('href', '/');
+	});
+
+	it('shows the done summary after feed and movie target are present', () => {
+		render(Page, {
+			data: {
+				config: {
+					...configWithMoviesFixture,
+					tv: []
+				},
+				etag: '"rev-3"',
+				canWrite: true,
+				onboarding: {
+					state: 'ready',
+					hasFeeds: true,
+					hasTvTargets: false,
+					hasMovieTargets: true,
+					minimumComplete: true
+				},
+				error: null
+			},
+			form: undefined
+		});
+
+		expect(screen.getByText('Done')).toBeInTheDocument();
+		expect(screen.getByText('Movie target')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Go to Dashboard' })).toHaveAttribute('href', '/');
 	});
 });
