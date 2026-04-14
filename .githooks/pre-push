@@ -6,12 +6,15 @@ if command -v bun >/dev/null 2>&1; then
   BUN_BIN="$(command -v bun)"
 else
   BUN_BIN=""
-  for candidate in /opt/homebrew/bin/bun /usr/local/bin/bun "$HOME/.bun/bin/bun"; do
+  for candidate in /opt/homebrew/bin/bun /usr/local/bin/bun; do
     if [ -x "$candidate" ]; then
       BUN_BIN="$candidate"
       break
     fi
   done
+  if [ -z "$BUN_BIN" ] && [ -n "${HOME:-}" ] && [ -x "$HOME/.bun/bin/bun" ]; then
+    BUN_BIN="$HOME/.bun/bin/bun"
+  fi
 fi
 
 if [ -z "$BUN_BIN" ]; then

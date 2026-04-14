@@ -584,7 +584,11 @@ function assertPatchedStageHasCommitEvidence(input: {
   patchCommits?: InternalReviewPatchCommit[];
   stageLabel: string;
 }): void {
-  if (input.outcome === 'patched' && (input.patchCommits?.length ?? 0) === 0) {
+  if (
+    input.outcome === 'patched' &&
+    input.patchCommits !== undefined &&
+    input.patchCommits.length === 0
+  ) {
     throw new Error(
       `${input.stageLabel} PR metadata requires recorded patch commits for patched outcomes.`,
     );
@@ -1073,10 +1077,9 @@ export function buildPullRequestTitle(
   commitSubject?: string,
 ): string {
   const fallbackSubject = `feat: ${ticket.title.toLowerCase()}`;
-  const normalizedSubject = (commitSubject?.trim() || '').replace(
-    /\s+\[[A-Z0-9.]+\]$/,
-    '',
-  );
+  const normalizedSubject = (commitSubject?.trim() || '')
+    .replace(/\s+\[(?:self-audit|codexPreflight)\]$/i, '')
+    .replace(/\s+\[[A-Z0-9.]+\]$/, '');
   const baseSubject = isConventionalCommitSubject(normalizedSubject)
     ? normalizedSubject
     : fallbackSubject;

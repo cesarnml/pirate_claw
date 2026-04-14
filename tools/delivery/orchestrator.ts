@@ -573,21 +573,8 @@ export async function runDeliveryOrchestrator(
             'Note: `internal-review` is deprecated; use `post-verify-self-audit`.',
           );
         }
-        const positional0 = parsed.positionals[0];
-        const positional1 = parsed.positionals[1];
-        const auditOutcome: ReviewOutcome | undefined =
-          positional0 === 'clean' || positional0 === 'patched'
-            ? positional0
-            : positional1 === 'clean' || positional1 === 'patched'
-              ? positional1
-              : undefined;
-        const auditTicketId =
-          positional0 !== 'clean' && positional0 !== 'patched'
-            ? positional0
-            : undefined;
-        const auditPatchCommitArgs = auditTicketId
-          ? parsed.positionals.slice(2)
-          : parsed.positionals.slice(1);
+        const { auditOutcome, auditTicketId, auditPatchCommitArgs } =
+          parseSelfAuditArgs(parsed.positionals);
         if (auditOutcome !== 'patched' && auditPatchCommitArgs.length > 0) {
           throw new Error(
             'Self-audit patch commits are only allowed when outcome is `patched`.',
@@ -1203,6 +1190,29 @@ function normalizeUniquePatchCommitShas(rawShas: string[]): string[] {
   return [...new Set(rawShas.map((sha) => sha.trim()).filter(Boolean))];
 }
 
+function parseSelfAuditArgs(positionals: string[]): {
+  auditOutcome?: ReviewOutcome;
+  auditPatchCommitArgs: string[];
+  auditTicketId?: string;
+} {
+  const positional0 = positionals[0];
+  const positional1 = positionals[1];
+  const auditOutcome: ReviewOutcome | undefined =
+    positional0 === 'clean' || positional0 === 'patched'
+      ? positional0
+      : positional1 === 'clean' || positional1 === 'patched'
+        ? positional1
+        : undefined;
+  const auditTicketId =
+    positional0 !== 'clean' && positional0 !== 'patched'
+      ? positional0
+      : undefined;
+  const auditPatchCommitArgs = auditTicketId
+    ? positionals.slice(2)
+    : positionals.slice(1);
+  return { auditOutcome, auditTicketId, auditPatchCommitArgs };
+}
+
 function resolveInternalReviewPatchCommits(
   cwd: string,
   rawShas: string[],
@@ -1213,7 +1223,7 @@ function resolveInternalReviewPatchCommits(
     const subject = readCommitSubject(cwd, sha);
     if (!subject.endsWith(` ${suffix}`)) {
       throw new Error(
-        `${stageLabel} patch commit ${sha.slice(0, 12)} must end with ${suffix}.`,
+        `${stageLabel} patch commit ${sha.slice(0, 12)} must end with " ${suffix}" (note the space).`,
       );
     }
     return { sha, subject };

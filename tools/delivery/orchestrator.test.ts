@@ -553,6 +553,18 @@ describe('delivery orchestrator', () => {
       ),
     ).toBe('feat: add torrent lifecycle reconciliation [P3.02]');
     expect(
+      buildPullRequestTitle(
+        { id: 'P3.02', title: 'Reconcile Torrent Lifecycle From Transmission' },
+        'fix: tighten review provenance [self-audit]',
+      ),
+    ).toBe('fix: tighten review provenance [P3.02]');
+    expect(
+      buildPullRequestTitle(
+        { id: 'P3.02', title: 'Reconcile Torrent Lifecycle From Transmission' },
+        'fix: tighten review provenance [codexPreflight]',
+      ),
+    ).toBe('fix: tighten review provenance [P3.02]');
+    expect(
       buildPullRequestTitle({
         id: 'P3.02',
         title: 'Reconcile Torrent Lifecycle From Transmission',
@@ -1020,10 +1032,41 @@ describe('delivery orchestrator', () => {
           baseBranch: 'main',
           postVerifySelfAuditCompletedAt: '2026-04-14T08:33:00.000Z',
           selfAuditOutcome: 'patched',
+          selfAuditPatchCommits: [],
           status: 'post_verify_self_audit_complete',
         },
       ),
     ).toThrow(/Self-audit PR metadata requires recorded patch commits/);
+  });
+
+  it('tolerates legacy patched internal review states with no recorded patch commits', () => {
+    const body = buildPullRequestBody(
+      {
+        planKey: 'engineering-epic-08',
+        planPath: 'docs/02-delivery/engineering-epic-08/implementation-plan.md',
+        statePath: '.agents/delivery/engineering-epic-08/state.json',
+        reviewsDirPath: '.agents/delivery/engineering-epic-08/reviews',
+        handoffsDirPath: '.agents/delivery/engineering-epic-08/handoffs',
+        reviewPollIntervalMinutes: 6,
+        reviewPollMaxWaitMinutes: 12,
+        tickets: [],
+      },
+      {
+        id: 'EE8.04',
+        title: 'PR body internal review observability',
+        ticketFile:
+          'docs/02-delivery/engineering-epic-08/ticket-04-pr-body-internal-review-observability.md',
+        baseBranch: 'main',
+        postVerifySelfAuditCompletedAt: '2026-04-14T08:33:00.000Z',
+        selfAuditOutcome: 'patched',
+        status: 'post_verify_self_audit_complete',
+      },
+    );
+
+    expect(body).toContain(
+      '- self-audit: outcome `patched` completed at 2026-04-14 08:33 UTC',
+    );
+    expect(body).not.toContain('### Self-Audit Patch Commits');
   });
 
   it('does not include external summary-only noise in the ticket pr body', () => {
