@@ -509,18 +509,22 @@ function formatNoAiReviewFeedbackNote(maxWaitMinutes: number): string {
 }
 
 function mergeReviewOutcome(
-  previous: ReviewOutcome | undefined,
-  next: ReviewOutcome | undefined,
+  previous: ReviewResult | undefined,
+  next: ReviewResult | undefined,
 ): ReviewOutcome | undefined {
   if (previous === 'patched' || next === 'patched') {
     return 'patched';
   }
 
-  return previous ?? next;
+  if (previous === 'clean' || next === 'clean') {
+    return 'clean';
+  }
+
+  return undefined;
 }
 
 function accumulateReviewOutcome(
-  previous: ReviewOutcome | undefined,
+  previous: ReviewResult | undefined,
   next: ReviewResult,
 ): ReviewResult | undefined {
   if (next === 'clean' || next === 'patched') {
@@ -531,16 +535,10 @@ function accumulateReviewOutcome(
 }
 
 function accumulateTicketReviewOutcome(
-  previous: ReviewOutcome | undefined,
+  previous: ReviewResult | undefined,
   next: ReviewResult,
-): ReviewOutcome | undefined {
-  const accumulated = accumulateReviewOutcome(previous, next);
-
-  if (accumulated === 'clean' || accumulated === 'patched') {
-    return accumulated;
-  }
-
-  return previous;
+): ReviewResult | undefined {
+  return accumulateReviewOutcome(previous, next);
 }
 
 function mapStandaloneReviewOutcome(outcome: ReviewResult): ReviewResult {
@@ -560,7 +558,7 @@ function formatCumulativePatchedReviewNote(note: string | undefined): string {
 }
 
 function formatAccumulatedReviewNote(
-  previous: ReviewOutcome | undefined,
+  previous: ReviewResult | undefined,
   next: ReviewResult,
   note: string | undefined,
 ): string | undefined {
@@ -588,7 +586,7 @@ function defaultFinalReviewNote(
 }
 
 function formatNoFeedbackReviewNote(
-  previous: ReviewOutcome | undefined,
+  previous: ReviewResult | undefined,
   maxWaitMinutes: number,
 ): string {
   return (
@@ -855,7 +853,7 @@ async function processDetectedAiReview(options: {
   incompleteAgents?: string[];
   mapOutcome?: (outcome: ReviewResult) => ReviewResult;
   mode: 'standalone' | 'ticketed';
-  previousOutcome: ReviewOutcome | undefined;
+  previousOutcome: ReviewResult | undefined;
   resolveThreads: (
     worktreePath: string,
     comments: AiReviewComment[],
@@ -928,7 +926,7 @@ function processCleanAiReview(options: {
   effectiveMaxWaitMinutes: number;
   incompleteAgents?: string[];
   maxWaitMinutes: number;
-  previousOutcome: ReviewOutcome | undefined;
+  previousOutcome: ReviewResult | undefined;
 }): CleanReviewProcessingResult {
   const recordedAt = new Date().toISOString();
   return {
@@ -971,6 +969,7 @@ async function writeCleanTriageArtifact(
 }
 
 async function applyTicketReviewUpdate(
+  cwd: string,
   state: DeliveryState,
   ticketId: string,
   updateTicket: (ticket: TicketState) => TicketState,
@@ -1005,10 +1004,7 @@ async function applyTicketReviewUpdate(
   };
   const persistedTarget = nextState.tickets[updatedIndex]!;
   const triageArtifactPath = persistedTarget.reviewTriageArtifactPath
-    ? resolve(
-        persistedTarget.worktreePath,
-        persistedTarget.reviewTriageArtifactPath,
-      )
+    ? resolve(cwd, persistedTarget.reviewTriageArtifactPath)
     : undefined;
 
   try {
@@ -1213,6 +1209,7 @@ export async function runTicketReviewLifecycle(
       const nextStatus =
         processedReview.outcome === 'needs_patch' ? 'needs_patch' : 'reviewed';
       return applyTicketReviewUpdate(
+        cwd,
         state,
         target.id,
         (ticket) => ({
@@ -1258,13 +1255,14 @@ export async function runTicketReviewLifecycle(
         },
       );
       return applyTicketReviewUpdate(
+        cwd,
         state,
         target.id,
         (ticket) => ({
           ...ticket,
           prOpenedAt: ticket.prOpenedAt ?? pollWindowStartedAtIso,
           status: 'reviewed',
-          reviewFetchArtifactPath: undefined,
+          reviewFetchArtifactPath: ticket.reviewFetchArtifactPath,
           reviewTriageArtifactPath: dependencies.relativeToRepo(
             cwd,
             triageArtifactPath,
@@ -1349,6 +1347,7 @@ export async function runReconcileLateTicketReview(
         worktreePath: target.worktreePath,
       });
       return applyTicketReviewUpdate(
+        cwd,
         state,
         target.id,
         (ticket) => ({
@@ -1394,12 +1393,14 @@ export async function runReconcileLateTicketReview(
         },
       );
       return applyTicketReviewUpdate(
+        cwd,
         state,
         target.id,
         (ticket) => ({
           ...ticket,
           prOpenedAt: ticket.prOpenedAt ?? pollWindowStartedAtIso,
           status: 'done',
+          reviewFetchArtifactPath: ticket.reviewFetchArtifactPath,
           reviewTriageArtifactPath: dependencies.relativeToRepo(
             cwd,
             triageArtifactPath,
@@ -1520,7 +1521,13 @@ export async function runStandaloneAiReviewLifecycle(
           recordedAt: processedReview.recordedAt,
         },
       );
+      const existingFetchArtifactPath = buildReviewArtifactPaths(
+        resolve(cwd, '.agents/ai-review', `pr-${pullRequest.number}`, 'review'),
+      ).fetchArtifactPath;
       const standaloneResult: StandaloneAiReviewResult = {
+        fetchArtifactPath: existsSync(existingFetchArtifactPath)
+          ? dependencies.relativeToRepo(cwd, existingFetchArtifactPath)
+          : undefined,
         incompleteAgents: processedReview.incompleteAgents,
         note: processedReview.note,
         outcome: processedReview.outcome,
@@ -1792,6 +1799,7 @@ export async function recordTicketReview(
   }
 
   return applyTicketReviewUpdate(
+    cwd,
     state,
     ticketId,
     (ticket) => ({

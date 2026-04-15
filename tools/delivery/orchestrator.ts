@@ -207,7 +207,7 @@ export type TicketState = TicketDefinition & {
   reviewTriageArtifactPath?: string;
   reviewHeadSha?: string;
   reviewRecordedAt?: string;
-  reviewOutcome?: ReviewOutcome;
+  reviewOutcome?: ReviewResult;
   // Legacy compatibility fields: current write paths do not persist these.
   reviewArtifactJsonPath?: string;
   reviewArtifactPath?: string;
@@ -1676,14 +1676,12 @@ function loadTicketReviewSnapshot(ticket: TicketState): {
     fetchArtifactPath:
       (ticket.reviewFetchArtifactPath ?? ticket.reviewArtifactJsonPath)
         ? resolve(
-            ticket.worktreePath,
             ticket.reviewFetchArtifactPath ?? ticket.reviewArtifactJsonPath!,
           )
         : undefined,
     triageArtifactPath:
       (ticket.reviewTriageArtifactPath ?? ticket.reviewArtifactJsonPath)
         ? resolve(
-            ticket.worktreePath,
             ticket.reviewTriageArtifactPath ?? ticket.reviewArtifactJsonPath!,
           )
         : undefined,

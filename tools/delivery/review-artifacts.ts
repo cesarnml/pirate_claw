@@ -190,13 +190,18 @@ function parseThreadResolutionArray(
     const threadId = parseOptionalString(entry.threadId ?? entry.thread_id);
     const vendor = parseOptionalString(entry.vendor);
 
-    if (!status || !threadId || !vendor) {
+    if (
+      !status ||
+      !isAiReviewThreadResolutionStatus(status) ||
+      !threadId ||
+      !vendor
+    ) {
       return [];
     }
 
     return [
       {
-        status: status as AiReviewThreadResolution['status'],
+        status,
         threadId,
         url: parseOptionalString(entry.url),
         vendor,
@@ -206,6 +211,17 @@ function parseThreadResolutionArray(
   });
 
   return parsed.length > 0 ? parsed : undefined;
+}
+
+function isAiReviewThreadResolutionStatus(
+  value: string,
+): value is AiReviewThreadResolution['status'] {
+  return (
+    value === 'resolved' ||
+    value === 'already_resolved' ||
+    value === 'unresolvable' ||
+    value === 'failed'
+  );
 }
 
 function parseOptionalStringArray(value: unknown): string[] | undefined {
