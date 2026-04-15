@@ -78,13 +78,7 @@ function buildReviewRecordedEvent(
   state: DeliveryState,
   ticket: Pick<
     TicketState,
-    | 'id'
-    | 'title'
-    | 'branch'
-    | 'reviewOutcome'
-    | 'reviewNote'
-    | 'prUrl'
-    | 'status'
+    'id' | 'title' | 'branch' | 'reviewOutcome' | 'prUrl' | 'status'
   >,
 ): DeliveryNotificationEvent | undefined {
   const outcome: ReviewResult | undefined =
@@ -106,7 +100,6 @@ function buildReviewRecordedEvent(
     ticketTitle: ticket.title,
     branch: ticket.branch,
     outcome,
-    note: ticket.reviewNote,
     prUrl: ticket.prUrl,
   };
 }
