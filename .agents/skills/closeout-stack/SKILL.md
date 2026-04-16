@@ -16,9 +16,22 @@ bun run closeout-stack --plan <plan-path>
 
 Processes each ticket in stack order via `git merge --squash` (3-way, robust against parent patches). For each ticket: fetch + reset local `main` to `origin/main`, squash-merge the ticket branch, commit with PR title, push to `origin/main`, close PR, delete remote branch. Produces one squash commit per ticket on `main`.
 
-### State file (`state.json`)
+### Delivery artifact mirror (`state.json`, `reviews/`, `handoffs/`)
 
-Closeout reads `.agents/delivery/<plan-key>/state.json` from the repo you run the command in. The orchestrator only writes that file in the worktree where you ran `deliver`. If you delivered from a ticket worktree, **copy** that worktree's `state.json` to the same path in your `main` checkout before running `closeout-stack`, or the command may use stale PR numbers. See `docs/03-engineering/delivery-orchestrator.md` (State file and primary checkout).
+Closeout reads `.agents/delivery/<plan-key>/state.json` from the repo you run the command in. The orchestrator only writes delivery artifacts in the worktree where you ran `deliver`. If you delivered from a ticket worktree, **copy** that worktree's `state.json`, `reviews/`, and `handoffs/` to the same relative paths in your `main` checkout before running `closeout-stack`, or the command may use stale PR numbers and the primary checkout will lose the latest local review/handoff evidence. See `docs/03-engineering/delivery-orchestrator.md` (State file and primary checkout).
+
+Example:
+
+```bash
+mkdir -p .agents/delivery/<plan-key>
+cp /path/to/ticket-worktree/.agents/delivery/<plan-key>/state.json \
+   .agents/delivery/<plan-key>/state.json
+rm -rf .agents/delivery/<plan-key>/reviews .agents/delivery/<plan-key>/handoffs
+cp -R /path/to/ticket-worktree/.agents/delivery/<plan-key>/reviews \
+   .agents/delivery/<plan-key>/reviews
+cp -R /path/to/ticket-worktree/.agents/delivery/<plan-key>/handoffs \
+   .agents/delivery/<plan-key>/handoffs
+```
 
 After success, clean up:
 
@@ -43,7 +56,7 @@ If closeout fails mid-flight, do not retry. Instead:
    gh pr close <number> --comment "Squash-merged manually" --delete-branch
    ```
 4. Confirm `origin/main` has expected squash commits in ticket order.
-5. Sync `state.json` from the active delivery worktree to `main` if needed.
+5. Sync `state.json`, `reviews/`, and `handoffs/` from the active delivery worktree to `main` if needed.
 6. Write `notes/public/<plan>-retrospective.md` if not already done.
 
 ## Key Rules
