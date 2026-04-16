@@ -156,6 +156,69 @@ The daemon currently also supports inline Transmission credentials in
 - keep the write token and Transmission credentials in `.env`
 - keep `pirate-claw.config.json` for non-secret runtime and policy settings
 
+## Plex Media Server Integration (Phase 18)
+
+Plex enrichment is optional. Add a `plex` block to
+`/volume1/pirate-claw/config/pirate-claw.config.json` to enable it:
+
+```json
+{
+  "plex": {
+    "url": "http://192.168.1.10:32400",
+    "token": "YOUR_PLEX_TOKEN",
+    "refreshIntervalMinutes": 30
+  }
+}
+```
+
+- `url`: base URL of the local Plex Media Server — use the LAN IP, not
+  `localhost`, so the pirate-claw container can reach it
+- `token`: your Plex authentication token (see below for how to find it)
+- `refreshIntervalMinutes`: how often the background refresh fires; defaults to
+  `30`; set `0` to disable background refresh
+
+The token is redacted in `GET /api/config` responses. If you prefer to keep it
+out of the JSON file entirely, set `PIRATE_CLAW_PLEX_TOKEN` in
+`/volume1/pirate-claw/config/.env` instead and omit the `token` field.
+
+### How To Find Your Plex Token
+
+1. Sign in to Plex Web at `http://<nas-ip>:32400/web`
+2. Play any item, then open the developer console
+3. Look for any request to the Plex API — the token appears as the
+   `X-Plex-Token` query parameter
+4. Alternatively: Settings → Account → `<username>` XML link; the token is in
+   the `authToken` attribute
+
+### Verification
+
+After restarting the `pirate-claw` container with the `plex` block configured:
+
+```sh
+curl -s http://localhost:5555/api/movies | jq '.[0] | {plexStatus, watchCount, lastWatchedAt}'
+```
+
+Expected on first boot (before the first refresh sweep completes):
+
+```json
+{ "plexStatus": "unknown", "watchCount": null, "lastWatchedAt": null }
+```
+
+Expected after the first refresh sweep:
+
+```json
+{
+  "plexStatus": "in_library",
+  "watchCount": 3,
+  "lastWatchedAt": "2026-01-15T21:00:00.000Z"
+}
+```
+
+or `"missing"` for items not found in the Plex library.
+
+If Plex is unreachable, the daemon logs a warning and continues; existing cache
+entries are preserved and API responses return `"unknown"` for expired rows.
+
 ## Runtime Config Contract
 
 The current live config uses:

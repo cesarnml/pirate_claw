@@ -50,5 +50,10 @@
     "apiKey": "your-tmdb-api-key",
     "cacheTtlDays": 7,
     "negativeCacheTtlDays": 1
+  },
+  "plex": {
+    "url": "http://192.168.1.10:32400",
+    "token": "YOUR_PLEX_TOKEN",
+    "refreshIntervalMinutes": 30
   }
 }
