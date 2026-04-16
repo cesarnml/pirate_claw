@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { DaemonHealth, SessionInfo } from '$lib/types';
 import Layout from './+layout.svelte';
@@ -31,20 +31,24 @@ describe('+layout.svelte', () => {
 			}
 		});
 
-		expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+		const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+		const sidebar = nav.closest('aside');
+		expect(nav).toBeInTheDocument();
+		expect(sidebar).not.toBeNull();
 
 		const labels = ['Dashboard', 'TV Shows', 'Movies', 'Config'] as const;
 		const hrefs = ['/', '/shows', '/movies', '/config'] as const;
+		const sidebarQueries = within(sidebar as HTMLElement);
 
 		for (let i = 0; i < labels.length; i++) {
-			const links = screen.getAllByRole('link', { name: labels[i] });
-			expect(links[0]).toHaveAttribute('href', hrefs[i]);
+			const link = sidebarQueries.getByRole('link', { name: labels[i] });
+			expect(link).toHaveAttribute('href', hrefs[i]);
 		}
 
-		expect(screen.getAllByText('Daemon')[0]).toBeInTheDocument();
-		expect(screen.getAllByText('1h 1m 1s')[0]).toBeInTheDocument();
-		expect(screen.getAllByText('Transmission')[0]).toBeInTheDocument();
-		expect(screen.getAllByText('Connected')[0]).toBeInTheDocument();
+		expect(sidebarQueries.getByText('Daemon')).toBeInTheDocument();
+		expect(sidebarQueries.getByText('1h 1m 1s')).toBeInTheDocument();
+		expect(sidebarQueries.getByText('Transmission')).toBeInTheDocument();
+		expect(sidebarQueries.getByText('Connected')).toBeInTheDocument();
 	});
 
 	it('surfaces unavailable shell status when shared API data is missing', () => {
@@ -58,7 +62,12 @@ describe('+layout.svelte', () => {
 			}
 		});
 
-		expect(screen.getAllByText('Unavailable')[0]).toBeInTheDocument();
-		expect(screen.getAllByText('Transmission')[0]).toBeInTheDocument();
+		const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+		const sidebar = nav.closest('aside');
+		expect(sidebar).not.toBeNull();
+		const sidebarQueries = within(sidebar as HTMLElement);
+
+		expect(sidebarQueries.getAllByText('Unavailable')).toHaveLength(2);
+		expect(sidebarQueries.getByText('Transmission')).toBeInTheDocument();
 	});
 });
