@@ -119,6 +119,7 @@
 		background-image:
 			radial-gradient(circle at top, rgb(13 186 249 / 0.14), transparent 32%),
 			radial-gradient(circle at 20% 20%, rgb(20 184 166 / 0.12), transparent 24%);
+
 		color-scheme: dark;
 	}
 }
