@@ -107,14 +107,15 @@
 	function sumRunCounts(
 		runs: RunSummaryRecord[] | null,
 		key: 'failed' | 'skipped_duplicate' | 'skipped_no_match'
-	): number {
-		return (runs ?? []).reduce((total, run) => total + run.counts[key], 0);
+	): number | null {
+		if (runs === null) return null;
+		return runs.reduce((total, run) => total + run.counts[key], 0);
 	}
 
 	const candidates = $derived(data.candidates ?? []);
 	const torrents = $derived(data.transmissionTorrents ?? []);
-	const runSummaries = $derived(data.runSummaries ?? []);
-	const outcomes = $derived(data.outcomes ?? []);
+	const runSummaries = $derived(data.runSummaries);
+	const outcomes = $derived(data.outcomes);
 
 	const activeDownloads = $derived(
 		torrents
@@ -140,7 +141,10 @@
 	const totalTracked = $derived(candidates.length);
 	const criticalFailures = $derived(sumRunCounts(runSummaries, 'failed'));
 	const filteredSkipped = $derived(
-		sumRunCounts(runSummaries, 'skipped_duplicate') + sumRunCounts(runSummaries, 'skipped_no_match')
+		runSummaries === null
+			? null
+			: (sumRunCounts(runSummaries, 'skipped_duplicate') ?? 0) +
+					(sumRunCounts(runSummaries, 'skipped_no_match') ?? 0)
 	);
 
 	const oneWeekAgo = $derived(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
@@ -184,13 +188,19 @@
 		{
 			label: 'Critical failures',
 			value: criticalFailures,
-			detail: 'Recent failed daemon outcomes',
+			detail:
+				criticalFailures === null
+					? 'Run summary data unavailable'
+					: 'Recent failed daemon outcomes',
 			icon: FlameIcon
 		},
 		{
 			label: 'Filtered / skipped',
 			value: filteredSkipped,
-			detail: 'Recent duplicate and no-match outcomes',
+			detail:
+				filteredSkipped === null
+					? 'Run summary data unavailable'
+					: 'Recent duplicate and no-match outcomes',
 			icon: FilterIcon
 		}
 	]);
@@ -276,7 +286,7 @@
 							>
 								{card.label}
 							</p>
-							<p class="mt-3 text-4xl font-semibold tracking-[-0.04em]">{card.value}</p>
+							<p class="mt-3 text-4xl font-semibold tracking-[-0.04em]">{card.value ?? '—'}</p>
 							<p class="text-muted-foreground mt-2 text-xs">{card.detail}</p>
 						</div>
 						<div class="bg-primary/15 text-primary rounded-2xl p-3">
@@ -398,7 +408,15 @@
 					</h2>
 				</CardHeader>
 				<CardContent>
-					{#if outcomes.length === 0}
+					{#if outcomes === null}
+						<div class="border-border bg-background/55 rounded-3xl border border-dashed px-5 py-8">
+							<p class="text-sm font-medium">Recent outcome data is unavailable.</p>
+							<p class="text-muted-foreground mt-2 text-sm">
+								The dashboard could not load `/api/outcomes`, so unmatched feed events are not shown
+								right now.
+							</p>
+						</div>
+					{:else if outcomes.length === 0}
 						<div class="border-border bg-background/55 rounded-3xl border border-dashed px-5 py-8">
 							<p class="text-sm font-medium">No filtered or skipped feed events yet.</p>
 							<p class="text-muted-foreground mt-2 text-sm">

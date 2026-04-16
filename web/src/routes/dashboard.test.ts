@@ -159,6 +159,20 @@ describe('/', () => {
 		expect(screen.getAllByText('SKIPPED_NO_MATCH')).toHaveLength(2);
 	});
 
+	it('shows unavailable copy when outcome and run summary fetches fail', () => {
+		render(Page, {
+			data: {
+				...baseData,
+				runSummaries: null,
+				outcomes: null
+			}
+		});
+
+		expect(screen.getByText('Critical failures').parentElement).toHaveTextContent('—');
+		expect(screen.getByText('Filtered / skipped').parentElement).toHaveTextContent('—');
+		expect(screen.getByText('Recent outcome data is unavailable.')).toBeInTheDocument();
+	});
+
 	it('renders the archive strip with links for completed items', () => {
 		const completed = Array.from({ length: 8 }, (_, index) =>
 			mockCandidate({
