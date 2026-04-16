@@ -7,9 +7,14 @@ export type DaemonOptions = {
   apiPort?: number;
   /** When set (TMDB configured + interval > 0), daemon schedules background refreshes. */
   tmdbRefreshIntervalMs?: number;
+  /** When set (Plex configured + interval > 0), daemon schedules background refreshes. */
+  plexRefreshIntervalMs?: number;
 };
 
-export function daemonOptionsFromConfig(runtime: RuntimeConfig): DaemonOptions {
+export function daemonOptionsFromConfig(
+  runtime: RuntimeConfig,
+  plexRefreshIntervalMinutes?: number,
+): DaemonOptions {
   const tmdbMin = runtime.tmdbRefreshIntervalMinutes;
   return {
     runIntervalMs: runtime.runIntervalMinutes * 60 * 1000,
@@ -17,6 +22,10 @@ export function daemonOptionsFromConfig(runtime: RuntimeConfig): DaemonOptions {
     apiPort: runtime.apiPort,
     tmdbRefreshIntervalMs:
       tmdbMin != null && tmdbMin > 0 ? tmdbMin * 60 * 1000 : undefined,
+    plexRefreshIntervalMs:
+      plexRefreshIntervalMinutes != null && plexRefreshIntervalMinutes > 0
+        ? plexRefreshIntervalMinutes * 60 * 1000
+        : undefined,
   };
 }
 
@@ -25,6 +34,8 @@ export async function runDaemonLoop(input: {
   reconcileCycle: () => Promise<void>;
   /** Optional TMDB cache refresh; does not share the RSS `busy` lock. */
   tmdbRefreshCycle?: () => Promise<void>;
+  /** Optional Plex cache refresh; does not share the RSS `busy` lock. */
+  plexRefreshCycle?: () => Promise<void>;
   options: DaemonOptions;
   signal: AbortSignal;
   log?: (message: string) => void;
@@ -76,6 +87,8 @@ export async function runDaemonLoop(input: {
   let inFlight: Promise<void> | undefined;
   let tmdbInFlight: Promise<void> | undefined;
   let tmdbBusy = false;
+  let plexInFlight: Promise<void> | undefined;
+  let plexBusy = false;
 
   async function guardedCycle(
     type: string,
@@ -139,6 +152,38 @@ export async function runDaemonLoop(input: {
     }
   }
 
+  async function runPlexRefresh(): Promise<void> {
+    if (!input.plexRefreshCycle) {
+      return;
+    }
+    if (plexBusy) {
+      log('plex_refresh cycle skipped: already_running');
+      emitCycleResult({
+        type: 'plex_refresh',
+        status: 'skipped',
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        durationMs: 0,
+        skipReason: 'already_running',
+      });
+      return;
+    }
+    plexBusy = true;
+    const promise = executeCycle(
+      'plex_refresh',
+      input.plexRefreshCycle,
+      log,
+      emitCycleResult,
+    );
+    plexInFlight = promise;
+    try {
+      await promise;
+    } finally {
+      plexBusy = false;
+      plexInFlight = undefined;
+    }
+  }
+
   log('daemon started');
 
   await guardedCycle('run', runCycle);
@@ -171,6 +216,17 @@ export async function runDaemonLoop(input: {
     }, options.tmdbRefreshIntervalMs);
   }
 
+  let plexTimer: ReturnType<typeof setInterval> | undefined;
+  if (
+    options.plexRefreshIntervalMs != null &&
+    options.plexRefreshIntervalMs > 0 &&
+    input.plexRefreshCycle
+  ) {
+    plexTimer = setInterval(() => {
+      void runPlexRefresh();
+    }, options.plexRefreshIntervalMs);
+  }
+
   await new Promise<void>((resolve) => {
     if (signal.aborted) {
       resolve();
@@ -185,6 +241,9 @@ export async function runDaemonLoop(input: {
   if (tmdbTimer) {
     clearInterval(tmdbTimer);
   }
+  if (plexTimer) {
+    clearInterval(plexTimer);
+  }
 
   if (server) {
     server.stop();
@@ -197,6 +256,9 @@ export async function runDaemonLoop(input: {
 
   if (tmdbInFlight) {
     await tmdbInFlight;
+  }
+  if (plexInFlight) {
+    await plexInFlight;
   }
 
   log('daemon stopped');

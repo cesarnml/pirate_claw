@@ -1,3 +1,5 @@
+import type { PlexStatus } from './movie-api-types';
+
 /** TMDB metadata attached to a TV show breakdown (API + dashboard). */
 export type TmdbTvShowMeta = {
   tmdbId?: number;
@@ -37,5 +39,8 @@ export type ShowSeason = {
 export type ShowBreakdown = {
   normalizedTitle: string;
   seasons: ShowSeason[];
+  plexStatus: PlexStatus;
+  watchCount: number | null;
+  lastWatchedAt: string | null;
   tmdb?: TmdbTvShowMeta;
 };

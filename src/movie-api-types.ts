@@ -1,3 +1,5 @@
+export type PlexStatus = 'in_library' | 'missing' | 'unknown';
+
 /** TMDB fields exposed on movie API responses (dashboard + JSON). */
 export type TmdbMoviePublic = {
   tmdbId?: number;
@@ -20,5 +22,8 @@ export type MovieBreakdown = {
   queuedAt?: string;
   transmissionPercentDone?: number;
   transmissionTorrentHash?: string;
+  plexStatus: PlexStatus;
+  watchCount: number | null;
+  lastWatchedAt: string | null;
   tmdb?: TmdbMoviePublic;
 };

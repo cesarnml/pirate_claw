@@ -326,6 +326,44 @@ describe('daemon', () => {
     expect(options.apiPort).toBe(8080);
   });
 
+  it('passes plex refresh interval through daemonOptionsFromConfig', () => {
+    const options = daemonOptionsFromConfig(
+      {
+        runIntervalMinutes: 15,
+        reconcileIntervalMinutes: 2,
+        artifactDir: '.pirate-claw/runtime',
+        artifactRetentionDays: 7,
+      },
+      30,
+    );
+
+    expect(options.plexRefreshIntervalMs).toBe(30 * 60 * 1000);
+  });
+
+  it('schedules recurring plex refresh cycles', async () => {
+    const controller = new AbortController();
+    let plexRefreshCount = 0;
+
+    await runDaemonLoop({
+      runCycle: async () => {},
+      reconcileCycle: async () => {},
+      plexRefreshCycle: async () => {
+        plexRefreshCount += 1;
+        if (plexRefreshCount >= 2) {
+          controller.abort();
+        }
+      },
+      options: {
+        runIntervalMs: 600_000,
+        reconcileIntervalMs: 600_000,
+        plexRefreshIntervalMs: 10,
+      },
+      signal: controller.signal,
+    });
+
+    expect(plexRefreshCount).toBeGreaterThanOrEqual(2);
+  });
+
   it('wraps EADDRINUSE with an actionable error mentioning runtime.apiPort', async () => {
     const first = Bun.serve({
       port: 0,

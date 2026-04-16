@@ -17,6 +17,7 @@ import {
   retryFailedCandidates,
   runPipeline,
 } from './pipeline';
+import { runPlexBackgroundRefresh } from './plex/background-refresh';
 import {
   filterDueFeeds,
   loadPollState,
@@ -200,6 +201,9 @@ export async function runCli(argv: string[]): Promise<number> {
           config.runtime.tmdbRefreshIntervalMinutes!;
         const scheduleTmdbRefresh =
           (tmdbMovies || tmdbShows) && tmdbRefreshIntervalMinutes > 0;
+        const plexRefreshIntervalMinutes =
+          config.plex?.refreshIntervalMinutes ?? 0;
+        const schedulePlexRefresh = plexRefreshIntervalMinutes > 0;
 
         const configHolder = { current: config };
 
@@ -251,7 +255,17 @@ export async function runCli(argv: string[]): Promise<number> {
                 });
               }
             : undefined,
-          options: daemonOptionsFromConfig(config.runtime),
+          plexRefreshCycle: schedulePlexRefresh
+            ? async () => {
+                await runPlexBackgroundRefresh({
+                  log,
+                });
+              }
+            : undefined,
+          options: daemonOptionsFromConfig(
+            config.runtime,
+            config.plex?.refreshIntervalMinutes,
+          ),
           signal: controller.signal,
           log,
           onCycleResult: (result) => {

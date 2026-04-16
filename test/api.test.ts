@@ -2267,4 +2267,80 @@ describe('redactConfig', () => {
     expect(redacted.tmdb?.apiKey).toBe('[redacted]');
     expect(config.tmdb?.apiKey).toBe('secret-tmdb');
   });
+
+  it('redacts plex token when present', () => {
+    const config: AppConfig = {
+      ...stubConfig(),
+      plex: {
+        url: 'http://plex.local:32400',
+        token: 'secret-plex',
+        refreshIntervalMinutes: 30,
+      },
+    };
+    const redacted = redactConfig(config);
+
+    expect(redacted.plex?.token).toBe('[redacted]');
+    expect(config.plex?.token).toBe('secret-plex');
+  });
+});
+
+describe('build Plex defaults', () => {
+  it('sets unknown Plex fields on movie breakdowns', () => {
+    const movies = buildMovieBreakdowns([
+      {
+        identityKey: 'movie:example movie|2024',
+        mediaType: 'movie',
+        status: 'queued',
+        ruleName: 'Example Movie',
+        score: 100,
+        reasons: ['matched'],
+        rawTitle: 'Example Movie 2024 1080p x265',
+        normalizedTitle: 'Example Movie',
+        year: 2024,
+        feedName: 'Movie Feed',
+        guidOrLink: 'https://example.test/movie',
+        publishedAt: '2026-01-01T00:00:00Z',
+        downloadUrl: 'https://example.test/movie.torrent',
+        firstSeenRunId: 1,
+        lastSeenRunId: 1,
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    expect(movies[0]).toMatchObject({
+      plexStatus: 'unknown',
+      watchCount: null,
+      lastWatchedAt: null,
+    });
+  });
+
+  it('sets unknown Plex fields on show breakdowns', () => {
+    const shows = buildShowBreakdowns([
+      {
+        identityKey: 'tv:example show|1|1',
+        mediaType: 'tv',
+        status: 'queued',
+        ruleName: 'Example Show',
+        score: 100,
+        reasons: ['matched'],
+        rawTitle: 'Example.Show.S01E01.1080p.x265',
+        normalizedTitle: 'Example Show',
+        season: 1,
+        episode: 1,
+        feedName: 'TV Feed',
+        guidOrLink: 'https://example.test/show',
+        publishedAt: '2026-01-01T00:00:00Z',
+        downloadUrl: 'https://example.test/show.torrent',
+        firstSeenRunId: 1,
+        lastSeenRunId: 1,
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    expect(shows[0]).toMatchObject({
+      plexStatus: 'unknown',
+      watchCount: null,
+      lastWatchedAt: null,
+    });
+  });
 });

@@ -66,6 +66,14 @@ export type TmdbConfig = {
   negativeCacheTtlDays?: number;
 };
 
+/** Optional Plex enrichment (Phase 18). Token may be supplied via env instead. */
+export type PlexConfig = {
+  url: string;
+  token: string;
+  /** Zero disables the background pass for local development. */
+  refreshIntervalMinutes: number;
+};
+
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   runIntervalMinutes: 30,
   reconcileIntervalMinutes: 1,
@@ -83,12 +91,15 @@ export type AppConfig = {
   transmission: TransmissionConfig;
   runtime: RuntimeConfig;
   tmdb?: TmdbConfig;
+  plex?: PlexConfig;
 };
 
 const DEFAULT_CONFIG_PATH = 'pirate-claw.config.json';
 const TRANSMISSION_USERNAME_ENV = 'PIRATE_CLAW_TRANSMISSION_USERNAME';
 const TRANSMISSION_PASSWORD_ENV = 'PIRATE_CLAW_TRANSMISSION_PASSWORD';
 const API_WRITE_TOKEN_ENV = 'PIRATE_CLAW_API_WRITE_TOKEN';
+const PLEX_TOKEN_ENV = 'PIRATE_CLAW_PLEX_TOKEN';
+const DEFAULT_PLEX_REFRESH_INTERVAL_MINUTES = 30;
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -142,6 +153,7 @@ export function validateConfig(
     transmission: validateTransmission(transmission, path, env),
     runtime: validateRuntime(input.runtime, path, env),
     tmdb: validateOptionalTmdb(input.tmdb, path),
+    plex: validateOptionalPlex(input.plex, path, env),
   };
 }
 
@@ -675,6 +687,42 @@ function validateOptionalTmdbDayCount(
   return input;
 }
 
+function validateOptionalPlex(
+  input: unknown,
+  path: string,
+  env: Record<string, string | undefined>,
+): PlexConfig | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  const plex = expectRecord(input, `${path} plex`);
+  const inlineToken =
+    plex.token === undefined
+      ? undefined
+      : typeof plex.token === 'string'
+        ? plex.token
+        : (() => {
+            throw new ConfigError(
+              `Config file "${path} plex token" must be a string.`,
+            );
+          })();
+
+  return {
+    url: expectString(plex.url, `${path} plex url`),
+    token: resolveSecretFromInlineOrEnv(
+      inlineToken,
+      env[PLEX_TOKEN_ENV],
+      `${path} plex token`,
+    ),
+    refreshIntervalMinutes:
+      validateOptionalTmdbRefreshInterval(
+        plex.refreshIntervalMinutes,
+        `${path} plex refreshIntervalMinutes`,
+      ) ?? DEFAULT_PLEX_REFRESH_INTERVAL_MINUTES,
+  };
+}
+
 function validateRuntime(
   input: unknown,
   path: string,
@@ -741,6 +789,22 @@ function resolveApiWriteToken(
 
   // Empty string in config intentionally disables write auth.
   return inlineValue.length > 0 ? inlineValue : undefined;
+}
+
+function resolveSecretFromInlineOrEnv(
+  inlineValue: string | undefined,
+  envValue: string | undefined,
+  path: string,
+): string {
+  if (typeof inlineValue === 'string' && inlineValue.length > 0) {
+    return inlineValue;
+  }
+
+  if (typeof envValue === 'string' && envValue.length > 0) {
+    return envValue;
+  }
+
+  throw new ConfigError(`Config file "${path}" must be a non-empty string.`);
 }
 
 const MAX_INTERVAL_MINUTES = 44_640;

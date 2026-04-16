@@ -260,7 +260,7 @@ export async function enrichShowBreakdowns(
       );
 
       return {
-        normalizedTitle: show.normalizedTitle,
+        ...show,
         seasons,
         tmdb: showMeta,
       };

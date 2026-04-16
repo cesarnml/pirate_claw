@@ -61,6 +61,64 @@ erDiagram
     TEXT created_at
   }
 
+  TMDB_MOVIE_CACHE {
+    TEXT match_key PK
+    INTEGER tmdb_id
+    INTEGER is_negative
+    TEXT expires_at
+    TEXT title
+    TEXT overview
+    TEXT poster_path
+    TEXT backdrop_path
+    REAL vote_average
+    INTEGER vote_count
+    TEXT genre_ids_json
+    TEXT release_date
+  }
+
+  TMDB_TV_CACHE {
+    TEXT match_key PK
+    INTEGER tmdb_id
+    INTEGER is_negative
+    TEXT expires_at
+    TEXT name
+    TEXT overview
+    TEXT poster_path
+    TEXT backdrop_path
+    REAL vote_average
+    INTEGER vote_count
+    TEXT genre_ids_json
+    TEXT first_air_date
+    INTEGER number_of_seasons
+    TEXT seasons_json
+  }
+
+  TMDB_TV_SEASON_CACHE {
+    TEXT show_match_key PK
+    INTEGER season_number PK
+    TEXT expires_at
+    TEXT episodes_json
+  }
+
+  PLEX_MOVIE_CACHE {
+    TEXT title PK
+    INTEGER year PK
+    TEXT plex_rating_key
+    INTEGER in_library
+    INTEGER watch_count
+    TEXT last_watched_at
+    TEXT cached_at
+  }
+
+  PLEX_TV_CACHE {
+    TEXT normalized_title PK
+    TEXT plex_rating_key
+    INTEGER in_library
+    INTEGER watch_count
+    TEXT last_watched_at
+    TEXT cached_at
+  }
+
   RUNS ||--o{ FEED_ITEMS : records
   RUNS ||--o{ FEED_ITEM_OUTCOMES : records
   RUNS ||--o{ CANDIDATE_STATE : first_seen_in

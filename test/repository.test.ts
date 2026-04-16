@@ -260,6 +260,28 @@ describe('SQLite repository', () => {
     });
   });
 
+  it('creates Plex cache tables during schema initialization', async () => {
+    const path = await createDatabasePath();
+    const database = openDatabase(path);
+
+    openDatabases.push(database);
+    ensureSchema(database);
+
+    const movieTable = database
+      .query(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'plex_movie_cache'`,
+      )
+      .get() as { name: string } | null;
+    const tvTable = database
+      .query(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'plex_tv_cache'`,
+      )
+      .get() as { name: string } | null;
+
+    expect(movieTable?.name).toBe('plex_movie_cache');
+    expect(tvTable?.name).toBe('plex_tv_cache');
+  });
+
   it('persists reconciled lifecycle state and raw Transmission fields', async () => {
     const repository = createTestRepository(await createDatabasePath());
     const run = repository.startRun('2026-03-30T00:00:00.000Z');
