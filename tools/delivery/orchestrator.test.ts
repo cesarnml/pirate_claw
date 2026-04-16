@@ -4240,7 +4240,7 @@ describe('delivery orchestrator', () => {
       );
     });
 
-    it('emits cook continuation guidance with the next handoff path', () => {
+    it('emits cook continuation guidance with the next worktree and absolute handoff path', () => {
       initOrchestratorConfig({
         defaultBranch: 'main',
         planRoot: 'docs',
@@ -4271,8 +4271,12 @@ describe('delivery orchestrator', () => {
 
       expect(output).toContain('continuation_mode=cook');
       expect(output).toContain('COOK CONTINUATION started EE7.02.');
+      expect(output).toContain('next_worktree=/tmp/ee7_02');
       expect(output).toContain(
         'next_handoff=.agents/delivery/engineering-epic-07/handoffs/ee7-02-handoff.md',
+      );
+      expect(output).toContain(
+        'next_handoff_absolute=/tmp/ee7_02/.agents/delivery/engineering-epic-07/handoffs/ee7-02-handoff.md',
       );
     });
 

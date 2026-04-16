@@ -1776,14 +1776,24 @@ export function formatAdvanceBoundaryGuidance(
     const startedTicket = nextState.tickets.find(
       (ticket) => ticket.id === nextPending.id,
     );
+    const nextHandoffAbsolutePath =
+      startedTicket?.handoffPath && startedTicket.worktreePath
+        ? resolve(startedTicket.worktreePath, startedTicket.handoffPath)
+        : undefined;
 
     return [
       'continuation_mode=cook',
       `COOK CONTINUATION started ${nextPending.id}.`,
+      startedTicket?.worktreePath
+        ? `next_worktree=${startedTicket.worktreePath}`
+        : undefined,
       startedTicket?.handoffPath
         ? `next_handoff=${startedTicket.handoffPath}`
         : undefined,
-      'Read the generated handoff artifact and continue implementation in the started ticket worktree.',
+      nextHandoffAbsolutePath
+        ? `next_handoff_absolute=${nextHandoffAbsolutePath}`
+        : undefined,
+      'Read the generated handoff artifact from `next_handoff_absolute` and continue implementation in the started ticket worktree.',
     ]
       .filter((line): line is string => line !== undefined)
       .join('\n');
