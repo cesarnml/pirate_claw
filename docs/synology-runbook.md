@@ -277,6 +277,131 @@ Expected checks:
 - the daemon API returns `200 OK`
 - a config write no longer returns `500`
 
+## Deploying new daemon and web images (from a dev machine)
+
+Use this when you have a fresh checkout on your laptop and want the same
+`pirate-claw.config.json`, repo-root `.env`, and `web/.env` on the NAS.
+
+### 1. Copy source to the NAS (tar over SSH)
+
+Synology often rejects `rsync` over SSH (`Permission denied` after the server
+starts `rsync --server`) and may disable `scp` (`subsystem request failed`).
+**Tar over SSH is reliable.**
+
+On the dev machine, from the repo root:
+
+```sh
+DEST=cesarnml@100.108.117.42
+SSH_PORT=25
+BUILD_DIR=/volume1/pirate-claw/runtime/phase18-build
+
+ssh -p "$SSH_PORT" "$DEST" "rm -rf \"$BUILD_DIR\" && mkdir -p \"$BUILD_DIR\""
+
+tar czf - \
+  --exclude=node_modules \
+  --exclude=web/node_modules \
+  --exclude=.git \
+  --exclude='.pirate-claw' \
+  --exclude=dist \
+  . | ssh -p "$SSH_PORT" "$DEST" "cd \"$BUILD_DIR\" && tar xzf -"
+```
+
+### 2. Copy secrets and config (repo `.env`, `pirate-claw.config.json`, `web/.env`)
+
+Files under `/volume1/pirate-claw/config/` are often owned by `root`, so use
+`sudo tee` from stdin:
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" "sudo -n tee /volume1/pirate-claw/config/.env > /dev/null" < .env
+ssh -p "$SSH_PORT" "$DEST" "sudo -n tee /volume1/pirate-claw/config/pirate-claw.config.json > /dev/null" < pirate-claw.config.json
+ssh -p "$SSH_PORT" "$DEST" "sudo -n tee /volume1/pirate-claw/config/web.env > /dev/null" < web/.env
+```
+
+`web/.env` is stored as **`web.env`** on the NAS so the web container can use
+`--env-file` (Docker env-file format: `KEY=value` lines only).
+
+Ensure **`ORIGIN`** is set for SvelteKit `adapter-node` (add if missing):
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" \
+  'grep -q "^ORIGIN=" /volume1/pirate-claw/config/web.env || echo "ORIGIN=http://100.108.117.42:3001" | sudo -n tee -a /volume1/pirate-claw/config/web.env >/dev/null'
+```
+
+Optional daemon secrets (same `/config/.env` as today):
+
+- `PIRATE_CLAW_PLEX_TOKEN` — omit `plex.token` from JSON if you set this
+
+### 3. Build `pirate-claw:latest` on the NAS
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" \
+  "cd \"$BUILD_DIR\" && sudo -n /usr/local/bin/docker build -t pirate-claw:latest ."
+```
+
+### 4. Build `pirate-claw-web:latest` on the NAS (Bun workaround)
+
+On DSM, **`bun run build` inside the official multi-stage Dockerfile often
+exits with a generic Bun error** during `vite build`. A reliable workaround is
+to produce `web/build` and `web/node_modules` with **Node** in a one-off
+container, then use a tiny runtime-only Dockerfile.
+
+One-off web build:
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" \
+  "sudo -n /usr/local/bin/docker run --rm -v \"$BUILD_DIR/web:/app\" -w /app node:22-alpine sh -lc 'npm install --ignore-scripts && npx vite build'"
+```
+
+Runtime image (write once next to the build tree, then build):
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY web/build ./build
+COPY web/package.json ./
+COPY web/node_modules ./node_modules
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV HOST=0.0.0.0
+EXPOSE 3001
+CMD ["node", "build"]
+```
+
+Save as `$BUILD_DIR/Dockerfile.web-runtime` on the NAS, then:
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" \
+  "cd \"$BUILD_DIR\" && sudo -n /usr/local/bin/docker build -f Dockerfile.web-runtime -t pirate-claw-web:latest ."
+```
+
+### 5. Recreate containers so new image IDs are picked up
+
+`docker restart` keeps the old image layer; remove and recreate when the tag
+was rebuilt.
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" "sudo -n /usr/local/bin/docker stop pirate-claw pirate-claw-web"
+ssh -p "$SSH_PORT" "$DEST" "sudo -n /usr/local/bin/docker rm pirate-claw pirate-claw-web"
+
+ssh -p "$SSH_PORT" "$DEST" "sudo -n /usr/local/bin/docker run -d --name pirate-claw --restart always --network host \
+  -v /volume1/pirate-claw/config:/config \
+  -v /volume1/pirate-claw/data/pirate-claw.db:/app/pirate-claw.db \
+  -v /volume1/pirate-claw/data/runtime:/app/.pirate-claw/runtime \
+  -v /volume1/pirate-claw/data/poll-state.json:/app/poll-state.json \
+  pirate-claw:latest daemon --config /config/pirate-claw.config.json"
+
+ssh -p "$SSH_PORT" "$DEST" "sudo -n /usr/local/bin/docker run -d --name pirate-claw-web --restart always --network host \
+  --env-file /volume1/pirate-claw/config/web.env \
+  pirate-claw-web:latest"
+```
+
+Smoke test on the NAS:
+
+```sh
+ssh -p "$SSH_PORT" "$DEST" "curl -s -o /dev/null -w 'api:%{http_code}\n' http://127.0.0.1:5555/api/config"
+ssh -p "$SSH_PORT" "$DEST" "curl -s -o /dev/null -w 'web:%{http_code}\n' http://127.0.0.1:3001/"
+```
+
 ## Historical Validation Trail
 
 For the original Phase 06 ticket-by-ticket validation record, use:
