@@ -103,8 +103,16 @@ Observed container contract:
 - env:
   - `HOST=0.0.0.0`
   - `PORT=3001`
+  - `ORIGIN=http://100.108.117.42:3001` in the current live deployment
   - `PIRATE_CLAW_API_URL=http://localhost:5555`
   - `PIRATE_CLAW_API_WRITE_TOKEN=<same write token the daemon accepts>`
+
+Critical rule:
+
+- when using SvelteKit `adapter-node`, set `ORIGIN` to the actual browser-facing
+  origin for the web UI
+- `HOST=0.0.0.0` is only the bind address, not a valid browser origin
+- without `ORIGIN`, form actions fail with `Cross-site POST form submissions are forbidden`
 
 ### `transmission`
 

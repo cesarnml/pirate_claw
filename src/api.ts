@@ -13,6 +13,7 @@ import {
   validateConfig,
   validateFeed,
   validateMoviePolicy,
+  loadConfigEnv,
 } from './config';
 import type { MovieBreakdown } from './movie-api-types';
 export type { MovieBreakdown, TmdbMoviePublic } from './movie-api-types';
@@ -373,7 +374,11 @@ export function createApiFetch(
           },
         };
 
-        const validated = validateConfig(merged, 'config');
+        const validated = validateConfig(
+          merged,
+          'config',
+          await loadConfigEnv(configPath),
+        );
         writeConfigAtomically(configPath, merged);
         activeConfig = validated;
         if (configHolder) {
@@ -434,7 +439,11 @@ export function createApiFetch(
           },
         };
 
-        const validated = validateConfig(merged, 'config');
+        const validated = validateConfig(
+          merged,
+          'config',
+          await loadConfigEnv(configPath),
+        );
         writeConfigAtomically(configPath, merged);
         activeConfig = validated;
         if (configHolder) {
@@ -495,7 +504,11 @@ export function createApiFetch(
           },
         };
 
-        const validated = validateConfig(merged, 'config');
+        const validated = validateConfig(
+          merged,
+          'config',
+          await loadConfigEnv(configPath),
+        );
         writeConfigAtomically(configPath, merged);
         activeConfig = validated;
         if (configHolder) {
@@ -586,7 +599,11 @@ export function createApiFetch(
           }),
         };
 
-        const validated = validateConfig(merged, 'config');
+        const validated = validateConfig(
+          merged,
+          'config',
+          await loadConfigEnv(configPath),
+        );
         writeConfigAtomically(configPath, merged);
         activeConfig = validated;
         if (configHolder) {

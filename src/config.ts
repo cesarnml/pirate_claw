@@ -821,7 +821,7 @@ function isRecord(input: unknown): input is Record<string, unknown> {
   return typeof input === 'object' && input !== null && !Array.isArray(input);
 }
 
-async function loadConfigEnv(
+export async function loadConfigEnv(
   configPath: string,
 ): Promise<Record<string, string | undefined>> {
   const envPath = join(dirname(configPath), '.env');

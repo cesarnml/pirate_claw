@@ -1,5 +1,5 @@
 import { Database } from 'bun:sqlite';
-import { chmod, mkdtemp } from 'node:fs/promises';
+import { chmod, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, spyOn } from 'bun:test';
@@ -925,6 +925,99 @@ describe('PUT /api/config', () => {
         error:
           'config file is not writable; check deployment mount permissions and restart the daemon after fixing them',
       });
+    } finally {
+      if (prevWrite !== undefined) {
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      } else {
+        delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+      }
+    }
+  });
+
+  it('preserves a .env-sourced write token across successful saves', async () => {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    try {
+      const directory = await mkdtemp(
+        join(tmpdir(), 'pirate-claw-api-config-dotenv-'),
+      );
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+
+      const disk = (await Bun.file(configPath).json()) as Record<
+        string,
+        unknown
+      >;
+      const runtime = disk.runtime as Record<string, unknown>;
+      delete runtime.apiWriteToken;
+      await Bun.write(configPath, `${JSON.stringify(disk, null, 2)}\n`);
+      await writeFile(
+        join(directory, '.env'),
+        'PIRATE_CLAW_API_WRITE_TOKEN=dotenv-write-token\n',
+        'utf8',
+      );
+
+      const loaded = await loadConfig(configPath);
+      const deps = createDeps();
+      deps.config = loaded;
+      deps.configHolder = { current: loaded };
+      deps.configPath = configPath;
+
+      const handler = createApiFetch(deps);
+      const get = await handler(new Request('http://localhost/api/config'));
+      const etag = get.headers.get('etag')!;
+
+      const put = await handler(
+        new Request('http://localhost/api/config', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer dotenv-write-token',
+            'if-match': etag,
+          },
+          body: JSON.stringify({
+            runtime: {
+              runIntervalMinutes: 45,
+              reconcileIntervalMinutes: 2,
+              tmdbRefreshIntervalMinutes: 0,
+            },
+            tv: {
+              shows: ['Alpha Show', 'Beta Show'],
+            },
+          }),
+        }),
+      );
+
+      expect(put.status).toBe(200);
+      expect(
+        (await put.json()) as { runtime: { apiWriteToken?: string } },
+      ).toMatchObject({
+        runtime: { apiWriteToken: '[redacted]' },
+      });
+
+      const nextEtag = put.headers.get('etag')!;
+      const secondPut = await handler(
+        new Request('http://localhost/api/config', {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer dotenv-write-token',
+            'if-match': nextEtag,
+          },
+          body: JSON.stringify({
+            runtime: {
+              runIntervalMinutes: 30,
+              reconcileIntervalMinutes: 1,
+              tmdbRefreshIntervalMinutes: 0,
+            },
+            tv: {
+              shows: ['Alpha Show'],
+            },
+          }),
+        }),
+      );
+
+      expect(secondPut.status).toBe(200);
     } finally {
       if (prevWrite !== undefined) {
         process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
