@@ -866,6 +866,58 @@ describe('validateConfig', () => {
       }),
     ).toThrow(ConfigError);
   });
+
+  it('accepts optional plex block and defaults the refresh interval', () => {
+    const config = validateConfig({
+      ...createMinimalConfig(),
+      plex: {
+        url: 'http://plex.local:32400',
+        token: 'plex-token',
+      },
+    });
+
+    expect(config.plex).toEqual({
+      url: 'http://plex.local:32400',
+      token: 'plex-token',
+      refreshIntervalMinutes: 30,
+    });
+  });
+
+  it('fills missing plex token from env values', () => {
+    const config = validateConfig(
+      {
+        ...createMinimalConfig(),
+        plex: {
+          url: 'http://plex.local:32400',
+        },
+      },
+      'config',
+      {
+        PIRATE_CLAW_PLEX_TOKEN: 'env-plex-token',
+      },
+    );
+
+    expect(config.plex).toEqual({
+      url: 'http://plex.local:32400',
+      token: 'env-plex-token',
+      refreshIntervalMinutes: 30,
+    });
+  });
+
+  it('fails when plex block is present without any token source', () => {
+    expect(() =>
+      validateConfig({
+        ...createMinimalConfig(),
+        plex: {
+          url: 'http://plex.local:32400',
+        },
+      }),
+    ).toThrow(
+      new ConfigError(
+        'Config file "config plex token" must be a non-empty string.',
+      ),
+    );
+  });
 });
 
 function createMinimalConfig() {

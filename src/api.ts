@@ -745,7 +745,13 @@ export function buildShowBreakdowns(
       seasons.push({ season, episodes });
     }
     seasons.sort((a, b) => a.season - b.season);
-    shows.push({ normalizedTitle: title, seasons });
+    shows.push({
+      normalizedTitle: title,
+      seasons,
+      plexStatus: 'unknown',
+      watchCount: null,
+      lastWatchedAt: null,
+    });
   }
 
   return shows.sort((a, b) =>
@@ -771,6 +777,9 @@ export function buildMovieBreakdowns(
       queuedAt: c.queuedAt,
       transmissionPercentDone: c.transmissionPercentDone,
       transmissionTorrentHash: c.transmissionTorrentHash,
+      plexStatus: 'unknown' as const,
+      watchCount: null,
+      lastWatchedAt: null,
     }))
     .sort((a, b) => a.normalizedTitle.localeCompare(b.normalizedTitle));
 }
@@ -827,6 +836,10 @@ export function redactConfig(config: AppConfig): AppConfig {
 
   if (next.tmdb?.apiKey) {
     next.tmdb = { ...next.tmdb, apiKey: '[redacted]' };
+  }
+
+  if (next.plex?.token) {
+    next.plex = { ...next.plex, token: '[redacted]' };
   }
 
   return next;

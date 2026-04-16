@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite';
 
+import { ensurePlexSchema } from './plex/schema';
 import type { TmdbMoviePublic } from './movie-api-types';
 import { ensureTmdbSchema } from './tmdb/schema';
 import type { TmdbTvShowMeta } from './tv-api-types';
@@ -257,6 +258,7 @@ export function ensureSchema(database: Database): void {
   ensureCandidateStateColumn(database, 'transmission_download_dir', 'TEXT');
 
   ensureTmdbSchema(database);
+  ensurePlexSchema(database);
 }
 
 export function hasStatusSchema(database: Database): boolean {
