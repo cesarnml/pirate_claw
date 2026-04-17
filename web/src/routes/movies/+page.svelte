@@ -203,7 +203,7 @@
 					onclick={() => (activeTab = tab.key)}
 				>
 					{tab.label}
-					<span class="ml-1 text-[10px] text-inherit/80">({tabCount(tab.key)})</span>
+					<span class="ml-1 text-[10px] opacity-80">({tabCount(tab.key)})</span>
 				</button>
 			{/each}
 		</div>
