@@ -159,26 +159,28 @@ The daemon currently also supports inline Transmission credentials in
 ## Plex Media Server Integration (Phase 18)
 
 Plex enrichment is optional. Add a `plex` block to
-`/volume1/pirate-claw/config/pirate-claw.config.json` to enable it:
+`/volume1/pirate-claw/config/pirate-claw.config.json` to enable it.
+
+### Choosing `plex.url` (host network vs bridge)
+
+This runbook runs `pirate-claw` with **`--network host`**. In that mode the
+daemon shares the NAS network stack, so **`plex.url` should use the host
+loopback**, not the address you type in a browser on another machine.
+
+Recommended for this deployment:
 
 ```json
 {
   "plex": {
-    "url": "http://172.17.0.1:32400",
+    "url": "http://127.0.0.1:32400",
     "token": "YOUR_PLEX_TOKEN",
     "refreshIntervalMinutes": 30
   }
 }
 ```
 
-- `url`: base URL of the local Plex Media Server
-- when Plex is installed on the NAS via Synology Package Center and
-  `pirate-claw` runs in Docker, `localhost` and `127.0.0.1` inside the
-  container point back to the container, not to the NAS host
-- in that deployment shape, point `plex.url` at the Docker host gateway instead;
-  on this NAS the working value is `http://172.17.0.1:32400`
-- if your Docker bridge uses a different gateway, inspect that network and use
-  the host-side gateway address instead
+`http://localhost:32400` is equivalent to `127.0.0.1` here.
+
 - `token`: your Plex authentication token (see below for how to find it)
 - `refreshIntervalMinutes`: how often the background refresh fires; defaults to
   `30`; set `0` to disable background refresh
@@ -187,20 +189,45 @@ The token is redacted in `GET /api/config` responses. If you prefer to keep it
 out of the JSON file entirely, set `PIRATE_CLAW_PLEX_TOKEN` in
 `/volume1/pirate-claw/config/.env` instead and omit the `token` field.
 
-### Host vs Container `localhost`
+If you ever run `pirate-claw` on **Docker bridge networking** (not this
+runbook’s `docker run`), loopback inside the container is **not** the NAS host.
+Use the Docker bridge gateway to reach host services instead; on this NAS that
+has been validated as `http://172.17.0.1:32400` (see your bridge network with
+`docker network inspect bridge` if the gateway differs).
 
-- from an SSH shell on the NAS, `localhost:32400` reaches the Plex service on
-  the NAS host
-- from inside the `pirate-claw` container, `localhost:32400` means the
-  container itself, so Plex requests fail or time out
-- Docker exposes the NAS host to containers through the bridge gateway; on this
-  NAS that host-side address is `172.17.0.1`
+### What breaks Plex from Pirate Claw (validated 2026-04-17)
 
-### Verify The Plex URL From Inside The Container
+Do **not** set `plex.url` to the NAS **Tailscale** or **LAN** address just
+because Plex Web opens at `http://<that-ip>:32400` in a browser. From the
+`pirate-claw` container on this `DS918+`, `http://100.108.117.42:32400` (example
+Tailscale IP) **hangs until timeout**, while `http://127.0.0.1:32400` and
+`http://172.17.0.1:32400` return Plex immediately with host networking.
+
+Symptoms when `plex.url` is wrong: daemon logs lines like
+`plex request failed: … (The operation was aborted)` or long hangs; background
+refresh may finish without useful cache updates; `plexStatus` can stay
+`"unknown"` for stale rows.
+
+**Fix:** set `plex.url` to `http://127.0.0.1:32400` (this runbook) or
+`http://172.17.0.1:32400` if you use bridge mode, then `docker restart
+pirate-claw`.
+
+### Verify Plex API reachability from the running container
+
+Uses the mounted config (no pasted token on the command line):
+
+```sh
+sudo /usr/local/bin/docker exec pirate-claw bun -e \
+  "const c=JSON.parse(await Bun.file('/config/pirate-claw.config.json').text());const u=new URL('/library/sections',c.plex.url);const r=await fetch(u,{headers:{'X-Plex-Token':c.plex.token}});console.log('plex.url',c.plex.url);console.log('GET /library/sections',r.status);"
+```
+
+Expected: `GET /library/sections 200`.
+
+Optional raw check with a literal token (replace placeholder):
 
 ```sh
 sudo /usr/local/bin/docker exec pirate-claw sh -lc \
-  'wget -S -O - --timeout=5 "http://172.17.0.1:32400/identity?X-Plex-Token=YOUR_PLEX_TOKEN"'
+  'wget -S -O - --timeout=5 "http://127.0.0.1:32400/identity?X-Plex-Token=YOUR_PLEX_TOKEN"'
 ```
 
 Expected result: `HTTP/1.1 200 OK` with a short XML `MediaContainer` response.
@@ -210,6 +237,8 @@ Expected result: `HTTP/1.1 200 OK` with a short XML `MediaContainer` response.
 Recommended method:
 
 1. Sign in to Plex Web at `http://<nas-ip>:32400/web` or `https://app.plex.tv`
+   (that `<nas-ip>` is only for the browser; do **not** paste it into
+   `plex.url` in Pirate Claw — see **Choosing `plex.url`** above)
 2. Open any movie or TV episode in your library
 3. Click the `...` menu on that item and choose `Get Info`
 4. In the media info dialog, click `View XML`
