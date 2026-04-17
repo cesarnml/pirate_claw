@@ -54,3 +54,9 @@ Config is the lowest-risk view in this phase: it introduces no new data
 patterns, no route changes, and no new components beyond the write-access chip.
 Placing it last means the design token system, sidebar, and more complex view
 patterns are all proven before tackling the write-critical form surface.
+
+Implementation note: the footer keeps the screenshot's four-metric shape while
+staying inside the existing endpoint constraint. Host-level storage/CPU stats do
+not exist on `/api/health` or `/api/status`, so the footer uses the available
+live operator proxies instead: storage target path, transfer speed, last run
+cycle duration, and daemon uptime.

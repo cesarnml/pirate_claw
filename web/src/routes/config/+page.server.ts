@@ -2,21 +2,23 @@ import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
 import { deriveOnboardingStatus } from '$lib/onboarding';
 import { apiRequest } from '$lib/server/api';
-import type { AppConfig, OnboardingStatus } from '$lib/types';
+import type { AppConfig, OnboardingStatus, RunSummaryRecord, SessionInfo } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const canWrite = !!env.PIRATE_CLAW_API_WRITE_TOKEN;
 
-	const [configResult, sessionResult] = await Promise.allSettled([
+	const [configResult, sessionResult, statusResult] = await Promise.allSettled([
 		apiRequest('/api/config'),
-		apiRequest('/api/transmission/session')
+		apiRequest('/api/transmission/session'),
+		apiRequest('/api/status')
 	]);
 
 	let config: AppConfig | null = null;
 	let etag: string | null = null;
 	let error: string | null = null;
-	let transmissionSession: { version: string } | null = null;
+	let transmissionSession: SessionInfo | null = null;
+	let runSummaries: RunSummaryRecord[] | null = null;
 	let onboarding: OnboardingStatus | null = null;
 
 	if (configResult.status === 'fulfilled' && configResult.value.ok) {
@@ -29,11 +31,15 @@ export const load: PageServerLoad = async () => {
 	}
 
 	if (sessionResult.status === 'fulfilled' && sessionResult.value.ok) {
-		const sessionData = (await sessionResult.value.json()) as { version: string };
-		transmissionSession = { version: sessionData.version };
+		transmissionSession = (await sessionResult.value.json()) as SessionInfo;
 	}
 
-	return { config, etag, canWrite, error, transmissionSession, onboarding };
+	if (statusResult.status === 'fulfilled' && statusResult.value.ok) {
+		const statusData = (await statusResult.value.json()) as { runs: RunSummaryRecord[] };
+		runSummaries = statusData.runs;
+	}
+
+	return { config, etag, canWrite, error, transmissionSession, runSummaries, onboarding };
 };
 
 function parseOptionalInt(input: unknown): number | undefined {

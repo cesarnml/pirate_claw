@@ -36,7 +36,8 @@ describe('config page server actions', () => {
 						{ status: 200 }
 					)
 				)
-				.mockRejectedValueOnce(new Error('network error'));
+				.mockRejectedValueOnce(new Error('network error'))
+				.mockResolvedValueOnce(new Response(JSON.stringify({ runs: [] }), { status: 200 }));
 
 			const result = await load({} as never);
 			expect((result as { onboarding: { state: string } | null }).onboarding?.state).toBe(
@@ -68,7 +69,8 @@ describe('config page server actions', () => {
 						{ status: 200 }
 					)
 				)
-				.mockRejectedValueOnce(new Error('network error'));
+				.mockRejectedValueOnce(new Error('network error'))
+				.mockResolvedValueOnce(new Response(JSON.stringify({ runs: [] }), { status: 200 }));
 
 			const result = await load({} as never);
 			expect((result as { transmissionSession: unknown }).transmissionSession).toBeNull();
@@ -99,12 +101,24 @@ describe('config page server actions', () => {
 					)
 				)
 				.mockResolvedValueOnce(
-					new Response(JSON.stringify({ version: '3.00 (bb6b5a062ef)' }), { status: 200 })
-				);
+					new Response(
+						JSON.stringify({
+							version: '3.00 (bb6b5a062ef)',
+							downloadSpeed: 2_097_152,
+							uploadSpeed: 524_288,
+							activeTorrentCount: 4
+						}),
+						{ status: 200 }
+					)
+				)
+				.mockResolvedValueOnce(new Response(JSON.stringify({ runs: [] }), { status: 200 }));
 
 			const result = await load({} as never);
 			expect((result as { transmissionSession: unknown }).transmissionSession).toEqual({
-				version: '3.00 (bb6b5a062ef)'
+				version: '3.00 (bb6b5a062ef)',
+				downloadSpeed: 2_097_152,
+				uploadSpeed: 524_288,
+				activeTorrentCount: 4
 			});
 		});
 	});
