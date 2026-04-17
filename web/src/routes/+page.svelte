@@ -1,4 +1,13 @@
 <script lang="ts">
+	// Map TorrentStatSnapshot to display status for StatusChip
+	function getTorrentDisplayStatus(torrent: { status: string; percentDone: number }): string {
+		if (torrent.status === 'error') return 'ERROR';
+		if (torrent.status === 'seeding') return 'SEEDING';
+		if (torrent.percentDone === 1) return 'COMPLETED';
+		if (torrent.status === 'stopped' && torrent.percentDone < 1) return 'PAUSED';
+		if (torrent.status === 'downloading' && torrent.percentDone < 1) return 'DOWNLOADING';
+		return torrent.status.toUpperCase(); // fallback
+	}
 	import ArrowDownToLineIcon from '@lucide/svelte/icons/arrow-down-to-line';
 	import FilterIcon from '@lucide/svelte/icons/filter';
 	import FlameIcon from '@lucide/svelte/icons/flame';
@@ -16,28 +25,33 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import { readOnboardingDismissed, writeOnboardingDismissed } from '$lib/onboarding';
-	import type { CandidateStateRecord, CandidateStatus, RunSummaryRecord } from '$lib/types';
+	import type { CandidateStateRecord, RunSummaryRecord } from '$lib/types';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 	let onboardingDismissed = $state(false);
 
-	function formatUptime(ms: number): string {
-		const totalSeconds = Math.floor(ms / 1000);
-		const hours = Math.floor(totalSeconds / 3600);
-		const minutes = Math.floor((totalSeconds % 3600) / 60);
-		const seconds = totalSeconds % 60;
-		if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-		if (minutes > 0) return `${minutes}m ${seconds}s`;
-		return `${seconds}s`;
+	// Returns { date: string, time: string, tz: string }
+	function formatDateParts(iso: string): { date: string; time: string; tz: string } {
+		const d = new Date(iso);
+		// Use browser's local time zone
+		const date = d.toLocaleDateString(undefined, { dateStyle: 'medium' });
+		const time = d.toLocaleTimeString(undefined, { timeStyle: 'short' });
+		// Try to get timezone abbreviation (not always supported)
+		let tz = '';
+		try {
+			tz = d.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ').pop() || '';
+		} catch (e) {
+			console.log('e:', e);
+			// ignore
+		}
+		return { date, time, tz };
 	}
 
+	// For event log table: keep a simple local time string
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleString('en-US', {
-			dateStyle: 'medium',
-			timeStyle: 'short',
-			timeZone: 'UTC'
-		});
+		const d = new Date(iso);
+		return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	}
 
 	function formatShortDate(iso: string): string {
@@ -51,11 +65,11 @@
 
 	function formatSpeed(bytesPerSec: number): string {
 		if (bytesPerSec >= 1_048_576) return `${(bytesPerSec / 1_048_576).toFixed(1)} MB/s`;
-		return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+		return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
 	}
 
 	function formatEta(eta: number): string {
-		if (eta < 0) return '—';
+		if (eta < 0) return '';
 		if (eta < 60) return '<1m';
 		const hours = Math.floor(eta / 3600);
 		const minutes = Math.floor((eta % 3600) / 60);
@@ -117,24 +131,34 @@
 	const runSummaries = $derived(data.runSummaries);
 	const outcomes = $derived(data.outcomes);
 
+	// Pagination state for outcomes table
+	let outcomesPage = $state(0);
+	const OUTCOMES_PAGE_SIZE = 5;
+	const outcomesPageCount = $derived(() =>
+		outcomes ? Math.ceil(outcomes.length / OUTCOMES_PAGE_SIZE) : 0
+	);
+	function setOutcomesPage(page: number) {
+		if (!outcomes) return;
+		if (page < 0) page = 0;
+		if (page >= outcomesPageCount()) page = outcomesPageCount() - 1;
+		outcomesPage = page;
+	}
+
 	const activeDownloads = $derived(
-		torrents
-			.filter((torrent) => torrent.status === 'downloading')
-			.slice(0, 5)
-			.map((torrent) => {
-				const candidate =
-					candidates.find((item) => item.transmissionTorrentHash === torrent.hash) ?? null;
-				return { torrent, candidate };
-			})
+		torrents.map((torrent) => {
+			const candidate =
+				candidates.find((item) => item.transmissionTorrentHash === torrent.hash) ?? null;
+			return { torrent, candidate };
+		})
 	);
 
 	const archiveItems = $derived(
 		candidates
 			.filter(
-				(candidate): candidate is CandidateStateRecord & { transmissionDoneDate: string } =>
-					candidate.status === 'completed' && !!candidate.transmissionDoneDate
+				(candidate): candidate is CandidateStateRecord & { queuedAt: string } =>
+					candidate?.lifecycleStatus === 'completed' && !!candidate.queuedAt
 			)
-			.sort((a, b) => b.transmissionDoneDate.localeCompare(a.transmissionDoneDate))
+			.sort((a, b) => b.queuedAt.localeCompare(a.queuedAt))
 			.slice(0, 6)
 	);
 
@@ -150,7 +174,8 @@
 	const oneWeekAgo = $derived(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 	const completedThisWeek = $derived(
 		candidates.filter((candidate) => {
-			if (candidate.status !== 'completed' || !candidate.transmissionDoneDate) return false;
+			if (candidate.lifecycleStatus !== 'completed' || !candidate.transmissionDoneDate)
+				return false;
 			return new Date(candidate.transmissionDoneDate) >= oneWeekAgo;
 		}).length
 	);
@@ -176,7 +201,7 @@
 		{
 			label: 'Total tracked',
 			value: totalTracked,
-			detail: `${candidates.filter((candidate) => candidate.status === 'downloading').length} active torrents`,
+			detail: `${candidates.filter((candidate) => candidate.lifecycleStatus === 'downloading').length} active torrents`,
 			icon: LibraryBigIcon
 		},
 		{
@@ -214,20 +239,41 @@
 		<div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
 			<div class="space-y-3">
 				<h1 class="max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-balance">
-					Runway for live downloads, filtered feed noise, and recent archive commits.
+					Pirate Claw is watching the seas
 				</h1>
 				<p class="text-muted-foreground max-w-2xl text-sm leading-6">
-					One pass over the daemon state: active pulls on the left, no-match fallout on the right,
-					and the latest completed grabs across the bottom rail.
+					This dashboard gives you a real-time overview of what Pirate Claw is up to, including
+					active downloads, recent feed outcomes, and more.
 				</p>
 			</div>
 
 			{#if data.health}
-				<div class="border-border bg-card/65 rounded-3xl border px-4 py-3 backdrop-blur-sm">
-					<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase">
-						Daemon uptime
-					</p>
-					<p class="mt-2 text-2xl font-semibold">{formatUptime(data.health.uptime)}</p>
+				<div class="flex flex-row gap-2">
+					{#each [{ label: 'Last feed intake', value: data.health.lastRunCycle?.completedAt }, { label: 'Last reconcile', value: data.health.lastReconcileCycle?.completedAt }] as card}
+						<div
+							class="bg-card/65 flex max-w-xs min-w-45 flex-col justify-between rounded-3xl border border-[color-mix(in_srgb,var(--primary)_60%,#23293a_40%)] px-4 py-3 shadow-[0_2px_12px_0_rgba(0,0,0,0.04)] backdrop-blur-sm"
+						>
+							<p
+								class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase"
+							>
+								{card.label}
+							</p>
+							{#if card.value}
+								{@const parts = formatDateParts(card.value)}
+								<div class="mt-2 flex flex-col items-start">
+									<span class="text-foreground/80 text-sm leading-tight font-medium"
+										>{parts.date}</span
+									>
+									<span class="text-2xl leading-tight font-semibold"
+										>{parts.time}
+										<span class="text-muted-foreground text-xs font-normal">{parts.tz}</span></span
+									>
+								</div>
+							{:else}
+								<span class="mt-2 text-2xl font-semibold">—</span>
+							{/if}
+						</div>
+					{/each}
 				</div>
 			{/if}
 		</div>
@@ -277,7 +323,7 @@
 		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 			{#each statusCards as card}
 				<Card
-					class="bg-card/70 rounded-[28px] border-white/10 shadow-[0_20px_60px_rgba(2,6,23,0.22)]"
+					class="bg-card/40 rounded-[28px] border-white/10 shadow-[0_20px_60px_rgba(2,6,23,0.22)]"
 				>
 					<CardContent class="flex items-start justify-between gap-4 pt-6">
 						<div>
@@ -297,19 +343,19 @@
 			{/each}
 		</div>
 
-		<div class="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-			<Card class="bg-card/70 rounded-[30px] border-white/10">
+		<div class="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
+			<Card
+				class="bg-card/70 scrollbar-none max-h-136 min-w-[420px] overflow-y-auto rounded-[30px] border-white/10 [ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			>
 				<CardHeader class="pb-4">
-					<div class="flex items-end justify-between gap-4">
+					<div class="flex items-start justify-between gap-4">
 						<div>
 							<p
 								class="text-muted-foreground text-[11px] font-semibold tracking-[0.24em] uppercase"
 							>
-								Active downlink
+								Transmission activity
 							</p>
-							<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">
-								Transmission pulls in flight
-							</h2>
+							<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Torrent Manager</h2>
 						</div>
 						{#if data.transmissionSession}
 							<div class="text-right">
@@ -318,8 +364,15 @@
 								>
 									Live throughput
 								</p>
-								<p class="mt-2 text-sm font-medium">
-									{formatSpeed(data.transmissionSession.downloadSpeed)}
+								<p class="mt-2 flex flex-col items-end gap-0.5 text-sm font-medium">
+									<span
+										><span class="text-muted-foreground">↓</span>
+										{formatSpeed(data.transmissionSession.downloadSpeed)}</span
+									>
+									<span
+										><span class="text-muted-foreground">↑</span>
+										{formatSpeed(data.transmissionSession.uploadSpeed)}</span
+									>
 								</p>
 							</div>
 						{/if}
@@ -367,9 +420,7 @@
 													{#if candidate?.codec}
 														<span class="rounded-full bg-white/6 px-2 py-1">{candidate.codec}</span>
 													{/if}
-													{#if candidate}
-														<StatusChip status={candidate.status as CandidateStatus} />
-													{/if}
+													<StatusChip status={getTorrentDisplayStatus(torrent)} />
 												</div>
 											</div>
 											<div class="text-right text-sm">
@@ -379,15 +430,14 @@
 										</div>
 
 										<div class="mt-4">
+											<div class="mb-2 flex items-center justify-end text-xs">
+												<p class="font-medium">{(torrent.percentDone * 100).toFixed(0)}%</p>
+											</div>
 											<div class="bg-muted h-2 rounded-full">
 												<div
 													class="bg-primary h-2 rounded-full"
 													style="width: {(torrent.percentDone * 100).toFixed(0)}%"
 												></div>
-											</div>
-											<div class="mt-2 flex items-center justify-between text-xs">
-												<p class="text-muted-foreground">Transmission progress</p>
-												<p class="font-medium">{(torrent.percentDone * 100).toFixed(0)}%</p>
 											</div>
 										</div>
 									</div>
@@ -398,7 +448,7 @@
 				</CardContent>
 			</Card>
 
-			<Card class="bg-card/70 rounded-[30px] border-white/10">
+			<Card class="bg-card/70 max-h-136 rounded-[30px] border-white/10">
 				<CardHeader class="pb-4">
 					<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.24em] uppercase">
 						Event log
@@ -425,33 +475,54 @@
 							</p>
 						</div>
 					{:else}
-						<div class="border-border overflow-hidden rounded-[24px] border">
-							<Table>
+						<div class="border-border overflow-hidden rounded-3xl border">
+							<Table class="w-full table-fixed">
 								<TableHeader>
 									<TableRow class="hover:bg-transparent">
-										<TableHead>Title</TableHead>
-										<TableHead>Feed</TableHead>
-										<TableHead>Status</TableHead>
-										<TableHead>Timestamp</TableHead>
+										<TableHead class="pl-4">Title</TableHead>
+										<TableHead class="w-26 whitespace-nowrap">Status</TableHead>
+										<TableHead class="w-20 text-right"></TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{#each outcomes.slice(0, 10) as outcome (outcome.id)}
+									{#each outcomes.slice(outcomesPage * OUTCOMES_PAGE_SIZE, (outcomesPage + 1) * OUTCOMES_PAGE_SIZE) as outcome (outcome.id)}
 										<TableRow>
-											<TableCell class="max-w-[14rem] truncate text-sm font-medium">
-												{outcome.title ?? '—'}
+											<TableCell class="min-w-0 pl-4 text-sm font-medium">
+												<p class="truncate">{outcome.title ?? '—'}</p>
+												<p class="text-muted-foreground mt-0.5 text-[11px] font-normal">
+													{formatDate(outcome.recordedAt)}
+												</p>
 											</TableCell>
-											<TableCell class="text-muted-foreground text-sm">
-												{outcome.feedName ?? '—'}
-											</TableCell>
-											<TableCell><StatusChip status={outcome.status} /></TableCell>
-											<TableCell class="text-muted-foreground text-xs">
-												{formatDate(outcome.recordedAt)}
+											<TableCell class="whitespace-nowrap"
+												><StatusChip status={outcome.status} /></TableCell
+											>
+											<TableCell class="pr-4 text-right">
+												<button
+													type="button"
+													class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/22 inline-flex h-6 cursor-pointer items-center rounded-md border px-2 text-[11px] font-medium transition"
+												>
+													Queue
+												</button>
 											</TableCell>
 										</TableRow>
 									{/each}
 								</TableBody>
 							</Table>
+						</div>
+						<div class="flex items-center justify-end gap-2 px-4 py-2">
+							<button
+								class="bg-muted/30 rounded px-2 py-1 text-xs font-semibold disabled:opacity-40"
+								onclick={() => setOutcomesPage(outcomesPage - 1)}
+								disabled={outcomesPage === 0}>&larr; Prev</button
+							>
+							<span class="text-muted-foreground text-xs"
+								>Page {outcomesPage + 1} of {outcomesPageCount()}</span
+							>
+							<button
+								class="bg-muted/30 rounded px-2 py-1 text-xs font-semibold disabled:opacity-40"
+								onclick={() => setOutcomesPage(outcomesPage + 1)}
+								disabled={outcomesPage + 1 >= outcomesPageCount()}>Next &rarr;</button
+							>
 						</div>
 					{/if}
 				</CardContent>
@@ -482,18 +553,18 @@
 							{@const posterUrl = candidatePosterUrl(item)}
 							<a
 								href={archiveHref(item)}
-								class="group border-border bg-background/45 overflow-hidden rounded-[24px] border transition-transform hover:-translate-y-0.5"
+								class="group border-border bg-background/45 overflow-hidden rounded-3xl border transition-transform hover:-translate-y-0.5"
 							>
 								{#if posterUrl}
 									<img
 										src={posterUrl}
 										alt={candidateTitle(item)}
-										class="aspect-[2/3] w-full object-cover"
+										class="aspect-2/3 w-full object-cover"
 										loading="lazy"
 									/>
 								{:else}
 									<div
-										class="bg-muted text-muted-foreground flex aspect-[2/3] w-full items-center justify-center text-xs font-medium"
+										class="bg-muted text-muted-foreground flex aspect-2/3 w-full items-center justify-center text-xs font-medium"
 									>
 										No poster
 									</div>
@@ -504,7 +575,7 @@
 									<div class="flex items-center justify-between gap-3">
 										<StatusChip status="completed" />
 										<p class="text-muted-foreground text-xs">
-											{formatShortDate(item.transmissionDoneDate)}
+											{formatShortDate(item.queuedAt)}
 										</p>
 									</div>
 								</div>

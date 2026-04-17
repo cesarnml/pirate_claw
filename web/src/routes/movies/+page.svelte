@@ -241,7 +241,7 @@
 								/>
 							{:else}
 								<div
-									class="h-full w-full bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.22),_transparent_48%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(15,23,42,0.72))]"
+									class="h-full w-full bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.22),transparent_48%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(15,23,42,0.72))]"
 								></div>
 							{/if}
 							<div

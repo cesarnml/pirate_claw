@@ -30,6 +30,7 @@ function stubRepository(): Repository {
     listReconcilableCandidates: () => [],
     listRetryableCandidates: () => [],
     listSkippedNoMatchOutcomes: () => [],
+    listDistinctUnmatchedAndFailedOutcomes: () => [],
   };
 }
 

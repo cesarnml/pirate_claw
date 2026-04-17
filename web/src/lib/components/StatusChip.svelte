@@ -10,14 +10,19 @@
 
 	const normalized = $derived(status.trim().toLowerCase());
 
+	// Add Transmission torrent UI display labels
 	const labels: Record<string, string> = {
 		active: 'ACTIVE',
 		completed: 'COMPLETED',
 		queued: 'QUEUED',
 		downloading: 'DOWNLOADING',
-		skipped_no_match: 'SKIPPED_NO_MATCH',
-		skipped_duplicate: 'SKIPPED_DUPLICATE',
+		seeding: 'SEEDING',
+		error: 'ERROR',
+		paused: 'PAUSED',
 		failed: 'FAILED',
+		stopped: 'PAUSED',
+		skipped_no_match: 'SKIPPED',
+		skipped_duplicate: 'SKIPPED_DUPLICATE',
 		rejected: 'FAILED',
 		duplicate: 'MISSING',
 		reconciled: 'COMPLETED',
@@ -27,14 +32,19 @@
 		unknown: 'WANTED'
 	};
 
+	// Add Transmission torrent UI display tones
 	const toneClasses: Record<string, string> = {
 		active: 'border-primary/35 bg-primary/18 text-primary',
 		downloading: 'border-primary/35 bg-primary/18 text-primary',
+		seeding: 'border-sky-400/25 bg-sky-500/15 text-sky-200',
+		error: 'border-rose-400/25 bg-rose-500/18 text-rose-200',
+		paused: 'border-slate-400/25 bg-slate-500/18 text-slate-200',
 		completed: 'border-emerald-400/25 bg-emerald-500/15 text-emerald-200',
 		queued: 'border-white/8 bg-white/6 text-slate-200',
 		skipped_no_match: 'border-white/8 bg-slate-900/70 text-slate-300',
 		skipped_duplicate: 'border-white/8 bg-slate-900/70 text-slate-300',
 		failed: 'border-rose-400/25 bg-rose-500/18 text-rose-200',
+		stopped: 'border-slate-400/25 bg-slate-500/18 text-slate-200',
 		rejected: 'border-rose-400/25 bg-rose-500/18 text-rose-200',
 		duplicate: 'border-amber-400/25 bg-amber-500/18 text-amber-200',
 		reconciled: 'border-emerald-400/25 bg-emerald-500/15 text-emerald-200',

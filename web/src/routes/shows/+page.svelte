@@ -255,7 +255,7 @@
 								onclick={() => openShow(show)}
 							>
 								<div class="grid gap-0 md:grid-cols-[200px_minmax(0,1fr)]">
-									<div class="bg-background/70 relative min-h-[19rem] overflow-hidden">
+									<div class="bg-background/70 relative min-h-76 overflow-hidden">
 										{#if posterUrl}
 											<img
 												src={posterUrl}
@@ -264,11 +264,11 @@
 												loading="lazy"
 											/>
 											<div
-												class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"
+												class="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-950/20 to-transparent"
 											></div>
 										{:else}
 											<div
-												class="from-primary/22 to-accent/10 text-muted-foreground flex h-full min-h-[19rem] items-center justify-center bg-linear-to-br text-xs font-semibold tracking-[0.24em] uppercase"
+												class="from-primary/22 to-accent/10 text-muted-foreground flex h-full min-h-76 items-center justify-center bg-linear-to-br text-xs font-semibold tracking-[0.24em] uppercase"
 											>
 												No poster
 											</div>
@@ -508,7 +508,7 @@
 												</div>
 
 												<div
-													class="border-border/80 bg-background/42 flex min-w-[8rem] flex-col justify-between rounded-2xl border px-3 py-3 text-right"
+													class="border-border/80 bg-background/42 flex min-w-32 flex-col justify-between rounded-2xl border px-3 py-3 text-right"
 												>
 													<div>
 														<p

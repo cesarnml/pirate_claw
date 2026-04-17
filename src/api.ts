@@ -694,16 +694,29 @@ export function createApiFetch(
     }
 
     if (path === '/api/outcomes' && request.method === 'GET') {
-      const statusParam = new URL(request.url).searchParams.get('status');
-      if (statusParam !== 'skipped_no_match') {
-        return Response.json(
-          { error: 'unsupported status filter' },
-          { status: 400 },
-        );
+      const movieYears = (activeConfig.movies?.years ?? []).map(Number);
+      const tvResolutions = [
+        ...new Set(activeConfig.tv.flatMap((rule) => rule.resolutions)),
+      ];
+      const tvCodecs = [
+        ...new Set(activeConfig.tv.flatMap((rule) => rule.codecs)),
+      ];
+      const feedMediaTypes: Record<string, 'movie' | 'tv'> = {};
+      for (const feed of activeConfig.feeds || []) {
+        if (
+          feed.name &&
+          (feed.mediaType === 'movie' || feed.mediaType === 'tv')
+        ) {
+          feedMediaTypes[feed.name] = feed.mediaType;
+        }
       }
-      return safeJson(() => ({
-        outcomes: repository.listSkippedNoMatchOutcomes(30),
-      }));
+      const outcomes = repository.listDistinctUnmatchedAndFailedOutcomes(30, {
+        movieYears,
+        tvResolutions,
+        tvCodecs,
+        feedMediaTypes,
+      });
+      return safeJson(() => ({ outcomes }));
     }
 
     if (path === '/api/transmission/torrents' && request.method === 'GET') {

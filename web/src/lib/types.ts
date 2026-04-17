@@ -1,14 +1,10 @@
-export type CandidateStatus =
-	| 'queued'
-	| 'skipped'
-	| 'rejected'
-	| 'duplicate'
-	| 'reconciled'
-	| 'downloading'
-	| 'completed'
-	| 'failed';
+export type CandidateStatus = 'queued' | 'skipped_duplicate' | 'failed';
 
-export type CandidateLifecycleStatus = 'active' | 'seeding' | 'stopped' | 'error';
+export type CandidateLifecycleStatus =
+	| 'completed'
+	| 'downloading'
+	| 'missing_from_transmission'
+	| 'queued';
 
 export type CandidateStateRecord = {
 	identityKey: string;
@@ -124,7 +120,7 @@ export type MovieBreakdown = {
 export type SkippedOutcomeRecord = {
 	id: number;
 	runId: number;
-	status: 'skipped_no_match';
+	status: 'skipped_no_match' | 'failed';
 	recordedAt: string;
 	title: string | null;
 	feedName: string | null;

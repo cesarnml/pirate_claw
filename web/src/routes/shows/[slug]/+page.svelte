@@ -71,7 +71,7 @@
 		return (
 			live?.status === 'downloading' ||
 			episode.lifecycleStatus === 'active' ||
-			episode.status === 'downloading' ||
+			episode.lifecycleStatus === 'downloading' ||
 			(episode.status === 'queued' && (episode.transmissionPercentDone ?? 0) > 0)
 		);
 	}
@@ -173,13 +173,13 @@
 						<img
 							src={data.show.tmdb.posterUrl}
 							alt={`Poster for ${displayTitle(data.show)}`}
-							class="h-full min-h-[20rem] w-full object-cover"
+							class="h-full min-h-80 w-full object-cover"
 							loading="eager"
 							fetchpriority="high"
 						/>
 					{:else}
 						<div
-							class="text-muted-foreground flex min-h-[20rem] items-center justify-center text-xs font-semibold tracking-[0.22em] uppercase"
+							class="text-muted-foreground flex min-h-80 items-center justify-center text-xs font-semibold tracking-[0.22em] uppercase"
 						>
 							Poster pending
 						</div>
@@ -225,7 +225,7 @@
 					</div>
 
 					<div class="grid gap-3 sm:grid-cols-3">
-						<div class="rounded-[24px] border border-white/10 bg-slate-950/46 px-4 py-4">
+						<div class="rounded-3xl border border-white/10 bg-slate-950/46 px-4 py-4">
 							<p
 								class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase"
 							>
@@ -235,7 +235,7 @@
 								<StatusChip status={data.show.plexStatus} />
 							</div>
 						</div>
-						<div class="rounded-[24px] border border-white/10 bg-slate-950/46 px-4 py-4">
+						<div class="rounded-3xl border border-white/10 bg-slate-950/46 px-4 py-4">
 							<p
 								class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase"
 							>
@@ -243,7 +243,7 @@
 							</p>
 							<p class="mt-3 text-lg font-semibold">{formatLastWatched(data.show.lastWatchedAt)}</p>
 						</div>
-						<div class="rounded-[24px] border border-white/10 bg-slate-950/46 px-4 py-4">
+						<div class="rounded-3xl border border-white/10 bg-slate-950/46 px-4 py-4">
 							<p
 								class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase"
 							>
@@ -299,12 +299,12 @@
 										alt={episode.tmdb?.name
 											? `Still for ${episode.tmdb.name}`
 											: `Episode ${episode.episode}`}
-										class="h-full min-h-[7rem] w-full object-cover"
+										class="h-full min-h-28 w-full object-cover"
 										loading="lazy"
 									/>
 								{:else}
 									<div
-										class="text-muted-foreground flex min-h-[7rem] items-center justify-center text-xs font-semibold tracking-[0.18em] uppercase"
+										class="text-muted-foreground flex min-h-28 items-center justify-center text-xs font-semibold tracking-[0.18em] uppercase"
 									>
 										Still pending
 									</div>

@@ -134,6 +134,23 @@ export type RecordCandidateReconciliationInput = {
   reconciledAt?: string;
 };
 
+export type DistinctUnmatchedOrFailedOutcome = {
+  id: number;
+  runId: number;
+  status: string;
+  recordedAt: string;
+  title: string | null;
+  feedName: string | null;
+  guidOrLink: string | null;
+};
+
+export type DistinctOutcomeFilters = {
+  movieYears: number[];
+  tvResolutions: string[];
+  tvCodecs: string[];
+  feedMediaTypes: Record<string, 'movie' | 'tv'>;
+};
+
 export type Repository = {
   startRun(startedAt?: string): RunRecord;
   getRun(runId: number): RunRecord | undefined;
@@ -157,6 +174,10 @@ export type Repository = {
   listReconcilableCandidates(limit?: number): CandidateStateRecord[];
   listRetryableCandidates(limit?: number): CandidateStateRecord[];
   listSkippedNoMatchOutcomes(days: number): SkippedOutcomeRecord[];
+  listDistinctUnmatchedAndFailedOutcomes(
+    days: number,
+    filters?: DistinctOutcomeFilters,
+  ): DistinctUnmatchedOrFailedOutcome[];
 };
 
 export const DEFAULT_DATABASE_PATH = 'pirate-claw.db';
@@ -284,6 +305,22 @@ export function hasStatusSchema(database: Database): boolean {
 }
 
 export function createRepository(database: Database): Repository {
+  const listDistinctUnmatchedAndFailedOutcomesStatement = database.prepare(
+    `SELECT
+      fo.id,
+      fo.run_id AS runId,
+      fo.status,
+      fo.created_at AS recordedAt,
+      fi.raw_title AS title,
+      fi.feed_name AS feedName,
+      fi.guid_or_link AS guidOrLink
+    FROM feed_item_outcomes fo
+    LEFT JOIN feed_items fi ON fo.feed_item_id = fi.id
+    WHERE (fo.status = 'skipped_no_match' OR fo.status = 'failed')
+      AND fo.created_at >= datetime('now', '-' || ?1 || ' days')
+    GROUP BY fi.guid_or_link, fi.raw_title
+    ORDER BY fo.created_at DESC`,
+  );
   const insertRun = database.query(
     `INSERT INTO runs (started_at, status) VALUES (?1, 'running')`,
   );
@@ -665,6 +702,34 @@ export function createRepository(database: Database): Repository {
   );
 
   return {
+    /**
+     * Returns distinct skipped_no_match and failed outcomes by guid_or_link and title.
+     * Used for dashboard unmatched feed events table.
+     */
+    listDistinctUnmatchedAndFailedOutcomes(
+      days: number,
+      filters?: DistinctOutcomeFilters,
+    ): DistinctUnmatchedOrFailedOutcome[] {
+      const rows = filters
+        ? (database
+            .query(buildDistinctOutcomesFilteredSql(filters))
+            .all(
+              days,
+              ...buildDistinctOutcomesFilteredParams(filters),
+            ) as DistinctUnmatchedOrFailedOutcome[])
+        : (listDistinctUnmatchedAndFailedOutcomesStatement.all(
+            days,
+          ) as DistinctUnmatchedOrFailedOutcome[]);
+      return rows.map((row) => ({
+        id: Number(row.id),
+        runId: Number(row.runId),
+        status: row.status,
+        recordedAt: row.recordedAt,
+        title: row.title,
+        feedName: row.feedName,
+        guidOrLink: row.guidOrLink,
+      }));
+    },
     startRun(startedAt = new Date().toISOString()): RunRecord {
       insertRun.run(startedAt);
       const row = selectRun.get(lastInsertedRowId(database)) as
@@ -879,6 +944,123 @@ export function createRepository(database: Database): Repository {
       );
     },
   };
+}
+
+function buildDistinctOutcomesFilteredSql(
+  filters: DistinctOutcomeFilters,
+): string {
+  const movieFeeds = Object.entries(filters.feedMediaTypes)
+    .filter(([, mediaType]) => mediaType === 'movie')
+    .map(([feedName]) => feedName);
+  const tvFeeds = Object.entries(filters.feedMediaTypes)
+    .filter(([, mediaType]) => mediaType === 'tv')
+    .map(([feedName]) => feedName);
+
+  const movieFeedClause = buildInClause('fi.feed_name', movieFeeds.length);
+  const tvFeedClause = buildInClause('fi.feed_name', tvFeeds.length);
+
+  const movieYearClauses = filters.movieYears.map(
+    () =>
+      "(fi.raw_title LIKE '%(' || ? || ')%' OR fi.raw_title LIKE '% ' || ? || ' %')",
+  );
+  const tvResolutionClauses = filters.tvResolutions.map(
+    () => "LOWER(fi.raw_title) LIKE '%' || ? || '%'",
+  );
+  const tvCodecClauses = expandCodecAliases(filters.tvCodecs).map(
+    () => "LOWER(fi.raw_title) LIKE '%' || ? || '%'",
+  );
+
+  const movieYearClause =
+    movieYearClauses.length > 0 ? `(${movieYearClauses.join(' OR ')})` : '0';
+  const tvResolutionClause =
+    tvResolutionClauses.length > 0
+      ? `(${tvResolutionClauses.join(' OR ')})`
+      : '0';
+  const tvCodecClause =
+    tvCodecClauses.length > 0 ? `(${tvCodecClauses.join(' OR ')})` : '0';
+
+  const skippedNoMatchFilter = `(
+      (
+        ${movieFeedClause}
+        AND ${movieYearClause}
+      )
+      OR
+      (
+        ${tvFeedClause}
+        AND ${tvResolutionClause}
+        AND ${tvCodecClause}
+      )
+    )`;
+
+  return `SELECT
+      fo.id,
+      fo.run_id AS runId,
+      fo.status,
+      fo.created_at AS recordedAt,
+      fi.raw_title AS title,
+      fi.feed_name AS feedName,
+      fi.guid_or_link AS guidOrLink
+    FROM feed_item_outcomes fo
+    LEFT JOIN feed_items fi ON fo.feed_item_id = fi.id
+    WHERE fo.created_at >= datetime('now', '-' || ?1 || ' days')
+      AND (
+        fo.status = 'failed'
+        OR (
+          fo.status = 'skipped_no_match'
+          AND ${skippedNoMatchFilter}
+        )
+      )
+    GROUP BY fi.guid_or_link, fi.raw_title
+    ORDER BY fo.created_at DESC`;
+}
+
+function buildDistinctOutcomesFilteredParams(
+  filters: DistinctOutcomeFilters,
+): Array<string | number> {
+  const movieFeeds = Object.entries(filters.feedMediaTypes)
+    .filter(([, mediaType]) => mediaType === 'movie')
+    .map(([feedName]) => feedName);
+  const tvFeeds = Object.entries(filters.feedMediaTypes)
+    .filter(([, mediaType]) => mediaType === 'tv')
+    .map(([feedName]) => feedName);
+  const codecAliases = expandCodecAliases(filters.tvCodecs);
+
+  const params: Array<string | number> = [...movieFeeds];
+  for (const year of filters.movieYears) {
+    params.push(year, year);
+  }
+  params.push(...tvFeeds);
+  params.push(...filters.tvResolutions.map((value) => value.toLowerCase()));
+  params.push(...codecAliases.map((value) => value.toLowerCase()));
+  return params;
+}
+
+function buildInClause(column: string, count: number): string {
+  if (count === 0) return '0';
+  return `${column} IN (${new Array(count).fill('?').join(', ')})`;
+}
+
+function expandCodecAliases(codecs: string[]): string[] {
+  const aliases = new Set<string>();
+  for (const codec of codecs) {
+    const normalized = codec.toLowerCase();
+    aliases.add(normalized);
+    if (normalized === 'x264') aliases.add('h264');
+    if (normalized === 'h264') aliases.add('x264');
+    if (normalized === 'x265') {
+      aliases.add('h265');
+      aliases.add('hevc');
+    }
+    if (normalized === 'h265') {
+      aliases.add('x265');
+      aliases.add('hevc');
+    }
+    if (normalized === 'hevc') {
+      aliases.add('x265');
+      aliases.add('h265');
+    }
+  }
+  return [...aliases];
 }
 
 function lastInsertedRowId(database: Database): number {
