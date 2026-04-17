@@ -323,6 +323,7 @@ describe('GET /api/candidates', () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.candidates[0].tmdb?.name).toBe('Test Show TMDB');
+      expect(body.candidates[0].tmdb?.network).toBe('HBO');
       expect(body.candidates[0].tmdb?.voteAverage).toBe(8);
     } finally {
       db.close();
@@ -610,15 +611,31 @@ describe('POST /api/shows/:slug/tmdb/refresh', () => {
     }
   });
 
-  it('requires write auth and configured TMDB refresh support', async () => {
-    const handler = createApiFetch(createDeps());
+  it('rejects refresh requests without write auth', async () => {
+    const deps = createDeps();
+    deps.config.runtime.apiWriteToken = 'write-token';
+    const handler = createApiFetch(deps);
     const response = await handler(
       new Request('http://localhost/api/shows/test%20show/tmdb/refresh', {
         method: 'POST',
       }),
     );
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
+  });
+
+  it('reports when TMDB refresh support is not configured', async () => {
+    const deps = createDeps();
+    deps.config.runtime.apiWriteToken = 'write-token';
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/shows/test%20show/tmdb/refresh', {
+        method: 'POST',
+        headers: { authorization: 'Bearer write-token' },
+      }),
+    );
+
+    expect(response.status).toBe(409);
   });
 });
 

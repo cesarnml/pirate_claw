@@ -27,8 +27,8 @@ tab strip with per-episode rows.
 
 ## Out Of Scope
 
-- Any change to the `/api/shows/[slug]` response shape
-- New daemon API endpoints
+- Broader API expansion beyond the approved detail-page exception captured below
+- Additional config surface beyond the write-authenticated TMDB refresh action
 - Plex chip when `watchCount` is null or absent
 
 ## Exit Condition
@@ -36,8 +36,8 @@ tab strip with per-episode rows.
 The detail page renders the backdrop hero with TMDB art and metadata. Season
 tabs switch the episode table correctly. Episode rows display spec tags and
 `StatusChip` values. A Plex watch count chip appears when `watchCount` is
-non-null. The Refresh TMDB button triggers the existing refresh action without
-regression.
+non-null. The Refresh TMDB button triggers the approved write-authenticated
+manual TMDB refresh action without regression.
 
 ## Rationale
 
