@@ -68,13 +68,14 @@ describe('/config', () => {
 		expect(screen.getByRole('heading', { name: 'RSS Feeds' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'TV Configuration' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Movie Policy' })).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: 'TV Shows' })).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: 'Runtime' })).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: /Transmission/ })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Transmission Protocol' })).toBeInTheDocument();
+		expect(screen.getByText('Write Access: Active')).toBeInTheDocument();
 		expect(screen.getByText('TestFeed')).toBeInTheDocument();
 		expect(screen.getByRole('textbox', { name: 'TV show 1' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save shows' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save runtime' })).toBeInTheDocument();
+		expect(screen.getByText('Storage Pool')).toBeInTheDocument();
+		expect(screen.getByText('Transfer Rate')).toBeInTheDocument();
 	});
 
 	it('renders error state when API is unreachable', () => {
@@ -184,30 +185,10 @@ describe('/config', () => {
 			onboarding: null
 		});
 
-		expect(screen.getByRole('button', { name: 'RSS Feeds' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		expect(screen.getByRole('button', { name: 'TV Configuration' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		expect(screen.getByRole('button', { name: 'Movie Policy' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		expect(screen.getByRole('button', { name: /Transmission/ })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		expect(screen.getByRole('button', { name: 'TV Shows' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		expect(screen.getByRole('button', { name: 'Runtime' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
+		expect(screen.getByRole('heading', { name: 'Transmission Protocol' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'RSS Feeds' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'TV Configuration' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Movie Policy' })).toBeInTheDocument();
 	});
 
 	it('disables all write controls in read-only mode but keeps Test Connection enabled', () => {
@@ -219,6 +200,7 @@ describe('/config', () => {
 			onboarding: null
 		});
 
+		expect(screen.getByText('Write Access: Restricted')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save feeds' })).toBeDisabled();
 		expect(screen.getByRole('button', { name: 'Save TV defaults' })).toBeDisabled();
 		expect(screen.getByRole('button', { name: 'Save movies policy' })).toBeDisabled();
