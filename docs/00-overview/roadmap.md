@@ -490,11 +490,15 @@ Committed scope:
 - 4 top-level nav items: Dashboard / TV Shows / Movies / Config
 - Dashboard absorbs `/candidates` (Active Downlink panel) and `/unmatched` (Event Log panel)
 - all views redesigned: Dashboard, TV Shows, TV Show Detail, Movies, Config
-- zero new daemon API endpoints; all visual improvements draw from data already returned
+- visual improvements primarily draw from existing data, with one approved
+  P19.05 exception: show-level TMDB network metadata, episode spec tags surfaced
+  on `/api/shows`, and a write-authenticated manual TMDB refresh action for the
+  show detail route
 
 Explicitly deferred:
 
-- new daemon endpoints or config surface
+- new daemon endpoints or config surface beyond the approved P19.05 detail-page
+  refresh exception
 - dark/light theme toggle (Obsidian Tide dark is the single theme in v1)
 - onboarding wizard re-architecture (retouched for new tokens only)
 
