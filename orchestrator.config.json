@@ -6,7 +6,7 @@
   "ticketBoundaryMode": "cook",
   "reviewPolicy": {
     "selfAudit": "skip_doc_only",
-    "codexPreflight": "disabled",
+    "codexPreflight": "skip_doc_only",
     "externalReview": "skip_doc_only"
   }
 }
