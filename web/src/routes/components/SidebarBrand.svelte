@@ -19,7 +19,7 @@
 			class="h-11 w-11 rounded-2xl object-cover shadow-[0_12px_30px_rgba(5,10,21,0.35)]"
 		/>
 		<div class="min-w-0 md:hidden lg:block">
-			<p class="text-foreground font-mono text-sm font-semibold tracking-[0.24em] uppercase">
+			<p class="text-accent font-mono text-sm font-semibold tracking-[0.24em] uppercase">
 				Pirate Claw
 			</p>
 			<p class="text-muted-foreground mt-1 text-xs">Library command deck</p>
