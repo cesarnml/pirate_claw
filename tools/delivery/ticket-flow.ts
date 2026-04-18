@@ -353,6 +353,7 @@ export function recordCodexPreflight(
   isDocOnly?: boolean,
   policy: ReviewPolicyStageValue = 'skip_doc_only',
   patchCommits?: InternalReviewPatchCommit[],
+  note?: string,
   now: () => string = () => new Date().toISOString(),
 ): DeliveryState {
   const target = state.tickets.find(
@@ -394,6 +395,7 @@ export function recordCodexPreflight(
             status: 'codex_preflight_complete',
             codexPreflightOutcome: resolvedOutcome,
             codexPreflightCompletedAt: completedAt,
+            codexPreflightNote: note,
             codexPreflightPatchCommits: patchCommits,
           }
         : ticket,

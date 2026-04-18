@@ -42,6 +42,7 @@ type TicketReviewMetadataRefreshTarget = Pick<
   | 'selfAuditPatchCommits'
   | 'codexPreflightOutcome'
   | 'codexPreflightCompletedAt'
+  | 'codexPreflightNote'
   | 'codexPreflightPatchCommits'
   | 'reviewActionSummary'
   | 'reviewArtifactJsonPath'
@@ -1016,6 +1017,9 @@ export function buildPullRequestBody(
   });
   if (codexPreflightLine) {
     lines.push(codexPreflightLine);
+    if (ticket.codexPreflightNote) {
+      lines.push(`  > ${ticket.codexPreflightNote}`);
+    }
   }
 
   const selfAuditPatchCommitBullets = buildRecordedPatchCommitBullets(

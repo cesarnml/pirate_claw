@@ -5,13 +5,15 @@ description: Execute approved multi-ticket phase/epic work or standalone (non-ti
 
 # Son Of Anton Ethos
 
+**Before executing a single command:** Read `docs/03-engineering/delivery-orchestrator.md` in full. Every orchestrator action — for both ticket stacks (`start`, `post-verify-self-audit`, `codex-preflight`, `open-pr`, `poll-review`, `record-review`, `advance`) and standalone PRs (`ai-review`) — is defined there with exact sequencing and policy. That document is the authoritative command surface. Your own reasoning about what the flow "probably" is does not override it.
+
 Son of Anton drives approved work to completion. How ticket boundaries are handled is governed by `ticketBoundaryMode` in `orchestrator.config.json`. The orchestrator does not seek repeated permission between tickets — but it honors the boundary contract precisely as configured.
 
 ---
 
 ## Standalone PRs
 
-1. **Entrypoint.** Use `bun run deliver`. Read `docs/03-engineering/delivery-orchestrator.md` for command surface — not ad hoc substitutes.
+1. **Entrypoint.** Use `bun run deliver`.
 2. **When to use.** Smaller bounded changes ship as standalone PRs without a new phase/epic. Use `bun run deliver ai-review [--pr <number>]` — not the ticketed stacked flow (`--plan …`, `poll-review`, `advance`, etc.).
 3. **Review discipline.** Complete implement → verify (`bun run verify` + scoped tests) → named self-audit (re-read diff, second-pass risky areas). Standalone PRs do not use the ticket-only `post-verify-self-audit` or `codex-preflight` recorders because the flow is stateless, so these remain expected preflight behaviors rather than orchestrator-enforced gates.
    - Self-audit is required for every standalone PR.

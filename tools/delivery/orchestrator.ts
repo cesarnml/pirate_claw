@@ -198,6 +198,7 @@ export type TicketState = TicketDefinition & {
   selfAuditPatchCommits?: InternalReviewPatchCommit[];
   codexPreflightOutcome?: CodexPreflightOutcome;
   codexPreflightCompletedAt?: string;
+  codexPreflightNote?: string;
   codexPreflightPatchCommits?: InternalReviewPatchCommit[];
   docOnly?: boolean;
   prNumber?: number;
@@ -631,7 +632,14 @@ export async function runDeliveryOrchestrator(
               _config.runtime,
             )
           : false;
-        if (preflightOutcome !== 'patched' && parsed.positionals.length > 1) {
+        const preflightNote =
+          preflightOutcome === 'clean' ? parsed.positionals[1] : undefined;
+        if (preflightOutcome === 'clean' && !isDocOnly && !preflightNote) {
+          throw new Error(
+            'codex-preflight clean requires a note summarizing what Codex reviewed and concluded. Usage: codex-preflight clean "<note>"',
+          );
+        }
+        if (preflightOutcome === 'patched' && parsed.positionals.length > 1) {
           throw new Error(
             'Codex preflight patch commits are only allowed when outcome is `patched`.',
           );
@@ -649,6 +657,7 @@ export async function runDeliveryOrchestrator(
                 'Codex preflight',
               )
             : undefined,
+          preflightNote,
         );
         const justRecordedPreflight = nextState.tickets.find(
           (t) =>
@@ -1175,6 +1184,7 @@ export function recordCodexPreflight(
   isDocOnly?: boolean,
   policy: ReviewPolicyStageValue = _config.reviewPolicy.codexPreflight,
   patchCommits?: InternalReviewPatchCommit[],
+  note?: string,
 ): DeliveryState {
   return recordCodexPreflightImpl(
     state,
@@ -1182,6 +1192,7 @@ export function recordCodexPreflight(
     isDocOnly,
     policy,
     patchCommits,
+    note,
   );
 }
 
