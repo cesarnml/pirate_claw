@@ -22,7 +22,7 @@ const detailShow: ShowBreakdown = {
 					episode: 1,
 					identityKey: 'key-s01e01',
 					status: 'queued',
-					lifecycleStatus: 'downloading',
+
 					resolution: '1080p',
 					codec: 'x265',
 					transmissionPercentDone: 0.42,

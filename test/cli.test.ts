@@ -404,7 +404,6 @@ describe('pirate-claw status', () => {
     });
     repository.recordCandidateReconciliation({
       identityKey: 'movie:example movie|2024',
-      lifecycleStatus: 'downloading',
       transmissionTorrentName: 'Queued Torrent',
       transmissionPercentDone: 0.5,
       reconciledAt: '2026-03-30T02:10:00.000Z',
@@ -440,7 +439,6 @@ describe('pirate-claw status', () => {
     });
     repository.recordCandidateReconciliation({
       identityKey: 'movie:retry me|2024',
-      lifecycleStatus: 'queued',
       transmissionTorrentName: 'Retry Me',
       transmissionPercentDone: 0,
       reconciledAt: '2026-03-30T01:20:00.000Z',
@@ -462,7 +460,7 @@ describe('pirate-claw status', () => {
     );
     expect(status.stdout).toContain('Candidate states');
     expect(status.stdout).toContain(
-      'movie:example movie|2024 | status=downloading | rule=movie-policy | title=example movie',
+      'movie:example movie|2024 | status=queued | rule=movie-policy | title=example movie',
     );
     expect(status.stdout).toContain(
       'progress=50% | torrent=Queued Torrent | feed=Movie Feed',
@@ -471,13 +469,13 @@ describe('pirate-claw status', () => {
       'updated=2026-03-30T00:10:00.000Z | queued=2026-03-30T00:10:00.000Z | reconciled=2026-03-30T02:10:00.000Z',
     );
     expect(status.stdout).toContain(
-      'movie:retry me|2024 | status=queued | rule=movie-policy | title=retry me',
+      'movie:retry me|2024 | status=failed | rule=movie-policy | title=retry me',
     );
 
     expect(
-      status.stdout.indexOf('movie:example movie|2024 | status=downloading'),
+      status.stdout.indexOf('movie:example movie|2024 | status=queued'),
     ).toBeLessThan(
-      status.stdout.indexOf('movie:retry me|2024 | status=queued'),
+      status.stdout.indexOf('movie:retry me|2024 | status=failed'),
     );
 
     expect(repository.listRecentRunSummaries()).toEqual(runsBefore);
@@ -900,13 +898,12 @@ describe('pirate-claw reconcile', () => {
     expect(reconcile.stderr).toBe('');
     expect(reconcile.stdout).toContain('Tracked torrents: 1');
     expect(reconcile.stdout).toContain('reconciled: 1');
-    expect(reconcile.stdout).toContain('downloading: 1');
+    expect(reconcile.stdout).toContain('updated: 1');
     expect(reconcile.stdout).toContain('missing_from_transmission: 0');
 
     expect(
       repository.getCandidateState('movie:example movie|2024'),
     ).toMatchObject({
-      lifecycleStatus: 'downloading',
       reconciledAt: expect.any(String),
       transmissionStatusCode: 4,
       transmissionPercentDone: 0.5,
@@ -914,7 +911,7 @@ describe('pirate-claw reconcile', () => {
     });
   });
 
-  it('marks missing torrents explicitly unless completion was already observed', async () => {
+  it('marks all non-terminal missing torrents as missing_from_transmission', async () => {
     const directory = await mkdtemp();
     const transmissionServer = startMissingTransmissionLifecycleServer();
     const configPath = join(directory, 'pirate-claw.config.json');
@@ -951,7 +948,7 @@ describe('pirate-claw reconcile', () => {
     });
     repository.recordCandidateReconciliation({
       identityKey: 'movie:example movie|2024',
-      lifecycleStatus: 'completed',
+      transmissionPercentDone: 1,
       reconciledAt: '2026-03-30T01:00:00.000Z',
     });
 
@@ -975,26 +972,29 @@ describe('pirate-claw reconcile', () => {
     );
 
     expect(reconcile.exitCode).toBe(0);
-    expect(reconcile.stdout).toContain('completed: 1');
-    expect(reconcile.stdout).toContain('missing_from_transmission: 1');
+    expect(reconcile.stdout).toContain('Tracked torrents: 2');
+    expect(reconcile.stdout).toContain('updated: 0');
+    expect(reconcile.stdout).toContain('missing_from_transmission: 2');
 
     expect(
       repository.getCandidateState('movie:example movie|2024'),
     ).toMatchObject({
-      lifecycleStatus: 'completed',
+      reconciledAt: expect.any(String),
     });
-    expect(repository.getCandidateState('movie:retry me|2024')).toMatchObject({
-      lifecycleStatus: 'missing_from_transmission',
+    expect(
+      repository.getCandidateState('movie:retry me|2024'),
+    ).toMatchObject({
+      reconciledAt: expect.any(String),
     });
 
     const status = await runSimpleCommand(directory, 'status');
 
     expect(status.exitCode).toBe(0);
     expect(status.stdout).toContain(
-      'movie:retry me|2024 | status=missing_from_transmission | rule=movie-policy | title=retry me',
+      'movie:retry me|2024 | status=queued | rule=movie-policy | title=retry me',
     );
     expect(status.stdout).toContain(
-      'movie:example movie|2024 | status=completed | rule=movie-policy | title=example movie',
+      'movie:example movie|2024 | status=queued | rule=movie-policy | title=example movie',
     );
   });
 });

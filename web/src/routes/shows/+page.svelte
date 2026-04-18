@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import type { ShowBreakdown, ShowEpisode, ShowSeason, TorrentStatSnapshot } from '$lib/types';
+	import { torrentDisplayState } from '$lib/helpers';
 	import type { PageData } from './$types';
 
 	const props = $props<{ data: PageData }>();
@@ -23,6 +24,7 @@
 	let selectedSeasonByShow = $state<Record<string, number>>({});
 
 	const torrents = $derived(data.torrents ?? []);
+	const liveHashes = $derived(new Set(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function showKey(show: ShowBreakdown): string {
 		return show.normalizedTitle;
@@ -53,7 +55,7 @@
 		if (totalEpisodes === 0) return null;
 		const completed = show.seasons
 			.flatMap((season) => season.episodes)
-			.filter((episode) => episode.lifecycleStatus === 'completed').length;
+			.filter((episode) => episode.transmissionPercentDone === 1).length;
 		return Math.round((completed / totalEpisodes) * 100);
 	}
 
@@ -115,11 +117,7 @@
 		episode: ShowEpisode,
 		live: TorrentStatSnapshot | undefined
 	): boolean {
-		return (
-			live?.status === 'downloading' ||
-			episode.lifecycleStatus === 'active' ||
-			episode.lifecycleStatus === 'downloading'
-		);
+		return live?.status === 'downloading' || torrentDisplayState(episode, liveHashes) === 'downloading';
 	}
 
 	function activeSeason(show: ShowBreakdown): ShowSeason | null {
@@ -478,8 +476,8 @@
 														{#if episode.tmdb?.airDate}
 															<Badge variant="outline">{episode.tmdb.airDate}</Badge>
 														{/if}
-														{#if episode.lifecycleStatus}
-															<Badge variant="outline">{episode.lifecycleStatus}</Badge>
+														{#if episode.pirateClawDisposition}
+															<Badge variant="outline">{episode.pirateClawDisposition}</Badge>
 														{/if}
 														{#if episode.transmissionTorrentHash}
 															<Badge variant="secondary">Torrent linked</Badge>

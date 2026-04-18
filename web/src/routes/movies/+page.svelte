@@ -6,7 +6,8 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import type { CandidateLifecycleStatus, MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
+	import type { MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
+	import { torrentDisplayState } from '$lib/helpers';
 	import type { PageData } from './$types';
 
 	const props = $props<{ data: PageData }>();
@@ -20,6 +21,7 @@
 	let sortKey = $state<SortKey>('date');
 
 	const torrents = $derived(data.torrents ?? []);
+	const liveHashes = $derived(new Set(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function displayTitle(movie: MovieBreakdown): string {
 		return movie.tmdb?.title ?? movie.normalizedTitle;
@@ -67,16 +69,11 @@
 			return 'queued';
 		}
 
-		const life = movie.lifecycleStatus as CandidateLifecycleStatus | undefined;
-		if (life === 'missing_from_transmission') {
-			return 'missing';
-		}
-		if (life === 'completed') {
-			return 'completed';
-		}
-		if (life === 'downloading') {
-			return 'downloading';
-		}
+		const derived = torrentDisplayState(movie, liveHashes);
+		if (derived === 'missing') return 'missing';
+		if (derived === 'completed') return 'completed';
+		if (derived === 'downloading') return 'downloading';
+		if (derived === 'removed' || derived === 'deleted') return 'missing';
 		return 'queued';
 	}
 
