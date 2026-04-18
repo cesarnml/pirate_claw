@@ -24,7 +24,7 @@
 	let selectedSeasonByShow = $state<Record<string, number>>({});
 
 	const torrents = $derived(data.torrents ?? []);
-	const liveHashes = $derived(new Set(torrents.map((t: TorrentStatSnapshot) => t.hash)));
+	const liveHashes = $derived(new Set<string>(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function showKey(show: ShowBreakdown): string {
 		return show.normalizedTitle;

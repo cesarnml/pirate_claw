@@ -21,7 +21,7 @@
 	let sortKey = $state<SortKey>('date');
 
 	const torrents = $derived(data.torrents ?? []);
-	const liveHashes = $derived(new Set(torrents.map((t: TorrentStatSnapshot) => t.hash)));
+	const liveHashes = $derived(new Set<string>(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function displayTitle(movie: MovieBreakdown): string {
 		return movie.tmdb?.title ?? movie.normalizedTitle;

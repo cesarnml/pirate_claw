@@ -21,7 +21,7 @@
 	let selectedSeason = $state<number | null>(null);
 
 	const torrents = $derived(data.torrents ?? []);
-	const liveHashes = $derived(new Set(torrents.map((t: TorrentStatSnapshot) => t.hash)));
+	const liveHashes = $derived(new Set<string>(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function displayTitle(show: NonNullable<PageData['show']>): string {
 		return show.tmdb?.name ?? show.normalizedTitle;
