@@ -111,7 +111,7 @@ export function torrentDisplayState(
 		transmissionPercentDone?: number;
 		transmissionStatusCode?: number;
 	},
-	liveHashes: Set<string>,
+	liveHashes: Set<string>
 ): TorrentDisplayState {
 	if (candidate.pirateClawDisposition) return candidate.pirateClawDisposition;
 	if (!candidate.transmissionTorrentHash) return 'queued';

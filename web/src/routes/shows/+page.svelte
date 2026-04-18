@@ -117,7 +117,9 @@
 		episode: ShowEpisode,
 		live: TorrentStatSnapshot | undefined
 	): boolean {
-		return live?.status === 'downloading' || torrentDisplayState(episode, liveHashes) === 'downloading';
+		return (
+			live?.status === 'downloading' || torrentDisplayState(episode, liveHashes) === 'downloading'
+		);
 	}
 
 	function activeSeason(show: ShowBreakdown): ShowSeason | null {

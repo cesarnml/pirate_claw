@@ -18,7 +18,7 @@ const exampleShow: ShowBreakdown = {
 					episode: 1,
 					identityKey: 'key-s01e01',
 					status: 'queued',
-	
+
 					transmissionPercentDone: 1,
 					tmdb: {
 						name: 'Pilot',
@@ -30,7 +30,7 @@ const exampleShow: ShowBreakdown = {
 					episode: 2,
 					identityKey: 'key-s01e02',
 					status: 'queued',
-	
+
 					transmissionPercentDone: 0.5,
 					transmissionTorrentHash: 'abc123',
 					queuedAt: '2026-04-16T00:00:00.000Z',
@@ -78,7 +78,7 @@ const archiveShow: ShowBreakdown = {
 					episode: 1,
 					identityKey: 'archive-s01e01',
 					status: 'queued',
-	
+
 					transmissionPercentDone: 0.8,
 					transmissionTorrentHash: 'def456',
 					queuedAt: '2026-04-10T00:00:00.000Z',
