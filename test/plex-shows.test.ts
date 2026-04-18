@@ -31,6 +31,7 @@ function stubRepository(): Repository {
     listRetryableCandidates: () => [],
     listSkippedNoMatchOutcomes: () => [],
     listDistinctUnmatchedAndFailedOutcomes: () => [],
+    setPirateClawDisposition: () => {},
   };
 }
 
