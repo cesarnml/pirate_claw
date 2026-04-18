@@ -26,7 +26,7 @@
 		rejected: 'FAILED',
 		duplicate: 'MISSING',
 		reconciled: 'COMPLETED',
-		in_library: 'IN_LIBRARY',
+		in_library: 'IN LIBRARY',
 		missing: 'MISSING',
 		unknown: 'UNKNOWN'
 	};

@@ -12,9 +12,9 @@
 <Card class="bg-card/70 rounded-[30px] border-white/10" data-testid="archive-strip">
 	<CardHeader class="pb-4">
 		<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.24em] uppercase">
-			Archive commit
+			Completed Downloads
 		</p>
-		<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Recently completed grabs</h2>
+		<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Your Haul</h2>
 	</CardHeader>
 	<CardContent>
 		{#if archiveItems.length === 0}

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import XIcon from '@lucide/svelte/icons/x';
 	import { fly } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
 
@@ -24,16 +23,6 @@
 			in:fly={{ x: -24, duration: 180 }}
 			out:fly={{ x: -18, duration: 140 }}
 		>
-			<div class="border-border flex items-center justify-end border-b px-4 py-3">
-				<button
-					type="button"
-					class="border-border bg-background text-foreground inline-flex h-11 w-11 items-center justify-center rounded-2xl border"
-					aria-label="Close navigation menu"
-					onclick={onClose}
-				>
-					<XIcon class="h-5 w-5" />
-				</button>
-			</div>
 			{@render content()}
 		</div>
 	</div>

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import ClapperboardIcon from '@lucide/svelte/icons/clapperboard';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import StarIcon from '@lucide/svelte/icons/star';
 	import StatusChip from '$lib/components/StatusChip.svelte';
@@ -109,10 +108,14 @@
 	}
 
 	function formatDate(value: string | undefined): string {
-		if (!value) return 'Queued date unknown';
+		if (!value) return 'Unknown';
 		const date = new Date(value);
-		if (Number.isNaN(date.getTime())) return 'Queued date unknown';
-		return date.toLocaleDateString();
+		if (Number.isNaN(date.getTime())) return 'Unknown';
+		// Format as DD ShortMonth YY (e.g., 18 Apr 26)
+		const day = date.getDate().toString().padStart(2, '0');
+		const month = date.toLocaleString('en-US', { month: 'short' });
+		const year = date.getFullYear().toString().slice(-2);
+		return `${day} ${month} ${year}`;
 	}
 
 	function formatSpeed(bytesPerSecond: number): string {
@@ -252,7 +255,6 @@
 				{@const live = liveTorrent(movie)}
 				{@const status = commandStatus(movie, live)}
 				{@const backdropUrl = safeImageUrl(movie.tmdb?.backdropUrl)}
-				{@const posterUrl = safeImageUrl(movie.tmdb?.posterUrl)}
 				{@const pct = progressPercent(movie, live)}
 				<li class="list-none">
 					<Card
@@ -278,58 +280,37 @@
 
 						<CardContent class="relative flex h-full flex-col gap-5 p-5">
 							<div class="flex items-start gap-4">
-								<div
-									class="bg-muted/70 border-border/70 flex h-40 w-28 shrink-0 overflow-hidden rounded-[20px] border"
-								>
-									{#if posterUrl}
-										<img
-											src={posterUrl}
-											alt={`Poster for ${displayTitle(movie)}${movie.year ? ` (${movie.year})` : ''}`}
-											class="h-full w-full object-cover"
-											loading="lazy"
-										/>
-									{:else}
-										<div
-											class="text-muted-foreground flex h-full w-full items-center justify-center"
-										>
-											<ClapperboardIcon class="size-6" />
-										</div>
-									{/if}
-								</div>
-
 								<div class="min-w-0 flex-1 space-y-3">
-									<div class="flex flex-wrap items-start justify-between gap-3">
-										<div class="space-y-2">
-											<div class="flex flex-wrap items-center gap-2">
-												<h2 class="text-xl font-semibold tracking-[-0.03em] text-balance">
-													{displayTitle(movie)}
-												</h2>
+									<div class="flex flex-col gap-2">
+										<div class="no-wrap flex items-start justify-between">
+											<h2 class="flex-1 text-xl font-semibold tracking-[-0.03em] text-balance">
+												{displayTitle(movie)}
+											</h2>
+											<div class="flex items-center gap-1">
 												{#if movie.year}
 													<Badge variant="secondary" class="bg-white/8 text-slate-200">
 														{movie.year}
 													</Badge>
 												{/if}
-											</div>
-
-											<div class="flex flex-wrap items-center gap-2">
-												<StatusChip {status} />
-												{#if hasPlexChip(movie)}
-													<StatusChip status={movie.plexStatus} />
+												{#if movie.tmdb?.voteAverage !== undefined}
+													<div
+														class="border-border bg-card/70 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.18em] uppercase"
+														aria-label={`TMDB vote average: ${formatRating(movie.tmdb.voteAverage)}`}
+													>
+														<StarIcon class="text-primary size-3.5 fill-current" />
+														{formatRating(movie.tmdb.voteAverage)}
+													</div>
 												{/if}
 											</div>
 										</div>
 
-										{#if movie.tmdb?.voteAverage !== undefined}
-											<div
-												class="border-border bg-card/70 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.18em] uppercase"
-												aria-label={`TMDB vote average: ${formatRating(movie.tmdb.voteAverage)}`}
-											>
-												<StarIcon class="text-primary size-3.5 fill-current" />
-												{formatRating(movie.tmdb.voteAverage)}
-											</div>
-										{/if}
+										<div class="flex flex-wrap items-center gap-2">
+											<StatusChip {status} />
+											{#if hasPlexChip(movie) && status == 'completed'}
+												<StatusChip status={movie.plexStatus} />
+											{/if}
+										</div>
 									</div>
-
 									{#if movie.tmdb?.overview}
 										<p class="text-muted-foreground text-sm leading-6">
 											{movie.tmdb.overview}
@@ -348,7 +329,7 @@
 											</Badge>
 										{/if}
 										<Badge variant="secondary" class="bg-white/8 text-slate-100">
-											Queued {formatDate(movie.queuedAt)}
+											Queued @ {formatDate(movie.queuedAt)}
 										</Badge>
 										{#if hasPlexChip(movie) && movie.lastWatchedAt}
 											<Badge variant="secondary" class="bg-white/8 text-slate-100">

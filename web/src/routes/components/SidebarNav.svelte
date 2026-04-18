@@ -26,11 +26,11 @@
 				<a
 					href={link.href}
 					{onclick}
-					class="focus-visible:ring-ring flex flex-1 items-center gap-3 rounded-2xl px-3 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-					class:text-secondary={isActive(link.href)}
-					class:text-muted-foreground={!isActive(link.href)}
-					class:hover:text-foreground={!isActive(link.href)}
-					class:hover:bg-secondary={!isActive(link.href)}
+					class="focus-visible:ring-ring flex flex-1 items-center gap-3 rounded-2xl px-3 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none {isActive(
+						link.href
+					)
+						? 'text-primary'
+						: 'text-muted-foreground hover:text-foreground hover:bg-primary/30'}"
 				>
 					<link.icon class="h-5 w-5 shrink-0" />
 					<span class="text-sm font-medium md:sr-only lg:not-sr-only">{link.label}</span>

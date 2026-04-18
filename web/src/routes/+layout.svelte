@@ -51,60 +51,56 @@
 
 {#snippet sidebarContent()}
 	<div class="flex h-full w-full flex-col">
-		<SidebarBrand onclick={closeMobileNav} />
+		<SidebarBrand onclick={closeMobileNav} onclose={closeMobileNav} />
 		<SidebarNav {nav} onclick={closeMobileNav} />
 		<SidebarStatusFooter {daemonUptime} daemonHealthy={!!data.health} {transmissionConnected} />
 	</div>
 {/snippet}
 
-<div class="dark bg-background text-foreground min-h-screen">
-	<div class="flex min-h-screen">
+<div class="dark bg-background text-foreground flex h-screen overflow-hidden">
+	{#if showSidebar}
+		<aside
+			class="border-border bg-card/60 hidden h-screen shrink-0 border-r backdrop-blur md:flex md:w-16 lg:w-56"
+		>
+			{@render sidebarContent()}
+		</aside>
+	{/if}
+
+	<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
 		{#if showSidebar}
-			<aside class="border-border bg-card/60 hidden border-r backdrop-blur md:flex md:w-16 lg:w-56">
-				{@render sidebarContent()}
-			</aside>
+			<header class="border-border bg-background/88 shrink-0 border-b backdrop-blur md:hidden">
+				<div class="flex items-center justify-between gap-3 px-4 py-3">
+					<a href="/" class="flex items-center gap-3" aria-label="Home">
+						<img
+							src="/pirate-claw-logo.png"
+							alt=""
+							width="40"
+							height="40"
+							class="h-10 w-10 rounded-2xl object-cover"
+						/>
+						<div>
+							<p class="text-primary font-mono text-sm font-semibold tracking-[0.22em] uppercase">
+								Pirate Claw
+							</p>
+							<p class="text-muted-foreground text-xs">Command & Control</p>
+						</div>
+					</a>
+
+					<button
+						type="button"
+						class="border-border bg-card text-foreground hover:text-primary inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-2xl border"
+						aria-label="Open navigation menu"
+						onclick={() => mobileNavOpen.set(true)}
+					>
+						<MenuIcon class="h-5 w-5" />
+					</button>
+				</div>
+			</header>
 		{/if}
 
-		<div class="flex min-w-0 flex-1 flex-col">
-			{#if showSidebar}
-				<header
-					class="border-border bg-background/88 sticky top-0 z-20 border-b backdrop-blur md:hidden"
-				>
-					<div class="flex items-center justify-between gap-3 px-4 py-3">
-						<a href="/" class="flex items-center gap-3" aria-label="Home">
-							<img
-								src="/pirate-claw-logo.png"
-								alt=""
-								width="40"
-								height="40"
-								class="h-10 w-10 rounded-2xl object-cover"
-							/>
-							<div>
-								<p
-									class="text-foreground font-mono text-sm font-semibold tracking-[0.22em] uppercase"
-								>
-									Pirate Claw
-								</p>
-								<p class="text-muted-foreground text-xs">Library command deck</p>
-							</div>
-						</a>
-
-						<button
-							type="button"
-							class="border-border bg-card text-foreground inline-flex h-11 w-11 items-center justify-center rounded-2xl border"
-							aria-label="Open navigation menu"
-							onclick={() => mobileNavOpen.set(true)}
-						>
-							<MenuIcon class="h-5 w-5" />
-						</button>
-					</div>
-				</header>
-			{/if}
-
-			<main class="min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8 lg:px-10">
-				{@render children()}
-			</main>
-		</div>
+		<main class="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8 lg:px-10">
+			{@render children()}
+		</main>
 	</div>
 
 	{#if showSidebar}

@@ -69,8 +69,6 @@
 			return;
 		}
 		if (typeof onclick === 'function') {
-			// Parameter name is for the function type only (call uses outer `e`).
-			// eslint-disable-next-line no-unused-vars -- type parameter in assertion
 			(onclick as (event: MouseEvent & { currentTarget: HTMLAnchorElement }) => void)(e);
 		}
 	}

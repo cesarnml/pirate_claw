@@ -55,7 +55,7 @@
 		<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.24em] uppercase">
 			Candidate outcomes
 		</p>
-		<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Skipped & Failed Candidates</h2>
+		<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Skipped/Failed Candidates</h2>
 	</CardHeader>
 	<CardContent>
 		{#if outcomes === null}

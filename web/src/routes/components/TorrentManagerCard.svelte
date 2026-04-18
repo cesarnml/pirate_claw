@@ -49,14 +49,16 @@
 						Live throughput
 					</p>
 					<p class="mt-2 flex flex-col items-end gap-0.5 text-sm font-medium">
-						<span
-							><span class="text-muted-foreground">↓</span>
-							{formatSpeed(totalDownloadSpeed)}</span
-						>
-						<span
-							><span class="text-muted-foreground">↑</span>
-							{formatSpeed(totalUploadSpeed)}</span
-						>
+						<span>
+							<span class="text-accent">↓</span>
+							<span class="text-accent">
+								{formatSpeed(totalDownloadSpeed)}
+							</span>
+						</span>
+						<span>
+							<span class="text-destructive">↑</span>
+							<span class="text-destructive">{formatSpeed(totalUploadSpeed)}</span>
+						</span>
 					</p>
 				</div>
 			{/if}
@@ -92,18 +94,9 @@
 						{/if}
 
 						<div class="min-w-0 flex-1">
-							<div class="flex flex-wrap items-start justify-between gap-3">
+							<div class="flex items-start justify-between gap-3">
 								<div class="min-w-0">
 									<p class="truncate text-lg font-medium">{title}</p>
-									<div class="text-muted-foreground mt-2 flex flex-wrap gap-2 text-xs">
-										{#if candidate?.resolution}
-											<span class="rounded-full bg-white/6 px-2 py-1">{candidate.resolution}</span>
-										{/if}
-										{#if candidate?.codec}
-											<span class="rounded-full bg-white/6 px-2 py-1">{candidate.codec}</span>
-										{/if}
-										<StatusChip status={getTorrentDisplayStatus(torrent)} />
-									</div>
 								</div>
 								<div class="text-right text-sm">
 									<p class="font-medium">
@@ -113,12 +106,21 @@
 									<p class="text-muted-foreground mt-1">{formatEta(torrent.eta)}</p>
 								</div>
 							</div>
+							<div class="text-muted-foreground mt-2 flex flex-wrap gap-2 text-xs">
+								{#if candidate?.resolution}
+									<span class="rounded-full bg-white/6 px-2 py-1">{candidate.resolution}</span>
+								{/if}
+								{#if candidate?.codec}
+									<span class="rounded-full bg-white/6 px-2 py-1">{candidate.codec}</span>
+								{/if}
+								<StatusChip status={getTorrentDisplayStatus(torrent)} />
+							</div>
 							{#if torrent.percentDone !== 1}
 								<div class="mt-4">
-									<div class="mb-2 flex items-center justify-end text-xs">
+									<div class="text-primary/80 mb-2 flex items-center justify-end text-xs">
 										<p class="font-medium">{(torrent.percentDone * 100).toFixed(0)}%</p>
 									</div>
-									<div class="bg-muted h-2 rounded-full">
+									<div class="bg-primary/20 h-2 rounded-full">
 										<div
 											class="bg-primary h-2 rounded-full"
 											style="width: {(torrent.percentDone * 100).toFixed(0)}%"
