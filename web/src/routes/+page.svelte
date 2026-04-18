@@ -42,6 +42,10 @@
 
 	const liveHashes = $derived(new Set(torrents.map((t) => t.hash)));
 
+	const missingCandidates = $derived(
+		candidates.filter((c) => torrentDisplayState(c, liveHashes) === 'missing')
+	);
+
 	const archiveItems = $derived(
 		candidates
 			.filter(
@@ -144,7 +148,11 @@
 		<StatusCardGrid {statusCards} />
 
 		<div class="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
-			<TorrentManagerCard {activeDownloads} transmissionSession={data.transmissionSession} />
+			<TorrentManagerCard
+				{activeDownloads}
+				{missingCandidates}
+				transmissionSession={data.transmissionSession}
+			/>
 			<FeedEventLogCard {outcomes} />
 		</div>
 

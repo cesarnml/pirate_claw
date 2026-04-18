@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { deriveOnboardingStatus } from '$lib/onboarding';
-import { apiFetch } from '$lib/server/api';
+import { apiFetch, apiRequest } from '$lib/server/api';
 import type {
 	AppConfig,
 	CandidateStateRecord,
@@ -11,7 +11,8 @@ import type {
 	SkippedOutcomeRecord,
 	TorrentStatSnapshot
 } from '$lib/types';
-import type { PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const canWrite = !!env.PIRATE_CLAW_API_WRITE_TOKEN;
@@ -77,4 +78,35 @@ export const load: PageServerLoad = async () => {
 		onboarding,
 		error
 	};
+};
+
+export const actions: Actions = {
+	dispose: async ({ request }) => {
+		const formData = await request.formData();
+		const hash = formData.get('hash');
+		const disposition = formData.get('disposition');
+
+		if (typeof hash !== 'string' || typeof disposition !== 'string') {
+			return fail(400, { error: 'hash and disposition are required' });
+		}
+
+		const res = await apiRequest('/api/transmission/torrent/dispose', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ hash, disposition })
+		});
+
+		if (!res.ok) {
+			let error = 'Request failed';
+			try {
+				const body = (await res.json()) as { error?: string };
+				if (body.error) error = body.error;
+			} catch {
+				// ignore parse error
+			}
+			return fail(res.status, { error });
+		}
+
+		return { ok: true };
+	}
 };

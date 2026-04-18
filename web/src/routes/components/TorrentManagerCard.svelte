@@ -10,6 +10,7 @@
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
 	import type { CandidateStateRecord, SessionInfo, TorrentStatSnapshot } from '$lib/types';
+	import { enhance } from '$app/forms';
 
 	type ActiveDownload = {
 		torrent: TorrentStatSnapshot;
@@ -18,11 +19,16 @@
 
 	const {
 		activeDownloads,
+		missingCandidates,
 		transmissionSession
 	}: {
 		activeDownloads: ActiveDownload[];
+		missingCandidates: CandidateStateRecord[];
 		transmissionSession: SessionInfo | null;
 	} = $props();
+
+	let inflightDispose = $state<string | null>(null);
+	let disposeErrors = $state<Record<string, string>>({});
 
 	// Derive speeds from individual torrents — consistent with per-card values and avoids
 	// the session-stats / torrent-get snapshot skew.
@@ -132,6 +138,89 @@
 					</li>
 				{/each}
 			</ul>
+		{/if}
+		{#if missingCandidates.length > 0}
+			<div class="border-border border-t pt-4">
+				<p
+					class="text-muted-foreground mb-3 text-[11px] font-semibold tracking-[0.24em] uppercase"
+				>
+					Missing from Transmission
+				</p>
+				<ul class="space-y-3">
+					{#each missingCandidates as candidate (candidate.identityKey)}
+						{@const title = candidateTitle(candidate)}
+						{@const hash = candidate.transmissionTorrentHash!}
+						{@const inFlight = inflightDispose === hash}
+						{@const rowError = disposeErrors[hash]}
+						<li
+							class="border-border bg-background/45 flex items-center justify-between gap-3 rounded-[20px] border p-3"
+						>
+							<div class="min-w-0">
+								<p class="truncate text-sm font-medium">{title}</p>
+								{#if rowError}
+									<p class="text-destructive mt-1 text-xs">{rowError}</p>
+								{/if}
+							</div>
+							<div class="flex shrink-0 gap-2">
+								<form
+									method="POST"
+									action="?/dispose"
+									use:enhance={() => {
+										inflightDispose = hash;
+										delete disposeErrors[hash];
+										return async ({ result, update }) => {
+											inflightDispose = null;
+											if (result.type === 'failure') {
+												const data = result.data as { error?: string } | undefined;
+												disposeErrors[hash] = data?.error ?? 'Failed';
+											} else {
+												await update();
+											}
+										};
+									}}
+								>
+									<input type="hidden" name="hash" value={hash} />
+									<input type="hidden" name="disposition" value="removed" />
+									<button
+										type="submit"
+										disabled={inFlight}
+										class="text-muted-foreground hover:text-foreground rounded-lg bg-white/6 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+									>
+										Mark Removed
+									</button>
+								</form>
+								<form
+									method="POST"
+									action="?/dispose"
+									use:enhance={() => {
+										inflightDispose = hash;
+										delete disposeErrors[hash];
+										return async ({ result, update }) => {
+											inflightDispose = null;
+											if (result.type === 'failure') {
+												const data = result.data as { error?: string } | undefined;
+												disposeErrors[hash] = data?.error ?? 'Failed';
+											} else {
+												await update();
+											}
+										};
+									}}
+								>
+									<input type="hidden" name="hash" value={hash} />
+									<input type="hidden" name="disposition" value="deleted" />
+									<button
+										type="submit"
+										disabled={inFlight}
+										class="text-destructive/80 hover:text-destructive rounded-lg bg-white/6 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+									>
+										Mark Deleted
+									</button>
+								</form>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		{/if}
 	</CardContent>
 </Card>
