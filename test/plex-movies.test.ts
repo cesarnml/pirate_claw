@@ -64,6 +64,7 @@ describe('plex movie enrichment', () => {
               lastViewedAt: 1_712_793_600,
             },
           ],
+          listAllMoviesForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},
@@ -99,6 +100,7 @@ describe('plex movie enrichment', () => {
         cache,
         client: {
           searchMovies: async () => [],
+          listAllMoviesForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},
@@ -109,6 +111,49 @@ describe('plex movie enrichment', () => {
       inLibrary: false,
       watchCount: 0,
       lastWatchedAt: null,
+    });
+  });
+
+  it('matches from movie library catalog when global search returns no rows', async () => {
+    const db = new Database(':memory:');
+    ensurePlexSchema(db);
+    const cache = new PlexCache(db);
+
+    await refreshMovieLibraryCache(
+      [
+        {
+          normalizedTitle: 'The Gates',
+          year: 2026,
+          identityKey: 'movie:the gates|2026',
+          status: 'queued',
+          plexStatus: 'unknown',
+          watchCount: null,
+          lastWatchedAt: null,
+        },
+      ],
+      {
+        cache,
+        client: {
+          searchMovies: async () => [],
+          listAllMoviesForMatching: async () => [
+            {
+              ratingKey: '99',
+              title: 'The Gates',
+              type: 'movie',
+              year: 2026,
+              viewCount: 1,
+            },
+          ],
+        } as never,
+        refreshIntervalMinutes: 30,
+        log: () => {},
+      },
+    );
+
+    expect(cache.getMovie('The Gates', 2026)).toMatchObject({
+      inLibrary: true,
+      plexRatingKey: '99',
+      watchCount: 1,
     });
   });
 

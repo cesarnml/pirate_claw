@@ -345,7 +345,7 @@
 
 		<div class="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
 			<Card
-				class="bg-card/70 scrollbar-none max-h-136 min-w-[420px] overflow-y-auto rounded-[30px] border-white/10 [ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+				class="bg-card/70 scrollbar-none max-h-136 min-w-105 overflow-y-auto rounded-[30px] border-white/10 [ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
 				<CardHeader class="pb-4">
 					<div class="flex items-start justify-between gap-4">

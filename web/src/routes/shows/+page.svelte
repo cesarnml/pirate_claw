@@ -53,7 +53,7 @@
 		if (totalEpisodes === 0) return null;
 		const completed = show.seasons
 			.flatMap((season) => season.episodes)
-			.filter((episode) => episode.status === 'completed').length;
+			.filter((episode) => episode.lifecycleStatus === 'completed').length;
 		return Math.round((completed / totalEpisodes) * 100);
 	}
 
@@ -118,7 +118,7 @@
 		return (
 			live?.status === 'downloading' ||
 			episode.lifecycleStatus === 'active' ||
-			episode.status === 'downloading'
+			episode.lifecycleStatus === 'downloading'
 		);
 	}
 

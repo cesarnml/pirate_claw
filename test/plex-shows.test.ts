@@ -62,6 +62,7 @@ describe('plex show enrichment', () => {
               lastViewedAt: 1_712_793_600,
             },
           ],
+          listAllTvShowsForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},
@@ -95,6 +96,7 @@ describe('plex show enrichment', () => {
         cache,
         client: {
           searchShows: async () => [],
+          listAllTvShowsForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},
@@ -105,6 +107,48 @@ describe('plex show enrichment', () => {
       inLibrary: false,
       watchCount: 0,
       lastWatchedAt: null,
+    });
+  });
+
+  it('matches from library catalog when global search returns no rows', async () => {
+    const db = new Database(':memory:');
+    ensurePlexSchema(db);
+    const cache = new PlexCache(db);
+
+    await refreshShowLibraryCache(
+      [
+        {
+          normalizedTitle: 'The Pitt',
+          seasons: [],
+          plexStatus: 'unknown',
+          watchCount: null,
+          lastWatchedAt: null,
+        },
+      ],
+      {
+        cache,
+        client: {
+          searchShows: async () => [],
+          listAllTvShowsForMatching: async () => [
+            {
+              ratingKey: '42',
+              title: 'The Pitt',
+              type: 'show',
+              viewCount: 3,
+              lastViewedAt: 1_712_793_600,
+            },
+          ],
+        } as never,
+        refreshIntervalMinutes: 30,
+        log: () => {},
+      },
+    );
+
+    expect(cache.getTv('The Pitt')).toMatchObject({
+      inLibrary: true,
+      plexRatingKey: '42',
+      watchCount: 3,
+      lastWatchedAt: '2024-04-11T00:00:00.000Z',
     });
   });
 
@@ -265,6 +309,7 @@ describe('plex show enrichment', () => {
               },
             ];
           },
+          listAllTvShowsForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},
@@ -334,6 +379,7 @@ describe('plex show enrichment', () => {
           searchMovies: async () => {
             throw new Error('movie sweep failed');
           },
+          listAllMoviesForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},
@@ -349,6 +395,7 @@ describe('plex show enrichment', () => {
               viewCount: 2,
             },
           ],
+          listAllTvShowsForMatching: async () => [],
         } as never,
         refreshIntervalMinutes: 30,
         log: () => {},

@@ -1,5 +1,9 @@
 import type { MovieBreakdown } from '../movie-api-types';
-import type { PlexHttpClient, PlexSearchResult } from './client';
+import {
+  type PlexHttpClient,
+  type PlexSearchResult,
+  dedupeSearchResults,
+} from './client';
 import type { PlexCache } from './cache';
 
 const PLEX_MOVIE_MATCH_THRESHOLD = 0.72;
@@ -39,6 +43,13 @@ export async function refreshMovieLibraryCache(
   deps: PlexMovieEnrichDeps,
 ): Promise<void> {
   const uniqueMovies = dedupeMovies(movies);
+  let movieCatalog: PlexSearchResult[] = [];
+  try {
+    movieCatalog = await deps.client.listAllMoviesForMatching();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    deps.log(`plex movie library catalog failed: ${message}`);
+  }
 
   for (const movie of uniqueMovies) {
     if (movie.year == null) {
@@ -48,12 +59,16 @@ export async function refreshMovieLibraryCache(
     const searchResults = await deps.client.searchMovies(movie.normalizedTitle);
     if (searchResults === null) {
       deps.log(
-        `plex movie refresh skipped for ${movie.normalizedTitle} (${String(movie.year)}): search unavailable`,
+        `plex movie refresh: search unavailable for ${movie.normalizedTitle} (${String(movie.year)}); matching against library catalog only`,
       );
-      continue;
     }
 
-    const best = selectBestMovieMatch(movie, searchResults);
+    const merged = dedupeSearchResults([
+      ...(searchResults ?? []),
+      ...movieCatalog,
+    ]);
+
+    const best = selectBestMovieMatch(movie, merged);
     const cachedAt = new Date().toISOString();
 
     if (!best) {
@@ -141,7 +156,12 @@ function movieMatchScore(
     return 0;
   }
 
-  let score = diceCoefficient(title, candidateTitle);
+  let score = Math.max(
+    tokenCoverScore(title, candidateTitle),
+    title.length >= 2 && candidateTitle.length >= 2
+      ? diceCoefficient(title, candidateTitle)
+      : 0,
+  );
 
   if (movie.year != null && candidate.year != null) {
     if (movie.year === candidate.year) {
@@ -156,6 +176,19 @@ function movieMatchScore(
   }
 
   return score;
+}
+
+function tokenCoverScore(needle: string, haystack: string): number {
+  const words = needle.split(/\s+/).filter((w) => w.length > 1);
+  if (words.length === 0) {
+    return 0;
+  }
+  const padded = ` ${haystack} `;
+  const covered = words.filter((w) => padded.includes(` ${w} `)).length;
+  if (covered !== words.length) {
+    return 0;
+  }
+  return 0.94;
 }
 
 function normalizeForMatch(input: string): string {

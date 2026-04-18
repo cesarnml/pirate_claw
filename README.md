@@ -28,6 +28,7 @@ It currently supports:
 - `pirate-claw status`
 - `pirate-claw retry-failed`
 - `pirate-claw reconcile`
+- `pirate-claw plex-refresh` (when `plex` is configured: re-query Plex and update the SQLite library cache)
 - `pirate-claw config show`
 
 ## Quick Start

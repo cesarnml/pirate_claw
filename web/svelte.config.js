@@ -10,6 +10,13 @@ const config = {
 	},
 	kit: {
 		adapter: adapter()
+	},
+	vitePlugin: {
+		inspector: {
+			toggleKeyCombo: 'alt-x',
+			showToggleButton: 'always',
+			toggleButtonPos: 'bottom-right'
+		}
 	}
 };
 

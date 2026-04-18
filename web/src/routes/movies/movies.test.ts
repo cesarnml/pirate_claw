@@ -61,7 +61,7 @@ describe('/movies', () => {
 
 	it('renders downloading progress and Plex chip when available', () => {
 		const movie = mockMovie({
-			status: 'downloading',
+			lifecycleStatus: 'downloading',
 			plexStatus: 'in_library',
 			lastWatchedAt: '2026-04-14T00:00:00.000Z',
 			transmissionTorrentHash: 'abc123',
@@ -81,36 +81,58 @@ describe('/movies', () => {
 		expect(screen.getByText(/Last watched/)).toBeInTheDocument();
 	});
 
-	it('renders filter tab counts for all, downloading, missing, and wanted', () => {
+	it('renders filter tab counts for transmission deck buckets', () => {
 		const movies = [
-			mockMovie({ identityKey: 'wanted' }),
+			mockMovie({ identityKey: 'queued', lifecycleStatus: 'queued' }),
 			mockMovie({
 				identityKey: 'downloading',
-				status: 'downloading',
-				transmissionTorrentHash: 'abc123'
+				transmissionTorrentHash: 'abc123',
+				lifecycleStatus: 'downloading'
+			}),
+			mockMovie({
+				identityKey: 'paused',
+				transmissionTorrentHash: 'def456',
+				lifecycleStatus: 'queued'
+			}),
+			mockMovie({
+				identityKey: 'completed',
+				transmissionTorrentHash: 'ghi789',
+				lifecycleStatus: 'completed'
 			}),
 			mockMovie({
 				identityKey: 'missing',
-				status: 'failed',
+				lifecycleStatus: 'missing_from_transmission',
 				tmdb: { title: 'Missing', backdropUrl: 'https://example.com/missing.jpg' }
 			})
 		];
+		const torrents: TorrentStatSnapshot[] = [
+			mockTorrent({ hash: 'abc123', status: 'downloading', percentDone: 0.1 }),
+			mockTorrent({ hash: 'def456', status: 'stopped', percentDone: 0.2 }),
+			mockTorrent({ hash: 'ghi789', status: 'seeding', percentDone: 1 })
+		];
 
-		render(Page, { data: { ...sharedLayoutData, movies, torrents: [mockTorrent()], error: null } });
+		render(Page, { data: { ...sharedLayoutData, movies, torrents, error: null } });
 
-		expect(screen.getByRole('tab', { name: /^All/ })).toHaveTextContent('(3)');
+		expect(screen.getByRole('tab', { name: /^All/ })).toHaveTextContent('(5)');
 		expect(screen.getByRole('tab', { name: /^Downloading/ })).toHaveTextContent('(1)');
+		expect(screen.getByRole('tab', { name: /^Paused/ })).toHaveTextContent('(1)');
+		expect(screen.getByRole('tab', { name: /^Queued/ })).toHaveTextContent('(1)');
+		expect(screen.getByRole('tab', { name: /^Completed/ })).toHaveTextContent('(1)');
 		expect(screen.getByRole('tab', { name: /^Missing/ })).toHaveTextContent('(1)');
-		expect(screen.getByRole('tab', { name: /^Wanted/ })).toHaveTextContent('(1)');
 	});
 
 	it('filters down to missing movies', async () => {
 		const movies = [
-			mockMovie({ identityKey: 'wanted', normalizedTitle: 'Wanted', tmdb: undefined }),
+			mockMovie({
+				identityKey: 'queued',
+				normalizedTitle: 'Queued Only',
+				lifecycleStatus: 'queued',
+				tmdb: undefined
+			}),
 			mockMovie({
 				identityKey: 'missing',
 				normalizedTitle: 'Missing',
-				status: 'failed',
+				lifecycleStatus: 'missing_from_transmission',
 				tmdb: undefined
 			})
 		];
@@ -120,7 +142,9 @@ describe('/movies', () => {
 		await fireEvent.click(screen.getByRole('tab', { name: /^Missing/ }));
 
 		expect(screen.getByRole('heading', { name: 'Missing', level: 2 })).toBeInTheDocument();
-		expect(screen.queryByRole('heading', { name: 'Wanted', level: 2 })).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole('heading', { name: 'Queued Only', level: 2 })
+		).not.toBeInTheDocument();
 	});
 
 	it('sorts movies by title', async () => {

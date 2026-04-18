@@ -999,6 +999,57 @@ describe('pirate-claw reconcile', () => {
   });
 });
 
+describe('pirate-claw plex-refresh', () => {
+  afterEach(async () => {
+    while (openDatabases.length > 0) {
+      openDatabases.pop()?.close();
+    }
+
+    while (tempDirs.length > 0) {
+      const directory = tempDirs.pop();
+
+      if (directory) {
+        await Bun.$`rm -rf ${directory}`;
+      }
+    }
+  });
+
+  it('exits with an error when Plex is not configured', async () => {
+    const directory = await mkdtemp();
+    const configPath = join(directory, 'pirate-claw.config.json');
+    createTestRepository(join(directory, 'pirate-claw.db'));
+
+    await Bun.write(
+      configPath,
+      JSON.stringify({
+        feeds: [],
+        tv: [],
+        movies: {
+          years: [2024],
+          resolutions: ['1080p'],
+          codecs: ['x265'],
+        },
+        transmission: {
+          url: 'http://localhost:9/transmission/rpc',
+          username: 'u',
+          password: 'p',
+        },
+      }),
+    );
+
+    const result = await runSimpleCommand(
+      directory,
+      'plex-refresh',
+      '--config',
+      './pirate-claw.config.json',
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Plex is not configured');
+  });
+});
+
 async function mkdtemp(): Promise<string> {
   const directory = await createTempDir(join(tmpdir(), 'pirate-claw-test-'));
 

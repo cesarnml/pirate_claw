@@ -281,6 +281,27 @@ or `"missing"` for items not found in the Plex library.
 If Plex is unreachable, the daemon logs a warning and continues; existing cache
 entries are preserved and API responses return `"unknown"` for expired rows.
 
+### When every title is Plex `"missing"` but Plex Web looks fine
+
+If `GET /library/sections` returns **200** from the container (see above) but
+SQLite still shows **`in_library = 0` for every row** in `plex_tv_cache` and
+`plex_movie_cache` after refresh, the daemon build is probably **too old to
+parse your Plex XML**: movie libraries expose rows as **`<Video type="movie">`**
+under `/library/sections/<id>/all`, and global search often nests hits under
+**`<Hub>`**. Current `main` ships catalog + hub parsing fixes; **rebuild
+`pirate-claw:latest` from that tree**, restart the container, then run
+`plex-refresh` (or wait for the background sweep).
+
+Host-side spot check (no secrets printed):
+
+```sh
+sqlite3 /volume1/pirate-claw/data/pirate-claw.db \
+  'SELECT COUNT(*), COALESCE(SUM(in_library),0) FROM plex_tv_cache; SELECT COUNT(*), COALESCE(SUM(in_library),0) FROM plex_movie_cache;'
+```
+
+When healthy, those `SUM` values should be **> 0** for libraries that actually
+contain matched media.
+
 ## Runtime Config Contract
 
 The current live config uses:

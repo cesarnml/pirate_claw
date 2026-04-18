@@ -213,6 +213,140 @@ export async function runCli(argv: string[]): Promise<number> {
       return 0;
     }
 
+    if (command === 'plex-refresh') {
+      const configPath = parseConfigPath(rest);
+      const resolvedConfigPath = resolveConfigPath(configPath);
+      const config = await loadConfig(resolvedConfigPath);
+
+      if (!config.plex) {
+        console.error(
+          'Plex is not configured; add a "plex" block with url and token to your config.',
+        );
+        return 1;
+      }
+
+      const database = openInitializedWritableDatabase();
+      const log = console.log;
+
+      try {
+        const repository = createRepository(database);
+        const plexMovies = plexMovieEnrichDeps(database, config, log);
+        const plexShows = plexShowEnrichDeps(database, config, log);
+        await runPlexBackgroundRefresh({
+          repository,
+          plexMovies,
+          plexShows,
+          log,
+        });
+      } finally {
+        database.close();
+      }
+
+      return 0;
+    }
+
+    if (command === 'plex-audit') {
+      const configPath = parseConfigPath(rest);
+      const resolvedConfigPath = resolveConfigPath(configPath);
+      const config = await loadConfig(resolvedConfigPath);
+
+      if (!config.plex) {
+        console.error(
+          'Plex is not configured; add a "plex" block with url and token to your config.',
+        );
+        return 1;
+      }
+
+      const client = new PlexHttpClient(
+        config.plex.url,
+        config.plex.token,
+        (message: string) => {
+          console.log(`[plex] ${message}`);
+        },
+      );
+
+      console.log('== Plex API (from config) ==');
+      console.log('plex.url:', config.plex.url);
+
+      const sections = await client.listLibrarySections();
+      console.log('library sections:', JSON.stringify(sections, null, 2));
+
+      const tvCatalog = await client.listAllTvShowsForMatching();
+      console.log(`TV catalog entries: ${String(tvCatalog.length)}`);
+      if (tvCatalog.length > 0) {
+        console.log('TV titles:', tvCatalog.map((row) => row.title).join(', '));
+      }
+
+      const movieCatalog = await client.listAllMoviesForMatching();
+      console.log(`Movie catalog entries: ${String(movieCatalog.length)}`);
+      if (movieCatalog.length > 0) {
+        console.log(
+          'Movie titles:',
+          movieCatalog.map((row) => row.title).join(', '),
+        );
+      }
+
+      console.log('\n== SQLite Plex cache ==');
+      const dbPath = DEFAULT_DATABASE_PATH;
+      if (!existsSync(dbPath)) {
+        console.log(`(no database file at ${dbPath})`);
+        return 0;
+      }
+
+      const database = openDatabaseReadOnly();
+      try {
+        if (!hasStatusSchema(database)) {
+          console.log(
+            '(database present but not initialized; run `run` first)',
+          );
+          return 0;
+        }
+
+        try {
+          const tvAgg = database
+            .query(
+              `SELECT COUNT(*) AS rows, COALESCE(SUM(in_library), 0) AS in_library_sum
+               FROM plex_tv_cache`,
+            )
+            .get() as { rows: number; in_library_sum: number };
+          console.log('plex_tv_cache:', JSON.stringify(tvAgg));
+          const tvSample = database
+            .query(
+              `SELECT normalized_title, in_library, substr(plex_rating_key, 1, 12) AS rk_prefix, cached_at
+               FROM plex_tv_cache ORDER BY normalized_title LIMIT 40`,
+            )
+            .all();
+          console.log(JSON.stringify(tvSample, null, 2));
+
+          const mvAgg = database
+            .query(
+              `SELECT COUNT(*) AS rows, COALESCE(SUM(in_library), 0) AS in_library_sum
+               FROM plex_movie_cache`,
+            )
+            .get() as { rows: number; in_library_sum: number };
+          console.log('plex_movie_cache:', JSON.stringify(mvAgg));
+          const mvSample = database
+            .query(
+              `SELECT title, year, in_library, substr(plex_rating_key, 1, 12) AS rk_prefix, cached_at
+               FROM plex_movie_cache ORDER BY title LIMIT 40`,
+            )
+            .all();
+          console.log(JSON.stringify(mvSample, null, 2));
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.log(`(SQLite Plex tables unreadable: ${message})`);
+        }
+      } finally {
+        database.close();
+      }
+
+      console.log(
+        '\nTip: after fixing `plex.url` or token, run `plex-refresh` to rewrite cache.',
+      );
+      return 0;
+    }
+
     if (command === 'daemon') {
       const configPath = parseConfigPath(rest);
       const resolvedConfigPath = resolveConfigPath(configPath);
@@ -374,7 +508,7 @@ export async function runCli(argv: string[]): Promise<number> {
     }
 
     console.error(
-      'Unknown command. Available commands: "run", "daemon", "status", "retry-failed", "reconcile", "config".',
+      'Unknown command. Available commands: "run", "daemon", "status", "retry-failed", "reconcile", "plex-refresh", "plex-audit", "config".',
     );
     return 1;
   } catch (error) {

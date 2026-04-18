@@ -66,8 +66,8 @@ const mockCandidate = (overrides: Partial<CandidateStateRecord> = {}): Candidate
 	firstSeenRunId: 1,
 	lastSeenRunId: 1,
 	updatedAt: '2024-01-08T12:00:00Z',
-		queuedAt: '2024-01-08T12:00:00Z',
-		transmissionDoneDate: '2024-01-08T12:00:00Z',
+	queuedAt: '2024-01-08T12:00:00Z',
+	transmissionDoneDate: '2024-01-08T12:00:00Z',
 	transmissionTorrentHash: 'abc123',
 	...overrides
 });
@@ -99,9 +99,14 @@ describe('/', () => {
 			data: {
 				...baseData,
 				candidates: [
-					mockCandidate({ identityKey: 'a', status: 'completed' }),
-					mockCandidate({ identityKey: 'b', status: 'completed' }),
-					mockCandidate({ identityKey: 'c', status: 'queued', transmissionDoneDate: undefined })
+					mockCandidate({ identityKey: 'a', status: 'queued', lifecycleStatus: 'completed' }),
+					mockCandidate({ identityKey: 'b', status: 'queued', lifecycleStatus: 'completed' }),
+					mockCandidate({
+						identityKey: 'c',
+						status: 'queued',
+						lifecycleStatus: 'completed',
+						transmissionDoneDate: undefined
+					})
 				],
 				runSummaries: [
 					mockRunSummary(),

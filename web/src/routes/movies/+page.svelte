@@ -7,15 +7,15 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import type { MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
+	import type { CandidateLifecycleStatus, MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
 	import type { PageData } from './$types';
 
 	const props = $props<{ data: PageData }>();
 	const data = $derived(props.data);
 
-	type FilterTab = 'all' | 'downloading' | 'missing' | 'wanted';
+	type DeckStatus = 'queued' | 'downloading' | 'paused' | 'completed' | 'missing' | 'error';
+	type FilterTab = 'all' | DeckStatus;
 	type SortKey = 'date' | 'title' | 'year';
-	type CommandStatus = 'downloading' | 'missing' | 'wanted';
 
 	let activeTab = $state<FilterTab>('all');
 	let sortKey = $state<SortKey>('date');
@@ -43,25 +43,53 @@
 		);
 	}
 
-	function isDownloading(movie: MovieBreakdown, live = liveTorrent(movie)): boolean {
-		return (
-			live?.status === 'downloading' ||
-			movie.status === 'downloading' ||
-			movie.lifecycleStatus === 'active'
-		);
-	}
+	/**
+	 * Transmission-facing deck state: live torrent snapshot wins, then last
+	 * reconciliation lifecycle from the API.
+	 */
+	function commandStatus(movie: MovieBreakdown, live = liveTorrent(movie)): DeckStatus {
+		if (live) {
+			const pct = live.percentDone ?? 0;
+			if (pct >= 1) {
+				return 'completed';
+			}
+			if (live.status === 'error') {
+				return 'error';
+			}
+			if (live.status === 'downloading') {
+				return 'downloading';
+			}
+			if (live.status === 'seeding') {
+				return 'downloading';
+			}
+			if (live.status === 'stopped') {
+				return 'paused';
+			}
+			return 'queued';
+		}
 
-	function commandStatus(movie: MovieBreakdown, live = liveTorrent(movie)): CommandStatus {
-		if (isDownloading(movie, live)) return 'downloading';
-		if (
-			movie.lifecycleStatus === 'missing_from_transmission' ||
-			movie.status === 'failed' ||
-			movie.status === 'rejected' ||
-			movie.status === 'duplicate'
-		) {
+		const life = movie.lifecycleStatus as CandidateLifecycleStatus | undefined;
+		if (life === 'missing_from_transmission') {
 			return 'missing';
 		}
-		return 'wanted';
+		if (life === 'completed') {
+			return 'completed';
+		}
+		if (life === 'downloading') {
+			return 'downloading';
+		}
+		return 'queued';
+	}
+
+	function matchesDeckTab(movie: MovieBreakdown, tab: FilterTab): boolean {
+		const deck = commandStatus(movie);
+		if (tab === 'all') {
+			return true;
+		}
+		if (tab === 'paused') {
+			return deck === 'paused' || deck === 'error';
+		}
+		return deck === tab;
 	}
 
 	function progressPercent(movie: MovieBreakdown, live: TorrentStatSnapshot | undefined): number {
@@ -105,14 +133,12 @@
 	}
 
 	function matchesFilter(movie: MovieBreakdown): boolean {
-		const status = commandStatus(movie);
-		if (activeTab === 'all') return true;
-		return status === activeTab;
+		return matchesDeckTab(movie, activeTab);
 	}
 
 	function tabCount(tab: FilterTab): number {
 		if (tab === 'all') return data.movies.length;
-		return data.movies.filter((movie: MovieBreakdown) => commandStatus(movie) === tab).length;
+		return data.movies.filter((movie: MovieBreakdown) => matchesDeckTab(movie, tab)).length;
 	}
 
 	const filteredMovies = $derived(
@@ -130,8 +156,10 @@
 	const tabs: Array<{ key: FilterTab; label: string }> = [
 		{ key: 'all', label: 'All' },
 		{ key: 'downloading', label: 'Downloading' },
-		{ key: 'missing', label: 'Missing' },
-		{ key: 'wanted', label: 'Wanted' }
+		{ key: 'paused', label: 'Paused' },
+		{ key: 'queued', label: 'Queued' },
+		{ key: 'completed', label: 'Completed' },
+		{ key: 'missing', label: 'Missing' }
 	];
 
 	const sorts: Array<{ key: SortKey; label: string }> = [
@@ -286,7 +314,7 @@
 
 											<div class="flex flex-wrap items-center gap-2">
 												<StatusChip {status} />
-												{#if status === 'downloading'}
+												{#if status === 'downloading' || (status === 'paused' && pct > 0)}
 													<span
 														class="text-primary text-xs font-semibold tracking-[0.18em] uppercase"
 													>
@@ -339,7 +367,7 @@
 								</div>
 							</div>
 
-							{#if status === 'downloading'}
+							{#if status === 'downloading' || (status === 'paused' && pct > 0)}
 								<div class="space-y-2">
 									<div class="h-2 overflow-hidden rounded-full bg-white/8">
 										<div
@@ -351,7 +379,7 @@
 										class="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-xs"
 									>
 										<span>{pct}% acquired</span>
-										{#if live}
+										{#if live && status === 'downloading'}
 											<span>{formatSpeed(live.rateDownload)}</span>
 										{/if}
 									</div>

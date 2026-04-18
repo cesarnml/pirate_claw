@@ -1,5 +1,9 @@
 import type { ShowBreakdown } from '../tv-api-types';
-import type { PlexHttpClient, PlexSearchResult } from './client';
+import {
+  type PlexHttpClient,
+  type PlexSearchResult,
+  dedupeSearchResults,
+} from './client';
 import type { PlexCache } from './cache';
 
 const PLEX_SHOW_MATCH_THRESHOLD = 0.72;
@@ -38,18 +42,29 @@ export async function refreshShowLibraryCache(
   deps: PlexShowEnrichDeps,
 ): Promise<void> {
   const uniqueShows = dedupeShows(shows);
+  let tvCatalog: PlexSearchResult[] = [];
+  try {
+    tvCatalog = await deps.client.listAllTvShowsForMatching();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    deps.log(`plex TV library catalog failed: ${message}`);
+  }
 
   for (const show of uniqueShows) {
     try {
       const searchResults = await deps.client.searchShows(show.normalizedTitle);
       if (searchResults === null) {
         deps.log(
-          `plex show refresh skipped for ${show.normalizedTitle}: search unavailable`,
+          `plex show refresh: search unavailable for ${show.normalizedTitle}; matching against library catalog only`,
         );
-        continue;
       }
 
-      const best = selectBestShowMatch(show, searchResults);
+      const merged = dedupeSearchResults([
+        ...(searchResults ?? []),
+        ...tvCatalog,
+      ]);
+
+      const best = selectBestShowMatch(show, merged);
       const cachedAt = new Date().toISOString();
 
       if (!best) {
@@ -141,12 +156,36 @@ function showMatchScore(
     return 0;
   }
 
-  let score = diceCoefficient(title, candidateTitle);
+  let score = Math.max(
+    title === candidateTitle
+      ? 1
+      : Math.max(
+          tokenCoverScore(title, candidateTitle),
+          title.length >= 2 && candidateTitle.length >= 2
+            ? diceCoefficient(title, candidateTitle)
+            : 0,
+        ),
+  );
+
   if (candidate.type && candidate.type !== 'show') {
     score -= 0.2;
   }
 
   return score;
+}
+
+/** When every significant word in `needle` appears in `haystack`, boost above fuzzy-only failures. */
+function tokenCoverScore(needle: string, haystack: string): number {
+  const words = needle.split(/\s+/).filter((w) => w.length > 1);
+  if (words.length === 0) {
+    return 0;
+  }
+  const padded = ` ${haystack} `;
+  const covered = words.filter((w) => padded.includes(` ${w} `)).length;
+  if (covered !== words.length) {
+    return 0;
+  }
+  return 0.94;
 }
 
 function normalizeForMatch(input: string): string {
