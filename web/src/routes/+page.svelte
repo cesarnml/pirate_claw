@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import ApiUnavailableAlert from '$lib/components/ApiUnavailableAlert.svelte';
-	import { readOnboardingDismissed, writeOnboardingDismissed } from '$lib/onboarding';
-	import type { CandidateStateRecord, RunSummaryRecord } from '$lib/types';
 	import ArrowDownToLineIcon from '@lucide/svelte/icons/arrow-down-to-line';
 	import FilterIcon from '@lucide/svelte/icons/filter';
 	import FlameIcon from '@lucide/svelte/icons/flame';
 	import LibraryBigIcon from '@lucide/svelte/icons/library-big';
+	import { browser } from '$app/environment';
+	import { readOnboardingDismissed, writeOnboardingDismissed } from '$lib/onboarding';
+	import type { CandidateStateRecord, RunSummaryRecord } from '$lib/types';
 	import { torrentDisplayState } from '$lib/helpers';
 	import type { PageData } from './$types';
+	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import ArchiveStrip from './components/ArchiveStrip.svelte';
 	import DashboardHeader from './components/DashboardHeader.svelte';
 	import FeedEventLogCard from './components/FeedEventLogCard.svelte';
@@ -40,7 +40,14 @@
 		})
 	);
 
+	const transmissionLoaded = $derived(data.transmissionTorrents !== null);
 	const liveHashes = $derived(new Set(torrents.map((t) => t.hash)));
+
+	const missingCandidates = $derived(
+		!transmissionLoaded
+			? []
+			: candidates.filter((c) => torrentDisplayState(c, liveHashes) === 'missing')
+	);
 
 	const archiveItems = $derived(
 		candidates
@@ -136,12 +143,19 @@
 	{/if}
 
 	{#if data.error}
-		<ApiUnavailableAlert message={data.error} />
+		<Alert variant="destructive" role="alert">
+			<AlertTitle>API unavailable</AlertTitle>
+			<AlertDescription>{data.error}</AlertDescription>
+		</Alert>
 	{:else}
 		<StatusCardGrid {statusCards} />
 
 		<div class="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
-			<TorrentManagerCard {activeDownloads} transmissionSession={data.transmissionSession} />
+			<TorrentManagerCard
+				{activeDownloads}
+				{missingCandidates}
+				transmissionSession={data.transmissionSession}
+			/>
 			<FeedEventLogCard {outcomes} />
 		</div>
 

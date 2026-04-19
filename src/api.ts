@@ -1013,6 +1013,109 @@ export function createApiFetch(
       return Response.json({ ok: true });
     }
 
+    if (
+      path === '/api/transmission/torrent/dispose' &&
+      request.method === 'POST'
+    ) {
+      const authError = checkWriteAuth(request, activeConfig);
+      if (authError) return authError;
+
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json(
+          { ok: false, error: 'invalid json body' },
+          { status: 400 },
+        );
+      }
+
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        !('hash' in body) ||
+        typeof (body as Record<string, unknown>).hash !== 'string' ||
+        !('disposition' in body) ||
+        typeof (body as Record<string, unknown>).disposition !== 'string'
+      ) {
+        return Response.json(
+          { ok: false, error: 'hash and disposition are required' },
+          { status: 400 },
+        );
+      }
+
+      const hash = (body as Record<string, string>).hash;
+      const disposition = (body as Record<string, string>).disposition;
+
+      if (disposition !== 'removed' && disposition !== 'deleted') {
+        return Response.json(
+          {
+            ok: false,
+            error: `disposition must be 'removed' or 'deleted', got: ${disposition}`,
+          },
+          { status: 400 },
+        );
+      }
+
+      const candidates = repository.listCandidateStates();
+      const candidate = candidates.find(
+        (c) => c.transmissionTorrentHash === hash,
+      );
+
+      if (!candidate) {
+        return Response.json(
+          { ok: false, error: 'candidate not found' },
+          { status: 400 },
+        );
+      }
+
+      if (candidate.pirateClawDisposition) {
+        return Response.json(
+          {
+            ok: false,
+            error: `candidate is already terminal: ${candidate.pirateClawDisposition}`,
+          },
+          { status: 400 },
+        );
+      }
+
+      if (!candidate.transmissionTorrentHash) {
+        return Response.json(
+          { ok: false, error: 'candidate is queued, not missing' },
+          { status: 400 },
+        );
+      }
+
+      const statsResult = await fetchTorrentStats(activeConfig.transmission, [
+        hash,
+      ]);
+      if (!statsResult.ok) {
+        return Response.json(
+          { ok: false, error: statsResult.message },
+          { status: 502 },
+        );
+      }
+
+      if (statsResult.torrents.length > 0) {
+        return Response.json(
+          {
+            ok: false,
+            error: 'torrent is still present in Transmission, not missing',
+          },
+          { status: 400 },
+        );
+      }
+
+      const written = repository.trySetPirateClawDispositionIfUnset(
+        candidate.identityKey,
+        disposition as 'removed' | 'deleted',
+      );
+      if (!written) {
+        return Response.json({ ok: false, error: 'conflict' }, { status: 409 });
+      }
+      return Response.json({ ok: true });
+    }
+
     if (path === '/api/daemon/restart' && request.method === 'POST') {
       const authError = checkWriteAuth(request, activeConfig);
       if (authError) return authError;
