@@ -3,6 +3,7 @@
 	import { base } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate } from '$lib/helpers';
+	import { toast } from '$lib/toast';
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
 	import {
@@ -21,21 +22,10 @@
 	const PAGE_SIZE = 6;
 
 	let inflightRequeue = $state<string | null>(null);
-	let queuedKeys = $state<Record<string, true>>({});
-	let requeueErrors = $state<Record<string, string>>({});
-
-	function actionFailureMessage(data: unknown): string {
-		if (data && typeof data === 'object' && 'error' in data) {
-			const err = (data as { error: unknown }).error;
-			if (typeof err === 'string') return err;
-		}
-		return 'Request failed';
-	}
 
 	async function requeue(identityKey: string) {
 		if (inflightRequeue) return;
 		inflightRequeue = identityKey;
-		delete requeueErrors[identityKey];
 		const formData = new FormData();
 		formData.append('identityKey', identityKey);
 		const actionHref = `${base}/?/requeue`;
@@ -52,30 +42,22 @@
 
 			const result = deserialize(await res.text());
 
-			if (result.type === 'error') {
-				requeueErrors[identityKey] =
-					typeof result.error === 'string' ? result.error : 'Request failed';
-				return;
-			}
-			if (result.type === 'failure') {
-				requeueErrors[identityKey] = actionFailureMessage(result.data);
+			if (result.type === 'error' || result.type === 'failure') {
+				toast('Failed to queue', 'error');
 				return;
 			}
 			if (result.type === 'redirect') {
 				return;
 			}
 
-			queuedKeys[identityKey] = true;
-			await invalidateAll();
-			await new Promise((r) => setTimeout(r, 150));
+			toast('Queued for retry', 'success');
 			await invalidateAll();
 			// Do not call applyAction(result): it can merge a stale action snapshot after a later
 			// invalidate (e.g. user pauses the new torrent immediately) and revert the UI.
-			setTimeout(() => {
-				delete queuedKeys[identityKey];
-			}, 2000);
+			await new Promise((r) => setTimeout(r, 150));
+			await invalidateAll();
 		} catch {
-			requeueErrors[identityKey] = 'Network error';
+			toast('Failed to queue', 'error');
 		} finally {
 			if (inflightRequeue === identityKey) inflightRequeue = null;
 		}
@@ -138,26 +120,18 @@
 						{#each sortedOutcomes()!.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) as outcome (outcome.id)}
 							{@const canRequeue = outcome.status === 'failed'}
 							{@const isInflight = inflightRequeue === outcome.identityKey}
-							{@const isQueued = !!queuedKeys[outcome.identityKey]}
 							<TableRow>
 								<TableCell class="min-w-0 pl-4 text-sm font-medium">
 									<p class="truncate">{outcome.title ?? '—'}</p>
 									<p class="text-muted-foreground mt-0.5 text-[11px] font-normal">
 										{formatDate(outcome.recordedAt)}
 									</p>
-									{#if requeueErrors[outcome.identityKey]}
-										<p class="mt-0.5 text-[11px] text-red-400">
-											{requeueErrors[outcome.identityKey]}
-										</p>
-									{/if}
 								</TableCell>
 								<TableCell class="whitespace-nowrap"
 									><StatusChip status={outcome.status} /></TableCell
 								>
 								<TableCell class="pr-4 text-right">
-									{#if isQueued}
-										<span class="text-[11px] font-medium text-green-400">Queued ✓</span>
-									{:else if canRequeue}
+									{#if canRequeue}
 										<button
 											type="button"
 											disabled={(!!inflightRequeue && inflightRequeue !== outcome.identityKey) ||
@@ -165,7 +139,7 @@
 											onclick={() => requeue(outcome.identityKey)}
 											class="bg-primary/15 text-primary border-primary/30 hover:bg-primary/22 inline-flex h-6 cursor-pointer items-center rounded-md border px-2 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
 										>
-											{isInflight ? 'Loading' : 'Queue'}
+											{isInflight ? 'Loading…' : 'Queue'}
 										</button>
 									{/if}
 								</TableCell>

@@ -13,6 +13,7 @@
 	import { deserialize, enhance } from '$app/forms';
 	import { base } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
+	import { toast } from '$lib/toast';
 
 	type ActiveDownload = {
 		torrent: TorrentStatSnapshot;
@@ -34,7 +35,6 @@
 	} = $props();
 
 	let inflightDispose = $state<string | null>(null);
-	let disposeErrors = $state<Record<string, string>>({});
 
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longPressTouchOrigin = { x: 0, y: 0 };
@@ -72,12 +72,15 @@
 
 	let menuState = $state<MenuState | null>(null);
 	let inflightAction = $state<string | null>(null);
-	let actionErrors = $state<Record<string, string>>({});
 
-	function enhanceDispose(hash: string) {
+	const disposeLabels: Record<string, string> = {
+		removed: 'Marked as removed',
+		deleted: 'Marked as deleted'
+	};
+
+	function enhanceDispose(hash: string, disposition: string) {
 		return () => {
 			inflightDispose = hash;
-			delete disposeErrors[hash];
 			return async ({
 				result,
 				update
@@ -86,10 +89,10 @@
 				update: () => Promise<void>;
 			}) => {
 				inflightDispose = null;
-				if (result.type === 'failure') {
-					const data = result.data as { error?: string } | undefined;
-					disposeErrors[hash] = data?.error ?? 'Failed';
+				if (result.type === 'failure' || result.type === 'error') {
+					toast('Action failed', 'error');
 				} else {
+					toast(disposeLabels[disposition] ?? 'Done', 'success');
 					await update();
 				}
 			};
@@ -133,11 +136,17 @@
 		menuState = null;
 	}
 
+	const actionToasts: Record<MenuAction, string> = {
+		pause: 'Paused',
+		resume: 'Resumed',
+		remove: 'Torrent removed',
+		removeAndDelete: 'Torrent removed and data deleted'
+	};
+
 	async function executeAction(action: MenuAction, hash: string) {
 		if (inflightAction) return;
 		menuState = null;
 		inflightAction = hash;
-		delete actionErrors[hash];
 		const formData = new FormData();
 		formData.append('hash', hash);
 		const actionHref = `${base}/?/${action}`;
@@ -154,19 +163,15 @@
 
 			const result = deserialize(await res.text());
 
-			if (result.type === 'error') {
-				actionErrors[hash] = typeof result.error === 'string' ? result.error : 'Request failed';
-				return;
-			}
-			if (result.type === 'failure') {
-				const data = result.data as { error?: string } | undefined;
-				actionErrors[hash] = data?.error ?? 'Request failed';
+			if (result.type === 'error' || result.type === 'failure') {
+				toast('Action failed', 'error');
 				return;
 			}
 			if (result.type === 'redirect') {
 				return;
 			}
 
+			toast(actionToasts[action], 'success');
 			// Refresh load data; avoid applyAction(result) so a stale serialized snapshot cannot
 			// overwrite a newer invalidate (e.g. pause right after requeue finishes invalidating).
 			await invalidateAll();
@@ -176,7 +181,7 @@
 				await invalidateAll();
 			}
 		} catch {
-			actionErrors[hash] = 'Network error';
+			toast('Action failed', 'error');
 		} finally {
 			if (inflightAction === hash) inflightAction = null;
 		}
@@ -207,7 +212,7 @@
 	);
 </script>
 
-<Card class="bg-card/70 max-h-136 min-w-105 rounded-[30px] border-white/10">
+<Card class="bg-card/70 max-h-136 min-w-84 rounded-[30px] border-white/10">
 	<CardHeader class="pb-4">
 		<div class="flex items-start justify-between gap-4">
 			<div>
@@ -251,7 +256,8 @@
 					{@const title = candidate ? candidateTitle(candidate) : torrent.name}
 					{@const posterUrl = candidate ? candidatePosterUrl(candidate) : null}
 					{@const inFlightRow = inflightAction === torrent.hash}
-					{@const rowError = actionErrors[torrent.hash]}
+					{@const rowState = rowDisplayState(torrent, candidate)}
+					{@const showUpload = rowState === 'completed' || rowState === 'paused'}
 					<li
 						class="border-border bg-background/45 flex gap-4 rounded-[26px] border p-4"
 						class:opacity-60={inFlightRow}
@@ -282,12 +288,19 @@
 								<div class="min-w-0">
 									<p class="truncate text-lg font-medium">{title}</p>
 								</div>
-								<div class="text-right text-sm">
-									<p class="font-medium">
-										<span class="text-muted-foreground">↓</span>
-										{formatSpeed(torrent.rateDownload)}
-									</p>
-									<p class="text-muted-foreground mt-1">{formatEta(torrent.eta)}</p>
+								<div class="text-right text-xs">
+									{#if showUpload}
+										<p class="font-medium">
+											<span class="text-amber-400">↑</span>
+											<span class="text-amber-400">{formatSpeed(torrent.rateUpload)}</span>
+										</p>
+									{:else}
+										<p class="font-medium">
+											<span class="text-accent">↓</span>
+											<span class="text-accent">{formatSpeed(torrent.rateDownload)}</span>
+										</p>
+										<p class="text-muted-foreground mt-1">{formatEta(torrent.eta)}</p>
+									{/if}
 								</div>
 							</div>
 							<div class="text-muted-foreground mt-2 flex flex-wrap gap-2 text-xs">
@@ -312,6 +325,8 @@
 								{#if candidate?.codec}
 									<span class="rounded-full bg-white/6 px-2 py-1">{candidate.codec}</span>
 								{/if}
+							</div>
+							<div class="mt-1.5">
 								<StatusChip status={getTorrentDisplayStatus(torrent)} />
 							</div>
 							{#if torrent.percentDone !== 1}
@@ -326,9 +341,6 @@
 										></div>
 									</div>
 								</div>
-							{/if}
-							{#if rowError}
-								<p class="text-destructive mt-2 text-xs">{rowError}</p>
 							{/if}
 						</div>
 					</li>
@@ -345,7 +357,6 @@
 						{@const title = candidateTitle(candidate)}
 						{@const hash = candidate.transmissionTorrentHash!}
 						{@const inFlight = inflightDispose === hash}
-						{@const rowError = disposeErrors[hash]}
 						<li
 							class="border-border bg-background/45 flex items-center justify-between gap-3 rounded-[20px] border p-3"
 						>
@@ -369,12 +380,13 @@
 										>E{String(candidate.episode).padStart(2, '0')}</span
 									>
 								{/if}
-								{#if rowError}
-									<p class="text-destructive shrink-0 text-xs">{rowError}</p>
-								{/if}
 							</div>
 							<div class="flex shrink-0 gap-2">
-								<form method="POST" action={`${base}/?/dispose`} use:enhance={enhanceDispose(hash)}>
+								<form
+									method="POST"
+									action={`${base}/?/dispose`}
+									use:enhance={enhanceDispose(hash, 'removed')}
+								>
 									<input type="hidden" name="hash" value={hash} />
 									<input type="hidden" name="disposition" value="removed" />
 									<button
@@ -382,10 +394,14 @@
 										disabled={inFlight}
 										class="text-muted-foreground hover:text-foreground rounded-lg bg-white/6 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
 									>
-										Removed
+										Remove
 									</button>
 								</form>
-								<form method="POST" action={`${base}/?/dispose`} use:enhance={enhanceDispose(hash)}>
+								<form
+									method="POST"
+									action={`${base}/?/dispose`}
+									use:enhance={enhanceDispose(hash, 'deleted')}
+								>
 									<input type="hidden" name="hash" value={hash} />
 									<input type="hidden" name="disposition" value="deleted" />
 									<button
