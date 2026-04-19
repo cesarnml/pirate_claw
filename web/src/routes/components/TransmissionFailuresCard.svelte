@@ -87,7 +87,7 @@
 		<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.24em] uppercase">
 			Transmission failures
 		</p>
-		<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Failed candidates</h2>
+		<h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Failed Candidates</h2>
 	</CardHeader>
 	<CardContent>
 		{#if outcomes === null}
