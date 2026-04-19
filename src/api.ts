@@ -706,8 +706,9 @@ export function createApiFetch(
           { status: 400 },
         );
       }
-      const outcomes = repository.listSkippedNoMatchOutcomes(30);
-      return safeJson(() => ({ outcomes }));
+      return safeJson(() => ({
+        outcomes: repository.listSkippedNoMatchOutcomes(30),
+      }));
     }
 
     if (path === '/api/transmission/torrents' && request.method === 'GET') {
@@ -765,6 +766,9 @@ export function createApiFetch(
       path === '/api/transmission/torrent/pause' &&
       request.method === 'POST'
     ) {
+      const authError = checkWriteAuth(request, activeConfig);
+      if (authError) return authError;
+
       let body: unknown;
       try {
         body = await request.json();
@@ -825,6 +829,9 @@ export function createApiFetch(
       path === '/api/transmission/torrent/resume' &&
       request.method === 'POST'
     ) {
+      const authError = checkWriteAuth(request, activeConfig);
+      if (authError) return authError;
+
       let body: unknown;
       try {
         body = await request.json();
