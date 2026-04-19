@@ -522,8 +522,8 @@ Goal:
 
 Current status:
 
-- product definition: [`docs/01-product/phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)
-- parts of the surface already run on `main` ahead of a formal Phase 20 delivery closeout
+- shipped on `main`; product contract: [`docs/01-product/phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)
+- delivery record: [`docs/02-delivery/phase-20/implementation-plan.md`](../02-delivery/phase-20/implementation-plan.md)
 
 ## Phase 25: v1.0.0 Release and Schema Versioning
 
@@ -557,7 +557,7 @@ The following items are **mapped** to numbered phases (no longer “unbounded”
 ## Current Planning Posture
 
 - product phases `01`–`19` are implemented in the current delivery stack; **Phase 19** is delivered via `P19.01`–`P19.08`
-- **Phase 20** (dashboard torrent proxy) and **Phase 25** (v1.0.0 / schema versioning) remain product-definition-first until their tickets are approved and implemented; parts of Phase 20 already exist on `main`
+- **Phase 20** (dashboard torrent proxy) is **shipped** on `main`; **Phase 25** (v1.0.0 / schema versioning) remains product-definition-first until its tickets are approved and implemented
 - engineering epic write-ups **`EE01`–`EE09`** live under `docs/03-engineering/` (orchestrator, PR hygiene, and delivery workflow tooling)
 - each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
 - smaller bounded changes can still proceed as standalone PR work without inventing a new phase
@@ -576,4 +576,4 @@ Working notes:
 - promote durable technical choices into ADRs
 - numbered phases are planning buckets, not a promise of strict implementation sequence when dependencies allow independent work
 
-Last verified against `README.md` and active delivery plans: 2026-04-19 (Phase 19 delivered; Phase 20 dashboard + Phase 25 v1 release are next numbered product buckets).
+Last verified against `README.md` and active delivery plans: 2026-04-19 (Phase 19 and Phase 20 delivered on `main`; Phase 25 v1 release is the next numbered product bucket).
