@@ -99,6 +99,7 @@
 	}
 
 	async function executeAction(action: MenuAction, hash: string) {
+		if (inflightAction) return;
 		menuState = null;
 		inflightAction = hash;
 		delete actionErrors[hash];
@@ -115,7 +116,7 @@
 		} catch {
 			actionErrors[hash] = 'Network error';
 		} finally {
-			inflightAction = null;
+			if (inflightAction === hash) inflightAction = null;
 		}
 	}
 
