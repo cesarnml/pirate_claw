@@ -252,13 +252,13 @@ When `reviewPolicy.codexPreflight` is `"required"`, the agent must record a Code
 **Role split:**
 
 - **Claude** executes and patches during build and self-audit mode.
-- **Codex** reviews the implementation internally via the `codex:rescue` skill — a second AI opinion before the PR is published.
+- **Codex** reviews and patches its own findings autonomously — a second AI pass before the PR is published. Claude does not triage Codex output; Codex acts on what it finds.
 - **External AI vendors** (CodeRabbit, Qodo, Greptile, SonarQube) review post-publication during `poll-review`.
 
 **Running Codex preflight:**
 
-1. Run the Codex review step by invoking the `codex:rescue` skill.
-2. Apply any prudent findings.
+1. Invoke Codex via the Agent tool with `subagent_type: "codex:codex-rescue"`. Codex will patch what it finds autonomously.
+2. **Stay idle. No read-ahead.** Wait for the Codex subagent to complete before doing anything else. Do not implement, read files, or plan the next ticket while Codex runs.
 3. Record the outcome. When the outcome is `patched`, include one or more patch-commit SHAs so the PR body can link the exact Codex follow-up commits:
 
 ```bash
@@ -309,7 +309,7 @@ Default `cook` flow (with repo-default `skip_doc_only` review policy):
 ```bash
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md start
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md post-verify-self-audit [clean|patched] [patch-commit-sha ...]
-# for code tickets, run codex:rescue skill, apply prudent findings, then record:
+# for code tickets, invoke codex:codex-rescue via Agent tool (subagent_type: "codex:codex-rescue"); Codex patches autonomously, then record:
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md codex-preflight [clean|patched] [patch-commit-sha ...]
 # for doc-only tickets under skip_doc_only, codex-preflight auto-records skipped
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md open-pr
@@ -324,7 +324,7 @@ With `codexPreflight: "required"` in `orchestrator.config.json`, add the Codex p
 ```bash
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md start
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md post-verify-self-audit [clean|patched] [patch-commit-sha ...]
-# run codex:rescue skill, apply prudent findings, then record:
+# run codex:review skill, apply prudent findings, then record:
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md codex-preflight [clean|patched] [patch-commit-sha ...]
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md open-pr
 bun run deliver --plan docs/02-delivery/phase-02/implementation-plan.md poll-review
@@ -360,7 +360,7 @@ For standalone PRs, the internal review contract is behavior-first, not state-re
 - implement
 - verify
 - self-audit the diff and risky areas
-- for non-trivial code changes, run `codex:rescue` informally before `ai-review`
+- for non-trivial code changes, run `codex:codex-rescue` informally before `ai-review`
 - run standalone `ai-review` as the orchestrator-visible external review gate
 
 In standalone mode, `selfAudit` and `codexPreflight` are expected preflight discipline, not orchestrator gates. The orchestrator can tell the agent to do them, but without standalone state it cannot verify, audit, or block on them. Only standalone `ai-review` is an orchestrator-visible gate today.

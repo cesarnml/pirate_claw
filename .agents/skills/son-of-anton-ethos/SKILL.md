@@ -17,7 +17,7 @@ Son of Anton drives approved work to completion. How ticket boundaries are handl
 2. **When to use.** Smaller bounded changes ship as standalone PRs without a new phase/epic. Use `bun run deliver ai-review [--pr <number>]` — not the ticketed stacked flow (`--plan …`, `poll-review`, `advance`, etc.).
 3. **Review discipline.** Complete implement → verify (`bun run verify` + scoped tests) → named self-audit (re-read diff, second-pass risky areas). Standalone PRs do not use the ticket-only `post-verify-self-audit` or `codex-preflight` recorders because the flow is stateless, so these remain expected preflight behaviors rather than orchestrator-enforced gates.
    - Self-audit is required for every standalone PR.
-   - For non-trivial code changes, run `codex:rescue` informally before `ai-review`; doc-only or genuinely trivial changes may skip it.
+   - For non-trivial code changes, invoke `codex:codex-rescue` via the Agent tool (subagent_type: "codex:codex-rescue") before `ai-review`; doc-only or genuinely trivial changes may skip it.
    - Standalone `ai-review` is the only orchestrator-visible review gate on this path.
    - If the change needs recorded self-audit / Codex gates to feel safe, it likely should not stay a standalone PR unless the repo first adds lightweight standalone review state.
 4. **Running `ai-review`.** Uses real wall-clock polling. Surface that before starting; do not hide the time cost.
@@ -81,13 +81,13 @@ Canonical `gated` resume prompt:
 **Role split:**
 
 - **Claude** executes and patches (build mode and self-audit).
-- **Codex** reviews internally via the `codex:rescue` skill — a second AI opinion before the PR is published.
+- **Codex** reviews and patches its own findings autonomously — a second AI pass before the PR is published. Claude does not triage Codex output; Codex acts on what it finds.
 - **External AI vendors** (CodeRabbit, Qodo, Greptile, SonarQube) review post-publication via `poll-review`.
 
 **When `codexPreflight` is `"required"`:**
 
-1. Run the `codex:rescue` skill.
-2. Apply prudent findings.
+1. Invoke Codex via the Agent tool with `subagent_type: "codex:codex-rescue"`. Codex will patch what it finds autonomously.
+2. **Stay idle. No read-ahead.** Wait for the Codex subagent to complete before doing anything else — same discipline as the external review window.
 3. Record: `bun run deliver --plan <plan> codex-preflight [clean|patched]`
 
 The CLI is a state recorder only — never invoke Codex from within the CLI.

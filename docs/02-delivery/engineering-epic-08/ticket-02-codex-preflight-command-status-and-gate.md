@@ -36,7 +36,7 @@ up by one).
 ### `codex-preflight` command
 
 The command is a state recorder. The agent runs the Codex review step via the
-`codex:rescue` skill, then calls this command to record the outcome. The CLI does
+`codex:codex-rescue` skill, then calls this command to record the outcome. The CLI does
 not invoke Codex directly.
 
 **Code ticket flow:**

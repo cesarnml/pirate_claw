@@ -17,7 +17,7 @@ depends on in production:
 - DSM `Docker` package (`Docker`, not `Container Manager`)
 - always-on LAN-first operation
 - separate `pirate-claw`, `pirate-claw-web`, `transmission`, and `gluetun`
-  containers
+containers
 
 ## Current Production Snapshot
 
@@ -76,12 +76,12 @@ Required mounts:
 Critical rule:
 
 - the daemon must receive the whole `/config` directory as a writable bind mount
-  if Web UI config saves are enabled
+if Web UI config saves are enabled
 - a single-file writable bind mount for `pirate-claw.config.json` is not enough
-  because Pirate Claw writes a sibling temp file and then renames it atomically
+because Pirate Claw writes a sibling temp file and then renames it atomically
 - if you want stricter secret hardening, layer a separate read-only `.env` bind
-  mount on top of the writable `/config` directory, but the current live NAS now
-  runs with the directory mount alone
+mount on top of the writable `/config` directory, but the current live NAS now
+runs with the directory mount alone
 
 Reason:
 
@@ -110,7 +110,7 @@ Observed container contract:
 Critical rule:
 
 - when using SvelteKit `adapter-node`, set `ORIGIN` to the actual browser-facing
-  origin for the web UI
+origin for the web UI
 - `HOST=0.0.0.0` is only the bind address, not a valid browser origin
 - without `ORIGIN`, form actions fail with `Cross-site POST form submissions are forbidden`
 
@@ -163,8 +163,8 @@ Plex enrichment is optional. Add a `plex` block to
 
 ### Choosing `plex.url` (host network vs bridge)
 
-This runbook runs `pirate-claw` with **`--network host`**. In that mode the
-daemon shares the NAS network stack, so **`plex.url` should use the host
+This runbook runs `pirate-claw` with `**--network host**`. In that mode the
+daemon shares the NAS network stack, so `**plex.url` should use the host
 loopback**, not the address you type in a browser on another machine.
 
 Recommended for this deployment:
@@ -183,7 +183,7 @@ Recommended for this deployment:
 
 - `token`: your Plex authentication token (see below for how to find it)
 - `refreshIntervalMinutes`: how often the background refresh fires; defaults to
-  `30`; set `0` to disable background refresh
+`30`; set `0` to disable background refresh
 
 The token is redacted in `GET /api/config` responses. If you prefer to keep it
 out of the JSON file entirely, set `PIRATE_CLAW_PLEX_TOKEN` in
@@ -209,8 +209,7 @@ refresh may finish without useful cache updates; `plexStatus` can stay
 `"unknown"` for stale rows.
 
 **Fix:** set `plex.url` to `http://127.0.0.1:32400` (this runbook) or
-`http://172.17.0.1:32400` if you use bridge mode, then `docker restart
-pirate-claw`.
+`http://172.17.0.1:32400` if you use bridge mode, then `docker restart pirate-claw`.
 
 ### Verify Plex API reachability from the running container
 
@@ -237,7 +236,7 @@ Expected result: `HTTP/1.1 200 OK` with a short XML `MediaContainer` response.
 Recommended method:
 
 1. Sign in to Plex Web at `http://<nas-ip>:32400/web` or `https://app.plex.tv`
-   (that `<nas-ip>` is only for the browser; do **not** paste it into
+  (that `<nas-ip>` is only for the browser; do **not** paste it into
    `plex.url` in Pirate Claw — see **Choosing `plex.url`** above)
 2. Open any movie or TV episode in your library
 3. Click the `...` menu on that item and choose `Get Info`
@@ -248,9 +247,9 @@ Recommended method:
 Fallback methods:
 
 1. Play any item, open the browser developer console, and inspect a Plex API
-   request; the token appears as the `X-Plex-Token` query parameter
+  request; the token appears as the `X-Plex-Token` query parameter
 2. Settings → Account → `<username>` XML link; the token appears in the
-   `authToken` attribute
+  `authToken` attribute
 
 ### Verification
 
@@ -284,11 +283,11 @@ entries are preserved and API responses return `"unknown"` for expired rows.
 ### When every title is Plex `"missing"` but Plex Web looks fine
 
 If `GET /library/sections` returns **200** from the container (see above) but
-SQLite still shows **`in_library = 0` for every row** in `plex_tv_cache` and
+SQLite still shows `**in_library = 0` for every row** in `plex_tv_cache` and
 `plex_movie_cache` after refresh, the daemon build is probably **too old to
-parse your Plex XML**: movie libraries expose rows as **`<Video type="movie">`**
+parse your Plex XML**: movie libraries expose rows as `**<Video type="movie">`**
 under `/library/sections/<id>/all`, and global search often nests hits under
-**`<Hub>`**. Current `main` ships catalog + hub parsing fixes; **rebuild
+`**<Hub>**`. Current `main` ships catalog + hub parsing fixes; **rebuild
 `pirate-claw:latest` from that tree**, restart the container, then run
 `plex-refresh` (or wait for the background sweep).
 
@@ -326,7 +325,7 @@ important ways:
 - production now runs Transmission behind `gluetun`
 - the daemon runtime mount uses `/app/.pirate-claw/runtime`, not `/data/runtime`
 - the old runbook described the daemon config file mount as read-only, which
-  breaks Web UI config writes
+breaks Web UI config writes
 
 ## Required Fix For Web UI Saves
 
@@ -336,11 +335,11 @@ with a `500`.
 The correct deployment contract is:
 
 1. mount `/volume1/pirate-claw/config` writable at `/config` in the
-   `pirate-claw` container
+  `pirate-claw` container
 2. restart `pirate-claw`
 3. verify `PUT /api/config` succeeds before trusting the UI
 4. optionally re-add a read-only file mount for `/config/.env` if you want
-   stronger secret isolation
+  stronger secret isolation
 
 ## Verification Commands
 
@@ -400,10 +399,10 @@ ssh -p "$SSH_PORT" "$DEST" "sudo -n tee /volume1/pirate-claw/config/pirate-claw.
 ssh -p "$SSH_PORT" "$DEST" "sudo -n tee /volume1/pirate-claw/config/web.env > /dev/null" < web/.env
 ```
 
-`web/.env` is stored as **`web.env`** on the NAS so the web container can use
+`web/.env` is stored as `**web.env**` on the NAS so the web container can use
 `--env-file` (Docker env-file format: `KEY=value` lines only).
 
-Ensure **`ORIGIN`** is set for SvelteKit `adapter-node` (add if missing):
+Ensure `**ORIGIN**` is set for SvelteKit `adapter-node` (add if missing):
 
 ```sh
 ssh -p "$SSH_PORT" "$DEST" \
@@ -423,7 +422,7 @@ ssh -p "$SSH_PORT" "$DEST" \
 
 ### 4. Build `pirate-claw-web:latest` on the NAS (Bun workaround)
 
-On DSM, **`bun run build` inside the official multi-stage Dockerfile often
+On DSM, `**bun run build` inside the official multi-stage Dockerfile often
 exits with a generic Bun error** during `vite build`. A reliable workaround is
 to produce `web/build` and `web/node_modules` with **Node** in a one-off
 container, then use a tiny runtime-only Dockerfile.
@@ -492,3 +491,4 @@ For the original Phase 06 ticket-by-ticket validation record, use:
 - `docs/01-product/phase-06-synology-runbook.md`
 - `docs/02-delivery/phase-06/implementation-plan.md`
 - `docs/02-delivery/phase-06/synology-runbook.md`
+

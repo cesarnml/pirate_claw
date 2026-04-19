@@ -44,7 +44,7 @@ Docs describe the shipped EE8 behavior exactly:
   call `bun run deliver codex-preflight [clean|patched]` to record the outcome
 - The role split is explicit:
   - Claude executes and patches
-  - Codex reviews internally via the `codex:rescue` skill
+  - Codex reviews internally via the `codex:codex-rescue` skill
   - External AI vendors review post-publication
 - Error message for unavailable `codex-plugin-cc` is documented with the config
   escape hatch
