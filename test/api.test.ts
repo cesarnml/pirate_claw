@@ -2112,8 +2112,8 @@ describe('GET /api/outcomes', () => {
   it('accepts legacy status=skipped_no_match filter for the same payload', async () => {
     const mockOutcomes = [
       {
-        id: 1,
-        runId: 42,
+        id: 9,
+        runId: 1,
         status: 'failed' as const,
         recordedAt: '2026-04-10T12:00:00.000Z',
         title: 'Legacy.Param',
@@ -2140,7 +2140,7 @@ describe('GET /api/outcomes', () => {
     });
     const handler = createApiFetch(deps);
     const response = await handler(
-      new Request('http://localhost/api/outcomes?status=skipped_no_match'),
+      new Request('http://localhost/api/outcomes?status=failed_enqueue'),
     );
 
     expect(response.status).toBe(200);
