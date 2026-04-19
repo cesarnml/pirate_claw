@@ -1108,7 +1108,6 @@ function migrateAndDropLifecycleStatus(database: Database): void {
   database.run(`ALTER TABLE candidate_state DROP COLUMN lifecycle_status`);
 }
 
-
 function requireRow<T>(row: T | null | undefined, label: string): T {
   if (!row) {
     throw new Error(`Failed to load ${label} row.`);
