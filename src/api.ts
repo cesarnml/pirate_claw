@@ -364,13 +364,14 @@ export function createApiFetch(
     if (path === '/api/candidates') {
       try {
         const list = repository.listCandidateStates(API_CANDIDATE_LIST_LIMIT);
-        const candidates = tmdbCache
+        const enriched = tmdbCache
           ? enrichCandidatesFromCache(
               list,
               tmdbCache,
               onCandidateTmdbCacheError,
             )
           : list;
+        const candidates = enriched.filter(isCandidateVisible);
         return Response.json({ candidates });
       } catch {
         return json500();
@@ -1188,12 +1189,25 @@ export function createApiFetch(
   };
 }
 
+// --- Candidate visibility ---
+
+// A candidate is visible when it has no disposition, or when it was removed
+// after a completed download (file landed in Plex; removal was just housekeeping).
+function isCandidateVisible(c: CandidateStateRecord): boolean {
+  if (!c.pirateClawDisposition) return true;
+  if (c.pirateClawDisposition === 'removed' && c.transmissionPercentDone === 1)
+    return true;
+  return false;
+}
+
 // --- Show breakdowns ---
 
 export function buildShowBreakdowns(
   candidates: CandidateStateRecord[],
 ): ShowBreakdown[] {
-  const tvCandidates = candidates.filter((c) => c.mediaType === 'tv');
+  const tvCandidates = candidates
+    .filter(isCandidateVisible)
+    .filter((c) => c.mediaType === 'tv');
 
   const showMap = new Map<string, Map<number, ShowEpisode[]>>();
 
@@ -1253,6 +1267,7 @@ export function buildMovieBreakdowns(
   candidates: CandidateStateRecord[],
 ): MovieBreakdown[] {
   return candidates
+    .filter(isCandidateVisible)
     .filter((c) => c.mediaType === 'movie')
     .map((c) => ({
       normalizedTitle: c.normalizedTitle,
