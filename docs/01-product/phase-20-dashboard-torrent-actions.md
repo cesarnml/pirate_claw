@@ -142,26 +142,4 @@ A user can pause, resume, remove, and requeue torrents entirely from the Pirate 
 
 ## Retrospective
 
-**Delivered:** 2026-04-19. Seven tickets, six PRs (#181–186), stacked branches.
-
-### What went well
-
-**Data model clean break landed atomically.** Dropping `CandidateLifecycleStatus` and replacing it with `torrentDisplayState()` + `pirateClawDisposition` was the right call. The derived-state approach eliminated a whole class of reconciler drift bugs. The startup migration ran silently on existing DBs.
-
-**Security review caught real gaps.** CodeRabbit flagged missing `checkWriteAuth` on all four torrent action endpoints (P20.05) and the `dispose` endpoint (P20.04). These were genuine auth holes, not false positives. The review cycle paid for itself.
-
-**Stacked branch discipline held.** Seven tickets, each branching off the previous, with no merge conflicts across the full chain. The orchestrator start/review flow kept handoffs clean.
-
-### What was harder than expected
-
-**CI stacking friction.** Each ticket inherits the pre-existing web test failures from the base branch. The root cause (Svelte component test breakage from P19) was not in scope for P20, so CI stayed red throughout the stack. This created noise in every review cycle. The web test failures should be isolated and fixed in a standalone ticket before P21.
-
-**Queue button design required two passes.** The initial implementation didn't guard historical failed outcome rows after requeue — `listSkippedNoMatchOutcomes` returned `feed_item_outcomes` rows by status, but after a successful requeue the `candidate_state` status changed while the outcome row stayed `failed`. CodeRabbit caught this. The fix (JOIN `candidate_state` and filter by current status) required updating the SQL query and the test.
-
-**`SkippedOutcomeRecord` naming is now stale.** The query now returns both `skipped_no_match` and `failed` outcomes, but the function and API parameter are still called `listSkippedNoMatchOutcomes` / `?status=skipped_no_match`. This should be renamed to `listRecentFeedItemOutcomesForReview` in a future cleanup.
-
-### Decisions that held
-
-- **Option A (synchronous submit) for requeue** — the right call. The alternative (defer to next daemon cycle) would have left users without any confirmation of success and made the Queue button UX feel broken.
-- **Not extracting the router** — still the right deferral. The API file grew again but extracting to Hono before DB migrations arrive would be premature.
-- **`pirateClawDisposition` as a terminal field** — working correctly. The reconciler skip guard (`WHERE pirate_claw_disposition IS NULL`) is clean.
+See [`notes/public/phase-20-retrospective.md`](../../notes/public/phase-20-retrospective.md).
