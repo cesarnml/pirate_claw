@@ -8,6 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import type { ShowEpisode, TorrentStatSnapshot } from '$lib/types';
+	import { torrentDisplayState } from '$lib/helpers';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import LayersIcon from '@lucide/svelte/icons/layers-3';
 	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
@@ -21,6 +22,7 @@
 	let selectedSeason = $state<number | null>(null);
 
 	const torrents = $derived(data.torrents ?? []);
+	const liveHashes = $derived(new Set<string>(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function displayTitle(show: NonNullable<PageData['show']>): string {
 		return show.tmdb?.name ?? show.normalizedTitle;
@@ -71,8 +73,7 @@
 	function isActive(episode: ShowEpisode, live: TorrentStatSnapshot | undefined): boolean {
 		return (
 			live?.status === 'downloading' ||
-			episode.lifecycleStatus === 'active' ||
-			episode.lifecycleStatus === 'downloading' ||
+			torrentDisplayState(episode, liveHashes) === 'downloading' ||
 			(episode.status === 'queued' && (episode.transmissionPercentDone ?? 0) > 0)
 		);
 	}
@@ -334,8 +335,8 @@
 									{#if episode.tmdb?.airDate}
 										<Badge variant="outline">{episode.tmdb.airDate}</Badge>
 									{/if}
-									{#if episode.lifecycleStatus}
-										<Badge variant="secondary">{episode.lifecycleStatus}</Badge>
+									{#if episode.pirateClawDisposition}
+										<Badge variant="secondary">{episode.pirateClawDisposition}</Badge>
 									{/if}
 									{#if data.show.watchCount !== null}
 										<Badge class="border-primary/20 bg-primary/12 text-primary">

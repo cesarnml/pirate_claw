@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ApiUnavailableAlert from '$lib/components/ApiUnavailableAlert.svelte';
-	import type { CandidateLifecycleStatus, MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
+	import { torrentDisplayState } from '$lib/helpers';
+	import type { MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
 	import type { PageData } from './$types';
 	import MovieAddCard from './components/MovieAddCard.svelte';
 	import MovieDeckHeader from './components/MovieDeckHeader.svelte';
@@ -19,6 +20,7 @@
 	let sortKey = $state<SortKey>('date');
 
 	const torrents = $derived(data.torrents ?? []);
+	const liveHashes = $derived(new Set<string>(torrents.map((t: TorrentStatSnapshot) => t.hash)));
 
 	function liveTorrent(movie: MovieBreakdown): TorrentStatSnapshot | undefined {
 		if (!movie.transmissionTorrentHash) return undefined;
@@ -34,10 +36,12 @@
 			if (live.status === 'stopped') return 'paused';
 			return 'queued';
 		}
-		const life = movie.lifecycleStatus as CandidateLifecycleStatus | undefined;
-		if (life === 'missing_from_transmission') return 'missing';
-		if (life === 'completed') return 'completed';
-		if (life === 'downloading') return 'downloading';
+
+		const derived = torrentDisplayState(movie, liveHashes);
+		if (derived === 'missing') return 'missing';
+		if (derived === 'completed') return 'completed';
+		if (derived === 'downloading') return 'downloading';
+		if (derived === 'removed' || derived === 'deleted') return 'missing';
 		return 'queued';
 	}
 

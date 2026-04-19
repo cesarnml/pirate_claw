@@ -30,7 +30,6 @@ import {
 } from './poll-state';
 import { pruneArtifacts, writeCycleArtifact } from './runtime-artifacts';
 import {
-  type CandidateLifecycleStatus,
   createRepository,
   ensureSchema,
   hasStatusSchema,
@@ -524,15 +523,14 @@ export async function runCli(argv: string[]): Promise<number> {
 function formatReconcileSummary(result: {
   trackedCount: number;
   reconciledCount: number;
-  counts: Record<CandidateLifecycleStatus, number>;
+  updatedCount: number;
+  missingCount: number;
 }): string {
   return [
     `Tracked torrents: ${result.trackedCount}`,
     `reconciled: ${result.reconciledCount}`,
-    `queued: ${result.counts.queued}`,
-    `downloading: ${result.counts.downloading}`,
-    `completed: ${result.counts.completed}`,
-    `missing_from_transmission: ${result.counts.missing_from_transmission}`,
+    `updated: ${result.updatedCount}`,
+    `missing_from_transmission: ${result.missingCount}`,
   ].join('\n');
 }
 
@@ -608,6 +606,16 @@ function formatRecentRuns(runs: RunSummaryRecord[]): string[] {
   );
 }
 
+function deriveCandidateDisplayStatus(candidate: CandidateStateRecord): string {
+  if (candidate.pirateClawDisposition) return candidate.pirateClawDisposition;
+  if (!candidate.transmissionTorrentHash) return candidate.status;
+  if (candidate.reconciledAt && candidate.transmissionStatusCode === undefined)
+    return candidate.status;
+  if (candidate.transmissionPercentDone === 1) return 'completed';
+  if (candidate.transmissionStatusCode === 0) return 'paused';
+  return 'downloading';
+}
+
 function formatCandidateStates(candidates: CandidateStateRecord[]): string[] {
   if (candidates.length === 0) {
     return ['No candidate states recorded.'];
@@ -615,7 +623,7 @@ function formatCandidateStates(candidates: CandidateStateRecord[]): string[] {
 
   return sortCandidatesForStatus(candidates).map((candidate) =>
     [
-      `${candidate.identityKey} | status=${candidate.lifecycleStatus ?? candidate.status} | rule=${candidate.ruleName} | title=${candidate.normalizedTitle}`,
+      `${candidate.identityKey} | status=${deriveCandidateDisplayStatus(candidate)} | rule=${candidate.ruleName} | title=${candidate.normalizedTitle}`,
       formatCandidateMetadata(candidate),
       `updated=${candidate.updatedAt} | queued=${candidate.queuedAt ?? '-'} | reconciled=${candidate.reconciledAt ?? '-'}`,
     ].join('\n'),

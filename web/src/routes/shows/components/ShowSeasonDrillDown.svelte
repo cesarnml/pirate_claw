@@ -16,6 +16,10 @@
 		if (!hash) return undefined;
 		return props.torrents.find((t: TorrentStatSnapshot) => t.hash === hash);
 	}
+
+	const liveHashes = $derived(
+		new Set<string>(props.torrents.map((t: TorrentStatSnapshot) => t.hash))
+	);
 </script>
 
 <div class="border-border/80 bg-background/36 border-t px-5 py-5">
@@ -50,7 +54,11 @@
 	{:else}
 		<div class="mt-5 space-y-3">
 			{#each props.selectedSeason.episodes as episode (episode.identityKey)}
-				<ShowEpisodeRow {episode} live={liveTorrent(episode.transmissionTorrentHash)} />
+				<ShowEpisodeRow
+					{episode}
+					live={liveTorrent(episode.transmissionTorrentHash)}
+					{liveHashes}
+				/>
 			{/each}
 		</div>
 	{/if}

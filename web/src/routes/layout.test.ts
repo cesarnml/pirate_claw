@@ -12,6 +12,15 @@ vi.mock('$lib/components/ui/sonner', () => ({
 	Toaster: vi.fn()
 }));
 
+vi.mock('$app/stores', () => ({
+	page: {
+		subscribe: vi.fn((cb: (val: { url: { pathname: string } }) => void) => {
+			cb({ url: { pathname: '/' } });
+			return () => {};
+		})
+	}
+}));
+
 const mockHealth: DaemonHealth = {
 	uptime: 3661000,
 	startedAt: '2024-01-01T00:00:00Z'

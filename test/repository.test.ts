@@ -307,7 +307,6 @@ describe('SQLite repository', () => {
 
     const state = repository.recordCandidateReconciliation({
       identityKey: 'movie:example movie|2024',
-      lifecycleStatus: 'downloading',
       transmissionTorrentName: 'Queued Torrent',
       transmissionStatusCode: 4,
       transmissionPercentDone: 0.5,
@@ -317,7 +316,6 @@ describe('SQLite repository', () => {
     });
 
     expect(state).toMatchObject({
-      lifecycleStatus: 'downloading',
       reconciledAt: '2026-03-30T00:20:00.000Z',
       transmissionStatusCode: 4,
       transmissionPercentDone: 0.5,

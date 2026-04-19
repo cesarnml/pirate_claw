@@ -53,7 +53,6 @@ const mockCandidate = (overrides: Partial<CandidateStateRecord> = {}): Candidate
 	identityKey: 'test-key',
 	mediaType: 'tv',
 	status: 'queued',
-	lifecycleStatus: 'completed',
 	normalizedTitle: 'Breaking Bad',
 	rawTitle: 'Breaking.Bad.S01E01.720p',
 	ruleName: 'test-rule',
@@ -68,6 +67,7 @@ const mockCandidate = (overrides: Partial<CandidateStateRecord> = {}): Candidate
 	updatedAt: '2024-01-08T12:00:00Z',
 	queuedAt: '2024-01-08T12:00:00Z',
 	transmissionDoneDate: '2024-01-08T12:00:00Z',
+	transmissionPercentDone: 1,
 	transmissionTorrentHash: 'abc123',
 	...overrides
 });
@@ -100,12 +100,12 @@ describe('/', () => {
 			data: {
 				...baseData,
 				candidates: [
-					mockCandidate({ identityKey: 'a', status: 'queued', lifecycleStatus: 'completed' }),
-					mockCandidate({ identityKey: 'b', status: 'queued', lifecycleStatus: 'completed' }),
+					mockCandidate({ identityKey: 'a', status: 'queued', transmissionPercentDone: 1 }),
+					mockCandidate({ identityKey: 'b', status: 'queued', transmissionPercentDone: 1 }),
 					mockCandidate({
 						identityKey: 'c',
 						status: 'queued',
-						lifecycleStatus: 'completed',
+						transmissionPercentDone: 1,
 						transmissionDoneDate: undefined
 					})
 				],
@@ -132,7 +132,7 @@ describe('/', () => {
 				candidates: [
 					mockCandidate({
 						status: 'queued',
-						lifecycleStatus: 'downloading',
+						transmissionPercentDone: 0.42,
 						transmissionDoneDate: undefined,
 						resolution: '1080p',
 						codec: 'x265',
@@ -184,7 +184,7 @@ describe('/', () => {
 				identityKey: `done${index}`,
 				mediaType: index % 2 === 0 ? 'tv' : 'movie',
 				normalizedTitle: `Movie ${index}`,
-				lifecycleStatus: 'completed',
+				transmissionPercentDone: 1,
 				queuedAt: `2024-01-${String(index + 1).padStart(2, '0')}T00:00:00Z`,
 				transmissionDoneDate: `2024-01-${String(index + 1).padStart(2, '0')}T00:00:00Z`
 			})

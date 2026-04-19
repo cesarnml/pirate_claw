@@ -7,6 +7,7 @@
 	import FilterIcon from '@lucide/svelte/icons/filter';
 	import FlameIcon from '@lucide/svelte/icons/flame';
 	import LibraryBigIcon from '@lucide/svelte/icons/library-big';
+	import { torrentDisplayState } from '$lib/helpers';
 	import type { PageData } from './$types';
 	import ArchiveStrip from './components/ArchiveStrip.svelte';
 	import DashboardHeader from './components/DashboardHeader.svelte';
@@ -39,11 +40,13 @@
 		})
 	);
 
+	const liveHashes = $derived(new Set(torrents.map((t) => t.hash)));
+
 	const archiveItems = $derived(
 		candidates
 			.filter(
 				(candidate): candidate is CandidateStateRecord & { queuedAt: string } =>
-					candidate?.lifecycleStatus === 'completed' && !!candidate.queuedAt
+					candidate.transmissionPercentDone === 1 && !!candidate.queuedAt
 			)
 			.sort((a, b) => b.queuedAt.localeCompare(a.queuedAt))
 			.slice(0, 6)
@@ -61,8 +64,7 @@
 	const oneWeekAgo = $derived(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 	const completedThisWeek = $derived(
 		candidates.filter((candidate) => {
-			if (candidate.lifecycleStatus !== 'completed' || !candidate.transmissionDoneDate)
-				return false;
+			if (candidate.transmissionPercentDone !== 1 || !candidate.transmissionDoneDate) return false;
 			return new Date(candidate.transmissionDoneDate) >= oneWeekAgo;
 		}).length
 	);
@@ -88,7 +90,7 @@
 		{
 			label: 'Total',
 			value: totalTracked,
-			detail: `${candidates.filter((candidate) => candidate.lifecycleStatus === 'downloading').length} active torrents`,
+			detail: `${candidates.filter((candidate) => torrentDisplayState(candidate, liveHashes) === 'downloading').length} active torrents`,
 			icon: LibraryBigIcon
 		},
 		{

@@ -1,12 +1,13 @@
 <script lang="ts">
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import { Badge } from '$lib/components/ui/badge';
-	import { formatPercent, formatSpeed } from '$lib/helpers';
+	import { formatPercent, formatSpeed, torrentDisplayState } from '$lib/helpers';
 	import type { ShowEpisode, TorrentStatSnapshot } from '$lib/types';
 
 	const props = $props<{
 		episode: ShowEpisode;
 		live: TorrentStatSnapshot | undefined;
+		liveHashes: Set<string>;
 	}>();
 
 	const percentDone = $derived(
@@ -14,8 +15,7 @@
 	);
 	const active = $derived(
 		props.live?.status === 'downloading' ||
-			props.episode.lifecycleStatus === 'active' ||
-			props.episode.lifecycleStatus === 'downloading'
+			torrentDisplayState(props.episode, props.liveHashes) === 'downloading'
 	);
 </script>
 
@@ -58,8 +58,8 @@
 			{#if props.episode.tmdb?.airDate}
 				<Badge variant="outline">{props.episode.tmdb.airDate}</Badge>
 			{/if}
-			{#if props.episode.lifecycleStatus}
-				<Badge variant="outline">{props.episode.lifecycleStatus}</Badge>
+			{#if props.episode.pirateClawDisposition}
+				<Badge variant="outline">{props.episode.pirateClawDisposition}</Badge>
 			{/if}
 			{#if props.episode.transmissionTorrentHash}
 				<Badge variant="secondary">Torrent linked</Badge>

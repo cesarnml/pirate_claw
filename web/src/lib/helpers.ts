@@ -1,4 +1,9 @@
-import type { CandidateStateRecord, MovieBreakdown, ShowBreakdown } from '$lib/types';
+import type {
+	CandidateStateRecord,
+	MovieBreakdown,
+	PirateClawDisposition,
+	ShowBreakdown
+} from '$lib/types';
 
 // ── Date / time ──────────────────────────────────────────────────────────────
 
@@ -172,6 +177,32 @@ export function formatPercent(value: number): string {
 }
 
 // ── Torrent display helpers ───────────────────────────────────────────────────
+
+export type TorrentDisplayState =
+	| 'queued'
+	| 'paused'
+	| 'downloading'
+	| 'completed'
+	| 'missing'
+	| 'removed'
+	| 'deleted';
+
+export function torrentDisplayState(
+	candidate: {
+		pirateClawDisposition?: PirateClawDisposition;
+		transmissionTorrentHash?: string;
+		transmissionPercentDone?: number;
+		transmissionStatusCode?: number;
+	},
+	liveHashes: Set<string>
+): TorrentDisplayState {
+	if (candidate.pirateClawDisposition) return candidate.pirateClawDisposition;
+	if (!candidate.transmissionTorrentHash) return 'queued';
+	if (candidate.transmissionPercentDone === 1) return 'completed';
+	if (!liveHashes.has(candidate.transmissionTorrentHash)) return 'missing';
+	if (candidate.transmissionStatusCode === 0) return 'paused';
+	return 'downloading';
+}
 
 export function getTorrentDisplayStatus(torrent: { status: string; percentDone: number }): string {
 	if (torrent.status === 'error') return 'ERROR';

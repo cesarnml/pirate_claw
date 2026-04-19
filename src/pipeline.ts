@@ -8,7 +8,6 @@ import {
   type RunPipelineResult,
 } from './pipeline-runner';
 import type {
-  CandidateLifecycleStatus,
   CandidateMatchRecord,
   CandidateStateRecord,
   Repository,
@@ -24,7 +23,8 @@ export type FetchFeedFn = (feed: FeedConfig) => Promise<RawFeedItem[]>;
 export type ReconcileCandidatesResult = {
   trackedCount: number;
   reconciledCount: number;
-  counts: Record<CandidateLifecycleStatus, number>;
+  updatedCount: number;
+  missingCount: number;
 };
 
 export async function runPipeline(input: {
@@ -116,7 +116,8 @@ export async function reconcileCandidates(input: {
     return {
       trackedCount: 0,
       reconciledCount: 0,
-      counts: createEmptyReconcileCounts(),
+      updatedCount: 0,
+      missingCount: 0,
     };
   }
 
@@ -143,38 +144,36 @@ export async function reconcileCandidates(input: {
   const torrentsByHash = new Map(
     lookup.torrents.map((torrent) => [torrent.torrentHash, torrent]),
   );
-  const counts = createEmptyReconcileCounts();
   let reconciledCount = 0;
+  let updatedCount = 0;
+  let missingCount = 0;
 
   for (const candidate of candidates) {
     const torrent = matchTorrent(candidate, torrentsById, torrentsByHash);
-    const lifecycleStatus = deriveLifecycleStatus(candidate, torrent);
 
     input.repository.recordCandidateReconciliation(
       torrent
         ? {
             identityKey: candidate.identityKey,
-            lifecycleStatus,
             transmissionTorrentName: torrent.torrentName,
             transmissionStatusCode: torrent.statusCode,
             transmissionPercentDone: torrent.percentDone,
             transmissionDoneDate: torrent.doneDate,
             transmissionDownloadDir: torrent.downloadDir,
           }
-        : {
-            identityKey: candidate.identityKey,
-            lifecycleStatus,
-          },
+        : { identityKey: candidate.identityKey },
     );
 
-    counts[lifecycleStatus] += 1;
-    reconciledCount += 1;
+    if (torrent) updatedCount++;
+    else missingCount++;
+    reconciledCount++;
   }
 
   return {
     trackedCount: candidates.length,
     reconciledCount,
-    counts,
+    updatedCount,
+    missingCount,
   };
 }
 
@@ -200,18 +199,6 @@ function getFeedItemNoMatchReason(
   return undefined;
 }
 
-function createEmptyReconcileCounts(): Record<
-  CandidateLifecycleStatus,
-  number
-> {
-  return {
-    queued: 0,
-    downloading: 0,
-    completed: 0,
-    missing_from_transmission: 0,
-  };
-}
-
 function matchTorrent(
   candidate: CandidateStateRecord,
   torrentsById: Map<number, TorrentSnapshot>,
@@ -230,31 +217,6 @@ function matchTorrent(
   }
 
   return undefined;
-}
-
-function deriveLifecycleStatus(
-  candidate: Pick<CandidateStateRecord, 'lifecycleStatus'>,
-  torrent?: Pick<TorrentSnapshot, 'percentDone' | 'statusCode'>,
-): CandidateLifecycleStatus {
-  if (!torrent) {
-    return candidate.lifecycleStatus === 'completed'
-      ? 'completed'
-      : 'missing_from_transmission';
-  }
-
-  if (torrent.percentDone !== undefined && torrent.percentDone >= 1) {
-    return 'completed';
-  }
-
-  if (torrent.statusCode !== undefined && torrent.statusCode === 4) {
-    return 'downloading';
-  }
-
-  if (torrent.percentDone !== undefined && torrent.percentDone > 0) {
-    return 'downloading';
-  }
-
-  return 'queued';
 }
 
 function createDownloadDirResolver(

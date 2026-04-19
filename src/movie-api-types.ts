@@ -18,9 +18,10 @@ export type MovieBreakdown = {
   codec?: string;
   identityKey: string;
   status: string;
-  lifecycleStatus?: string;
+  pirateClawDisposition?: 'removed' | 'deleted';
   queuedAt?: string;
   transmissionPercentDone?: number;
+  transmissionStatusCode?: number;
   transmissionTorrentHash?: string;
   plexStatus: PlexStatus;
   watchCount: number | null;

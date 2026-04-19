@@ -25,11 +25,12 @@ export type ShowEpisode = {
   episode: number;
   identityKey: string;
   status: string;
-  lifecycleStatus?: string;
+  pirateClawDisposition?: 'removed' | 'deleted';
   queuedAt?: string;
   resolution?: string;
   codec?: string;
   transmissionPercentDone?: number;
+  transmissionStatusCode?: number;
   transmissionTorrentHash?: string;
   tmdb?: TmdbTvEpisodeMeta;
 };

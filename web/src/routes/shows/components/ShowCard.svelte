@@ -40,7 +40,7 @@
 		if (total === 0) return null;
 		const done = show.seasons
 			.flatMap((s) => s.episodes)
-			.filter((ep) => ep.lifecycleStatus === 'completed').length;
+			.filter((ep) => ep.transmissionPercentDone === 1).length;
 		return Math.round((done / total) * 100);
 	}
 

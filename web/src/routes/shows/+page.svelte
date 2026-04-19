@@ -20,12 +20,12 @@
 	const torrents = $derived(data.torrents ?? []);
 
 	function completionPct(show: ShowBreakdown): number | null {
-		const total = show.seasons.reduce((sum, s) => sum + s.episodes.length, 0);
-		if (total === 0) return null;
-		const done = show.seasons
-			.flatMap((s) => s.episodes)
-			.filter((ep) => ep.lifecycleStatus === 'completed').length;
-		return Math.round((done / total) * 100);
+		const totalEpisodes = show.seasons.reduce((sum, s) => sum + s.episodes.length, 0);
+		if (totalEpisodes === 0) return null;
+		const completed = show.seasons
+			.flatMap((season) => season.episodes)
+			.filter((episode) => episode.transmissionPercentDone === 1).length;
+		return Math.round((completed / totalEpisodes) * 100);
 	}
 
 	function mostRecentQueuedAt(show: ShowBreakdown): number {

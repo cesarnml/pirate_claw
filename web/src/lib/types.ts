@@ -1,17 +1,13 @@
 export type CandidateStatus = 'queued' | 'skipped_duplicate' | 'failed';
 
-export type CandidateLifecycleStatus =
-	| 'completed'
-	| 'downloading'
-	| 'missing_from_transmission'
-	| 'queued';
+export type PirateClawDisposition = 'removed' | 'deleted';
 
 export type CandidateStateRecord = {
 	identityKey: string;
 	mediaType: 'movie' | 'tv';
 	status: CandidateStatus;
 	queuedAt?: string;
-	lifecycleStatus?: CandidateLifecycleStatus;
+	pirateClawDisposition?: PirateClawDisposition;
 	reconciledAt?: string;
 	transmissionTorrentId?: number;
 	transmissionTorrentName?: string;
@@ -67,11 +63,12 @@ export type ShowEpisode = {
 	episode: number;
 	identityKey: string;
 	status: CandidateStatus;
-	lifecycleStatus?: string;
+	pirateClawDisposition?: PirateClawDisposition;
 	queuedAt?: string;
 	resolution?: string;
 	codec?: string;
 	transmissionPercentDone?: number;
+	transmissionStatusCode?: number;
 	transmissionTorrentHash?: string;
 	tmdb?: TmdbTvEpisodeMeta;
 };
@@ -107,9 +104,10 @@ export type MovieBreakdown = {
 	codec?: string;
 	identityKey: string;
 	status: CandidateStatus;
-	lifecycleStatus?: string;
+	pirateClawDisposition?: PirateClawDisposition;
 	queuedAt?: string;
 	transmissionPercentDone?: number;
+	transmissionStatusCode?: number;
 	transmissionTorrentHash?: string;
 	plexStatus: PlexStatus;
 	watchCount: number | null;

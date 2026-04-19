@@ -62,7 +62,6 @@ describe('/movies', () => {
 
 	it('renders downloading progress and Plex chip when available', () => {
 		const movie = mockMovie({
-			lifecycleStatus: 'downloading',
 			plexStatus: 'in_library',
 			lastWatchedAt: '2026-04-14T00:00:00.000Z',
 			transmissionTorrentHash: 'abc123',
@@ -84,25 +83,22 @@ describe('/movies', () => {
 
 	it('renders filter tab counts for transmission deck buckets', () => {
 		const movies = [
-			mockMovie({ identityKey: 'queued', lifecycleStatus: 'queued' }),
+			mockMovie({ identityKey: 'queued' }),
 			mockMovie({
 				identityKey: 'downloading',
-				transmissionTorrentHash: 'abc123',
-				lifecycleStatus: 'downloading'
+				transmissionTorrentHash: 'abc123'
 			}),
 			mockMovie({
 				identityKey: 'paused',
-				transmissionTorrentHash: 'def456',
-				lifecycleStatus: 'queued'
+				transmissionTorrentHash: 'def456'
 			}),
 			mockMovie({
 				identityKey: 'completed',
-				transmissionTorrentHash: 'ghi789',
-				lifecycleStatus: 'completed'
+				transmissionTorrentHash: 'ghi789'
 			}),
 			mockMovie({
 				identityKey: 'missing',
-				lifecycleStatus: 'missing_from_transmission',
+				transmissionTorrentHash: 'jkl000',
 				tmdb: { title: 'Missing', backdropUrl: 'https://example.com/missing.jpg' }
 			})
 		];
@@ -127,13 +123,12 @@ describe('/movies', () => {
 			mockMovie({
 				identityKey: 'queued',
 				normalizedTitle: 'Queued Only',
-				lifecycleStatus: 'queued',
 				tmdb: undefined
 			}),
 			mockMovie({
 				identityKey: 'missing',
 				normalizedTitle: 'Missing',
-				lifecycleStatus: 'missing_from_transmission',
+				transmissionTorrentHash: 'jkl000',
 				tmdb: undefined
 			})
 		];
