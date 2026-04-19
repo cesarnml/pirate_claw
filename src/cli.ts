@@ -570,6 +570,7 @@ function formatRunSummary(result: {
   counts: {
     queued: number;
     failed: number;
+    dismissed: number;
     skipped_duplicate: number;
     skipped_no_match: number;
   };
@@ -578,6 +579,7 @@ function formatRunSummary(result: {
     `Run ${result.runId} completed.`,
     `queued: ${result.counts.queued}`,
     `failed: ${result.counts.failed}`,
+    `dismissed: ${result.counts.dismissed}`,
     `skipped_duplicate: ${result.counts.skipped_duplicate}`,
     `skipped_no_match: ${result.counts.skipped_no_match}`,
   ].join('\n');

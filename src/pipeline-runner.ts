@@ -137,9 +137,10 @@ export async function submitCandidate(
     return;
   }
 
+  const isPermanent = !submission.ok && submission.code === 'rpc_error';
   recordCandidateResult(repository, {
     ...input,
-    status: 'failed',
+    status: isPermanent ? 'dismissed' : 'failed',
     message: submission.message,
   });
 }
@@ -218,7 +219,7 @@ function recordFeedItemOutcome(
 function recordCandidateResult(
   repository: Repository,
   input: SubmissionInput & {
-    status: 'queued' | 'failed' | 'skipped_duplicate';
+    status: 'queued' | 'failed' | 'dismissed' | 'skipped_duplicate';
     message: string;
     transmissionTorrentId?: number;
     transmissionTorrentName?: string;
@@ -269,6 +270,7 @@ function createEmptyCounts(): Record<FeedItemOutcomeStatus, number> {
   return {
     queued: 0,
     failed: 0,
+    dismissed: 0,
     skipped_duplicate: 0,
     skipped_no_match: 0,
   };

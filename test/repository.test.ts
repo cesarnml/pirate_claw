@@ -429,6 +429,7 @@ describe('SQLite repository', () => {
         counts: {
           queued: 0,
           failed: 0,
+          dismissed: 0,
           skipped_duplicate: 1,
           skipped_no_match: 1,
         },
@@ -441,6 +442,7 @@ describe('SQLite repository', () => {
         counts: {
           queued: 1,
           failed: 1,
+          dismissed: 0,
           skipped_duplicate: 0,
           skipped_no_match: 0,
         },

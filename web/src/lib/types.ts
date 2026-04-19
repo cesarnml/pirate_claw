@@ -1,4 +1,4 @@
-export type CandidateStatus = 'queued' | 'skipped_duplicate' | 'failed';
+export type CandidateStatus = 'queued' | 'skipped_duplicate' | 'failed' | 'dismissed';
 
 export type PirateClawDisposition = 'removed' | 'deleted';
 

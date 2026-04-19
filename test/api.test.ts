@@ -203,6 +203,7 @@ describe('GET /api/status', () => {
         completedAt: '2026-01-01T00:00:05Z',
         counts: {
           queued: 2,
+          dismissed: 0,
           skipped_duplicate: 1,
           skipped_no_match: 0,
           failed: 0,

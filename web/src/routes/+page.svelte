@@ -87,12 +87,22 @@
 	$effect(() => {
 		if (!browser) return;
 		let id: ReturnType<typeof setInterval> | null = null;
-		const start = () => { if (id === null) id = setInterval(() => invalidateAll(), 5000); };
-		const stop = () => { if (id !== null) { clearInterval(id); id = null; } };
+		const start = () => {
+			if (id === null) id = setInterval(() => invalidateAll(), 5000);
+		};
+		const stop = () => {
+			if (id !== null) {
+				clearInterval(id);
+				id = null;
+			}
+		};
 		const onVisibility = () => (document.visibilityState === 'hidden' ? stop() : start());
 		start();
 		document.addEventListener('visibilitychange', onVisibility);
-		return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+		return () => {
+			stop();
+			document.removeEventListener('visibilitychange', onVisibility);
+		};
 	});
 
 	function dismissOnboardingPrompt() {
@@ -165,11 +175,7 @@
 		<StatusCardGrid {statusCards} />
 
 		<div class="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
-			<TorrentManagerCard
-				{activeDownloads}
-				{missingCandidates}
-				transmissionLoaded={transmissionLoaded}
-			/>
+			<TorrentManagerCard {activeDownloads} {missingCandidates} {transmissionLoaded} />
 			<TransmissionFailuresCard {outcomes} />
 		</div>
 

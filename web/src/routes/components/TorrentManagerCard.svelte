@@ -54,13 +54,20 @@
 	}
 
 	function cancelLongPress() {
-		if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+		if (longPressTimer !== null) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
 	}
 
 	function onTouchMove(e: TouchEvent) {
 		if (longPressTimer === null) return;
 		const t = e.touches[0];
-		if (Math.abs(t.clientX - longPressTouchOrigin.x) > 8 || Math.abs(t.clientY - longPressTouchOrigin.y) > 8) cancelLongPress();
+		if (
+			Math.abs(t.clientX - longPressTouchOrigin.x) > 8 ||
+			Math.abs(t.clientY - longPressTouchOrigin.y) > 8
+		)
+			cancelLongPress();
 	}
 
 	let menuState = $state<MenuState | null>(null);
@@ -284,6 +291,21 @@
 								</div>
 							</div>
 							<div class="text-muted-foreground mt-2 flex flex-wrap gap-2 text-xs">
+								{#if candidate?.mediaType}
+									<span class="rounded-full bg-white/6 px-2 py-1 uppercase"
+										>{candidate.mediaType}</span
+									>
+								{/if}
+								{#if candidate?.mediaType === 'tv' && candidate?.season != null}
+									<span class="rounded-full bg-white/6 px-2 py-1"
+										>S{String(candidate.season).padStart(2, '0')}</span
+									>
+								{/if}
+								{#if candidate?.mediaType === 'tv' && candidate?.episode != null}
+									<span class="rounded-full bg-white/6 px-2 py-1"
+										>E{String(candidate.episode).padStart(2, '0')}</span
+									>
+								{/if}
 								{#if candidate?.resolution}
 									<span class="rounded-full bg-white/6 px-2 py-1">{candidate.resolution}</span>
 								{/if}
@@ -327,10 +349,28 @@
 						<li
 							class="border-border bg-background/45 flex items-center justify-between gap-3 rounded-[20px] border p-3"
 						>
-							<div class="min-w-0">
-								<p class="truncate text-sm font-medium">{title}</p>
+							<div class="mr-2 flex min-w-0 items-center gap-1.5 overflow-hidden">
+								<p class="shrink truncate text-sm font-medium">{title}</p>
+								{#if candidate.mediaType}
+									<span
+										class="text-muted-foreground shrink-0 rounded-full bg-white/6 px-1.5 py-0.5 text-[10px] uppercase"
+										>{candidate.mediaType}</span
+									>
+								{/if}
+								{#if candidate.mediaType === 'tv' && candidate.season != null}
+									<span
+										class="text-muted-foreground shrink-0 rounded-full bg-white/6 px-1.5 py-0.5 text-[10px]"
+										>S{String(candidate.season).padStart(2, '0')}</span
+									>
+								{/if}
+								{#if candidate.mediaType === 'tv' && candidate.episode != null}
+									<span
+										class="text-muted-foreground shrink-0 rounded-full bg-white/6 px-1.5 py-0.5 text-[10px]"
+										>E{String(candidate.episode).padStart(2, '0')}</span
+									>
+								{/if}
 								{#if rowError}
-									<p class="text-destructive mt-1 text-xs">{rowError}</p>
+									<p class="text-destructive shrink-0 text-xs">{rowError}</p>
 								{/if}
 							</div>
 							<div class="flex shrink-0 gap-2">
@@ -342,7 +382,7 @@
 										disabled={inFlight}
 										class="text-muted-foreground hover:text-foreground rounded-lg bg-white/6 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
 									>
-										Mark Removed
+										Removed
 									</button>
 								</form>
 								<form method="POST" action={`${base}/?/dispose`} use:enhance={enhanceDispose(hash)}>
@@ -353,7 +393,7 @@
 										disabled={inFlight}
 										class="text-destructive/80 hover:text-destructive rounded-lg bg-white/6 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
 									>
-										Mark Deleted
+										Delete
 									</button>
 								</form>
 							</div>

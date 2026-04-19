@@ -7,13 +7,18 @@ import type { TmdbTvShowMeta } from './tv-api-types';
 import type { RawFeedItem } from './feed';
 import type { NormalizedFeedItem } from './normalize';
 
-export type CandidateStatus = 'queued' | 'failed' | 'skipped_duplicate';
+export type CandidateStatus =
+  | 'queued'
+  | 'failed'
+  | 'dismissed'
+  | 'skipped_duplicate';
 export type RunStatus = 'running' | 'completed' | 'failed';
 export type PirateClawDisposition = 'removed' | 'deleted';
 
 export type FeedItemOutcomeStatus =
   | 'queued'
   | 'failed'
+  | 'dismissed'
   | 'skipped_duplicate'
   | 'skipped_no_match';
 
@@ -1256,6 +1261,7 @@ function mapRunSummaryRow(row: RunSummaryRow): RunSummaryRecord {
     counts: {
       queued: Number(row.queuedCount),
       failed: Number(row.failedCount),
+      dismissed: 0,
       skipped_duplicate: Number(row.skippedDuplicateCount),
       skipped_no_match: Number(row.skippedNoMatchCount),
     },

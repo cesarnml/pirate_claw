@@ -93,7 +93,7 @@ describe('pirate-claw run', () => {
     expect(firstRun.stderr).toBe('');
     expect(firstRun.stdout).toContain('Run 1 completed.');
     expect(firstRun.stdout).toContain('queued: 1');
-    expect(firstRun.stdout).toContain('failed: 1');
+    expect(firstRun.stdout).toContain('dismissed: 1');
     expect(firstRun.stdout).toContain('skipped_duplicate: 1');
     expect(firstRun.stdout).toContain('skipped_no_match: 1');
 
@@ -106,7 +106,7 @@ describe('pirate-claw run', () => {
     expect(secondRun.stderr).toBe('');
     expect(secondRun.stdout).toContain('Run 2 completed.');
     expect(secondRun.stdout).toContain('queued: 0');
-    expect(secondRun.stdout).toContain('failed: 1');
+    expect(secondRun.stdout).toContain('dismissed: 1');
     expect(secondRun.stdout).toContain('skipped_duplicate: 2');
     expect(secondRun.stdout).toContain('skipped_no_match: 1');
 
@@ -118,16 +118,17 @@ describe('pirate-claw run', () => {
       'skipped_no_match',
       'skipped_duplicate',
       'queued',
-      'failed',
+      'dismissed',
     ]);
     expect(secondRunOutcomes.map((outcome) => outcome.status)).toEqual([
       'skipped_no_match',
       'skipped_duplicate',
       'skipped_duplicate',
-      'failed',
+      'dismissed',
     ]);
     expect(
-      firstRunOutcomes.find((outcome) => outcome.status === 'failed')?.message,
+      firstRunOutcomes.find((outcome) => outcome.status === 'dismissed')
+        ?.message,
     ).toContain('torrent rejected by policy');
     expect(
       secondRunOutcomes.find(
@@ -145,7 +146,7 @@ describe('pirate-claw run', () => {
       transmissionTorrentHash: 'hash-42',
     });
     expect(repository.getCandidateState('movie:retry me|2024')).toMatchObject({
-      status: 'failed',
+      status: 'dismissed',
       queuedAt: undefined,
     });
     expect(transmissionServer.requestCount).toBe(6);
@@ -776,16 +777,16 @@ describe('pirate-claw retry-failed', () => {
     expect(retry.stderr).toBe('');
     expect(retry.stdout).toContain('Run 2 completed.');
     expect(retry.stdout).toContain('queued: 0');
-    expect(retry.stdout).toContain('failed: 1');
+    expect(retry.stdout).toContain('dismissed: 1');
     expect(repository.listFeedItemOutcomes(2)).toMatchObject([
       {
-        status: 'failed',
+        status: 'dismissed',
         identityKey: 'movie:retry me|2024',
         ruleName: 'movie-policy',
       },
     ]);
     expect(repository.getCandidateState('movie:retry me|2024')).toMatchObject({
-      status: 'failed',
+      status: 'dismissed',
       queuedAt: undefined,
     });
     expect(transmissionServer.requestCount).toBe(2);
