@@ -2126,14 +2126,22 @@ describe('POST /api/candidates/:id/requeue', () => {
   const writeToken = 'write-token';
   const authHeader = { Authorization: `Bearer ${writeToken}` };
 
-  function createDepsWithAuth(overrides: Partial<Repository> = {}): ApiFetchDeps {
+  function createDepsWithAuth(
+    overrides: Partial<Repository> = {},
+  ): ApiFetchDeps {
     return {
       ...createDeps(overrides),
-      config: { ...stubConfig(), runtime: { ...stubConfig().runtime, apiWriteToken: writeToken } },
+      config: {
+        ...stubConfig(),
+        runtime: { ...stubConfig().runtime, apiWriteToken: writeToken },
+      },
     };
   }
 
-  function requeueRequest(identityKey: string, headers: Record<string, string> = {}) {
+  function requeueRequest(
+    identityKey: string,
+    headers: Record<string, string> = {},
+  ) {
     return new Request(
       `http://localhost/api/candidates/${encodeURIComponent(identityKey)}/requeue`,
       { method: 'POST', headers },
@@ -2144,17 +2152,23 @@ describe('POST /api/candidates/:id/requeue', () => {
     const deps = createDeps();
     const handler = createApiFetch({
       ...deps,
-      downloader: { submit: async () => ({ ok: true, status: 'queued' as const }) },
+      downloader: {
+        submit: async () => ({ ok: true, status: 'queued' as const }),
+      },
     });
     const response = await handler(requeueRequest('some-key', authHeader));
     expect(response.status).toBe(403);
   });
 
   it('returns 401 when bearer token is missing', async () => {
-    const deps = createDepsWithAuth({ getCandidateState: () => tvCandidate({ status: 'failed' }) });
+    const deps = createDepsWithAuth({
+      getCandidateState: () => tvCandidate({ status: 'failed' }),
+    });
     const handler = createApiFetch({
       ...deps,
-      downloader: { submit: async () => ({ ok: true, status: 'queued' as const }) },
+      downloader: {
+        submit: async () => ({ ok: true, status: 'queued' as const }),
+      },
     });
     const response = await handler(requeueRequest('some-key'));
     expect(response.status).toBe(401);
@@ -2172,11 +2186,16 @@ describe('POST /api/candidates/:id/requeue', () => {
     const deps = createDepsWithAuth({ getCandidateState: () => undefined });
     const handler = createApiFetch({
       ...deps,
-      downloader: { submit: async () => ({ ok: true, status: 'queued' as const }) },
+      downloader: {
+        submit: async () => ({ ok: true, status: 'queued' as const }),
+      },
     });
     const response = await handler(requeueRequest('missing-key', authHeader));
     expect(response.status).toBe(404);
-    expect(await response.json()).toMatchObject({ ok: false, error: 'candidate not found' });
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: 'candidate not found',
+    });
   });
 
   it('returns 400 when candidate status is not failed', async () => {
@@ -2185,7 +2204,9 @@ describe('POST /api/candidates/:id/requeue', () => {
     });
     const handler = createApiFetch({
       ...deps,
-      downloader: { submit: async () => ({ ok: true, status: 'queued' as const }) },
+      downloader: {
+        submit: async () => ({ ok: true, status: 'queued' as const }),
+      },
     });
     const response = await handler(requeueRequest('some-key', authHeader));
     expect(response.status).toBe(400);
@@ -2194,7 +2215,9 @@ describe('POST /api/candidates/:id/requeue', () => {
 
   it('returns 500 when downloader.submit fails', async () => {
     const failedCandidate = tvCandidate({ status: 'failed' });
-    const deps = createDepsWithAuth({ getCandidateState: () => failedCandidate });
+    const deps = createDepsWithAuth({
+      getCandidateState: () => failedCandidate,
+    });
     const handler = createApiFetch({
       ...deps,
       downloader: {
@@ -2207,7 +2230,10 @@ describe('POST /api/candidates/:id/requeue', () => {
     });
     const response = await handler(requeueRequest('some-key', authHeader));
     expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({ ok: false, error: 'connection refused' });
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: 'connection refused',
+    });
   });
 
   it('calls requeueCandidate and returns torrent fields on success', async () => {
@@ -2219,7 +2245,9 @@ describe('POST /api/candidates/:id/requeue', () => {
     let requeuedWith: Parameters<Repository['requeueCandidate']> | null = null;
     const deps = createDepsWithAuth({
       getCandidateState: () => failedCandidate,
-      requeueCandidate: (...args) => { requeuedWith = args; },
+      requeueCandidate: (...args) => {
+        requeuedWith = args;
+      },
     });
     const handler = createApiFetch({
       ...deps,
@@ -2243,7 +2271,10 @@ describe('POST /api/candidates/:id/requeue', () => {
     });
     expect(requeuedWith).not.toBeNull();
     expect(requeuedWith![0]).toBe('test-key');
-    expect(requeuedWith![1]).toMatchObject({ torrentId: 42, torrentHash: 'abc123' });
+    expect(requeuedWith![1]).toMatchObject({
+      torrentId: 42,
+      torrentHash: 'abc123',
+    });
   });
 });
 

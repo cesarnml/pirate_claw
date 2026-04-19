@@ -245,7 +245,10 @@ export function createApiFetch(
         downloadUrl: candidate.downloadUrl,
       });
       if (!result.ok) {
-        return Response.json({ ok: false, error: result.message }, { status: 500 });
+        return Response.json(
+          { ok: false, error: result.message },
+          { status: 500 },
+        );
       }
 
       repository.requeueCandidate(identityKey, {
