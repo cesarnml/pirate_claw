@@ -30,7 +30,7 @@ export const load: PageServerLoad = async () => {
 		apiFetch<{ torrents: TorrentStatSnapshot[] }>('/api/transmission/torrents'),
 		apiFetch<{ candidates: CandidateStateRecord[] }>('/api/candidates'),
 		apiFetch<{ runs: RunSummaryRecord[] }>('/api/status'),
-		apiFetch<{ outcomes: SkippedOutcomeRecord[] }>('/api/outcomes?status=skipped_no_match'),
+		apiFetch<{ outcomes: SkippedOutcomeRecord[] }>('/api/outcomes?status=failed_enqueue'),
 		apiFetch<AppConfig>('/api/config')
 	]);
 

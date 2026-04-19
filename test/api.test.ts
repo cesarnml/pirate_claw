@@ -2060,7 +2060,7 @@ describe('GET /api/outcomes', () => {
     });
   });
 
-  it('returns 400 when status param is not skipped_no_match', async () => {
+  it('returns 400 when status param is not a supported filter', async () => {
     const deps = createDeps();
     const handler = createApiFetch(deps);
     const response = await handler(
@@ -2073,7 +2073,7 @@ describe('GET /api/outcomes', () => {
     });
   });
 
-  it('returns outcomes from repository on valid request', async () => {
+  it('returns outcomes from repository when status=failed_enqueue', async () => {
     const mockOutcomes = [
       {
         id: 1,
@@ -2100,12 +2100,37 @@ describe('GET /api/outcomes', () => {
     });
     const handler = createApiFetch(deps);
     const response = await handler(
-      new Request('http://localhost/api/outcomes?status=skipped_no_match'),
+      new Request('http://localhost/api/outcomes?status=failed_enqueue'),
     );
 
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toEqual({ outcomes: mockOutcomes });
+  });
+
+  it('accepts legacy status=skipped_no_match filter for the same payload', async () => {
+    const mockOutcomes = [
+      {
+        id: 9,
+        runId: 1,
+        status: 'failed' as const,
+        recordedAt: '2026-04-10T12:00:00.000Z',
+        title: 'Legacy.Param',
+        feedName: 'main-tv',
+        identityKey: 'tv:legacy|s01e01',
+      },
+    ];
+
+    const deps = createDeps({
+      listSkippedNoMatchOutcomes: () => mockOutcomes,
+    });
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/outcomes?status=skipped_no_match'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ outcomes: mockOutcomes });
   });
 
   it('returns empty outcomes array when repository returns none', async () => {
@@ -2114,7 +2139,7 @@ describe('GET /api/outcomes', () => {
     });
     const handler = createApiFetch(deps);
     const response = await handler(
-      new Request('http://localhost/api/outcomes?status=skipped_no_match'),
+      new Request('http://localhost/api/outcomes?status=failed_enqueue'),
     );
 
     expect(response.status).toBe(200);

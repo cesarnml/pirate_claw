@@ -167,7 +167,7 @@ Set `runtime.apiPort` to start an HTTP JSON API alongside the daemon:
 | `POST /api/shows/:slug/tmdb/refresh` | Refresh TMDB metadata for one TV show (token required)                          |
 | `GET /api/transmission/session`      | Transmission session stats                                                      |
 | `GET /api/transmission/torrents`     | Pirate Claw-managed torrents with progress, speed, ETA                          |
-| `GET /api/outcomes`                  | Feed item outcomes (`?status=skipped_no_match`)                                 |
+| `GET /api/outcomes`                  | Feed item outcomes (`?status=failed_enqueue`; legacy alias `skipped_no_match`)  |
 
 Write rules: `runtime.apiWriteToken` (or env `PIRATE_CLAW_API_WRITE_TOKEN`) must be set; all writes require `Authorization: Bearer <token>` and `If-Match` from the latest `GET /api/config` ETag. Writes are atomic file updates.
 

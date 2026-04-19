@@ -753,7 +753,8 @@ export function createApiFetch(
 
     if (path === '/api/outcomes' && request.method === 'GET') {
       const status = new URL(request.url).searchParams.get('status');
-      if (status !== 'skipped_no_match') {
+      // Preferred: failed_enqueue. Legacy: skipped_no_match (Phase 15 query-param name).
+      if (status !== 'failed_enqueue' && status !== 'skipped_no_match') {
         return Response.json(
           { error: 'unsupported status filter' },
           { status: 400 },
