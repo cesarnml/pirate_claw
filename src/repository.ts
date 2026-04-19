@@ -697,11 +697,6 @@ export function createRepository(database: Database): Repository {
         transmission_torrent_id = ?3,
         transmission_torrent_hash = ?4,
         transmission_torrent_name = ?5,
-        transmission_status_code = NULL,
-        transmission_percent_done = NULL,
-        transmission_done_date = NULL,
-        transmission_download_dir = NULL,
-        reconciled_at = NULL,
         updated_at = ?6
     WHERE identity_key = ?1`,
   );

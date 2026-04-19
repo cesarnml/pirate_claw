@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { deserialize } from '$app/forms';
 	import { formatDate } from '$lib/helpers';
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
@@ -22,7 +21,6 @@
 	let inflightRequeue = $state<string | null>(null);
 	let queuedKeys = $state<Record<string, true>>({});
 	let requeueErrors = $state<Record<string, string>>({});
-	const queueClearTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 	async function requeue(identityKey: string) {
 		if (inflightRequeue) return;
@@ -32,24 +30,15 @@
 		formData.append('identityKey', identityKey);
 		try {
 			const res = await fetch('?/requeue', { method: 'POST', body: formData });
-			const result = deserialize(await res.text());
-			if (result.type === 'success') {
+			if (res.ok) {
 				queuedKeys[identityKey] = true;
 				await invalidateAll();
-				const prev = queueClearTimers.get(identityKey);
-				if (prev) clearTimeout(prev);
-				queueClearTimers.set(
-					identityKey,
-					setTimeout(() => {
-						delete queuedKeys[identityKey];
-						queueClearTimers.delete(identityKey);
-					}, 2000)
-				);
-			} else if (result.type === 'failure') {
-				const data = result.data as { error?: string } | undefined;
-				requeueErrors[identityKey] = data?.error ?? 'Request failed';
+				setTimeout(() => {
+					delete queuedKeys[identityKey];
+				}, 2000);
 			} else {
-				requeueErrors[identityKey] = 'Request failed';
+				const body = (await res.json().catch(() => ({}))) as { error?: string };
+				requeueErrors[identityKey] = body.error ?? 'Request failed';
 			}
 		} catch {
 			requeueErrors[identityKey] = 'Network error';
@@ -57,11 +46,6 @@
 			if (inflightRequeue === identityKey) inflightRequeue = null;
 		}
 	}
-
-	$effect(() => () => {
-		for (const t of queueClearTimers.values()) clearTimeout(t);
-		queueClearTimers.clear();
-	});
 
 	type StatusSort = 'asc' | 'desc' | null;
 	let statusSort = $state<StatusSort>(null);

@@ -142,4 +142,4 @@ A user can pause, resume, remove, and requeue torrents entirely from the Pirate 
 
 ## Retrospective
 
-To be completed after delivery.
+See [`notes/public/phase-20-retrospective.md`](../../notes/public/phase-20-retrospective.md).

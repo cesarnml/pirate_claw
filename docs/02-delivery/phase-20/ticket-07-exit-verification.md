@@ -52,7 +52,30 @@ Must pass clean.
 
 ### 6. Retrospective
 
-Fill in the retrospective section of `docs/01-product/phase-20-dashboard-torrent-actions.md`.
+Write `notes/public/phase-20-retrospective.md` using `.agents/skills/write-retrospective/SKILL.md` (required sections: Scope delivered, What went well, Pain points, Surprises, What we'd do differently, Net assessment, Follow-up). Update the retrospective section of `docs/01-product/phase-20-dashboard-torrent-actions.md` to a pointer link to that file.
+
+### 7. Doc updates
+
+Each doc must reflect Phase 20 as delivered, not pending:
+
+- **`README.md`**
+  - Change "Phases 01–19 are implemented" → "Phases 01–20 are implemented" (operator intro paragraph and any summary line)
+  - Add the six new torrent action endpoints to the API reference table (`POST /api/transmission/torrent/pause`, `resume`, `remove`, `remove-and-delete`, `POST /api/transmission/torrent/dispose`, `POST /api/candidates/:id/requeue`)
+  - Update the "Implemented" / "Planned" summary paragraph: move torrent lifecycle actions and queue button from Planned/future to Implemented; update the Planned entry to whatever Phase 21 is
+
+- **`docs/00-overview/start-here.md`**
+  - Update "Current Repo State" and "Current delivered surface" to include Phase 20: torrent lifecycle actions via context menu (pause, resume, remove, remove+delete), missing-candidate disposition resolution, Queue button for manual requeue, and the `pirateClawDisposition` data model
+  - Move Phase 20 from "next" to delivered; advance the active-phase pointer
+  - Update "last verified" date
+
+- **`docs/00-overview/roadmap.md`**
+  - Mark Phase 20 (Dashboard Torrent Actions) as delivered; add PR stack reference (#181–#187)
+  - Advance the active-phase pointer to Phase 21
+  - Update "last verified" date
+
+- **`docs/README.md`**
+  - Add `phase-20-dashboard-torrent-actions.md` to the product-doc map if not already listed
+  - Add `docs/02-delivery/phase-20/` directory entry if not already listed
 
 ## Exit Condition
 
