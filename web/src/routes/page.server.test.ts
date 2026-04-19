@@ -37,6 +37,9 @@ describe('dashboard page server load', () => {
 		expect((result as { onboarding: { state: string } | null }).onboarding?.state).toBe(
 			'initial_empty'
 		);
+		expect(
+			apiFetchMock.mock.calls.some((args) => args[0] === '/api/outcomes?status=failed_enqueue')
+		).toBe(true);
 	});
 
 	it('derives partial_setup onboarding state for feed-only config', async () => {

@@ -925,8 +925,10 @@ export function createApiFetch(
 
     if (path === '/api/outcomes' && request.method === 'GET') {
       const status = new URL(request.url).searchParams.get('status');
-      // Historical filter name: returns deduped matched Transmission enqueue failures only.
-      if (status !== 'skipped_no_match') {
+      // Preferred name describes the payload: deduped Transmission enqueue failures for
+      // matched candidates still in `failed` state. `skipped_no_match` is a legacy alias
+      // from Phase 15 when this endpoint returned a different slice.
+      if (status !== 'failed_enqueue' && status !== 'skipped_no_match') {
         return Response.json(
           { error: 'unsupported status filter' },
           { status: 400 },

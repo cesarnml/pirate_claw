@@ -167,7 +167,7 @@ Set `runtime.apiPort` to start an HTTP JSON API alongside the daemon:
 | `POST /api/shows/:slug/tmdb/refresh`               | Refresh TMDB metadata for one TV show (token required)                                                                                                   |
 | `GET /api/transmission/session`                    | Transmission session stats                                                                                                                               |
 | `GET /api/transmission/torrents`                   | Live stats for torrents referenced by tracked candidates (progress, speed, ETA)                                                                          |
-| `GET /api/outcomes`                                | Dashboard enqueue failures (`?status=skipped_no_match`): deduped rows per matched candidate still in `failed` state (historical query param name)        |
+| `GET /api/outcomes`                                | Dashboard enqueue failures (`?status=failed_enqueue`; legacy alias `skipped_no_match`): deduped rows per matched candidate still in `failed` state       |
 | `POST /api/transmission/torrent/pause`             | Pause a managed torrent (`{ "hash": "<transmission hash>" }`, bearer token)                                                                              |
 | `POST /api/transmission/torrent/resume`            | Resume a managed torrent (JSON body + bearer token)                                                                                                      |
 | `POST /api/transmission/torrent/remove`            | Remove torrent from Transmission (JSON body + bearer token)                                                                                              |
