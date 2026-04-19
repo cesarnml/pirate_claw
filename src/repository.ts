@@ -678,7 +678,15 @@ export function createRepository(database: Database): Repository {
       fo.identity_key AS identityKey
     FROM feed_item_outcomes fo
     LEFT JOIN feed_items fi ON fo.feed_item_id = fi.id
-    WHERE (fo.status = 'skipped_no_match' OR fo.status = 'failed')
+    LEFT JOIN candidate_state cs ON cs.identity_key = fo.identity_key
+    WHERE (
+        fo.status = 'skipped_no_match'
+        OR (
+          fo.status = 'failed'
+          AND cs.status = 'failed'
+          AND cs.pirate_claw_disposition IS NULL
+        )
+      )
       AND fo.created_at >= datetime('now', '-' || ?1 || ' days')
     ORDER BY fo.created_at DESC`,
   );
