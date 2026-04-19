@@ -6,17 +6,17 @@
 </script>
 
 <div class="space-y-3">
-	<p class="text-primary font-mono text-xs font-semibold tracking-[0.28em] uppercase">
-		Overview Dashboard
-	</p>
-	<div class="flex flex-col items-end gap-3 lg:flex-row lg:justify-end">
+	<p class="text-primary f≈ont-mono text-xs font-semibold tracking-[0.28em] uppercase">Dashboard</p>
+	<div class="flex justify-start gap-3 lg:justify-end">
 		{#if health}
-			<div class="flex flex-row justify-end gap-2">
+			<div class="flex justify-between gap-2 sm:w-full sm:justify-end">
 				{#each [{ label: 'Last feed intake', value: health.lastRunCycle?.completedAt }, { label: 'Last reconcile', value: health.lastReconcileCycle?.completedAt }] as card}
 					<div
 						class="bg-card/65 flex max-w-xs min-w-45 flex-col justify-between rounded-3xl border border-[color-mix(in_srgb,var(--primary)_60%,#23293a_40%)] px-4 py-3 shadow-[0_2px_12px_0_rgba(0,0,0,0.04)] backdrop-blur-sm"
 					>
-						<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase">
+						<p
+							class="text-muted-foreground text-[10px] font-semibold tracking-[0.22em] uppercase sm:text-[11px]"
+						>
 							{card.label}
 						</p>
 						{#if card.value}
@@ -25,9 +25,11 @@
 								<span class="text-foreground/80 text-xs leading-tight font-medium"
 									>{parts.date}</span
 								>
-								<span class="text-xl leading-tight font-semibold"
+								<span class="text-lg leading-tight font-semibold sm:text-xl"
 									>{parts.time}
-									<span class="text-muted-foreground text-xs font-normal">{parts.tz}</span></span
+									<span class="text-muted-foreground text-[10px] font-normal sm:text-[11px]"
+										>{parts.tz}</span
+									></span
 								>
 							</div>
 						{:else}

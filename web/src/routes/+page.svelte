@@ -151,7 +151,7 @@
 	]);
 </script>
 
-<section class="space-y-8">
+<section class="space-y-4 sm:space-y-6 md:space-y-8">
 	<DashboardHeader health={data.health} />
 
 	{#if data.onboarding && data.onboarding.state !== 'ready'}
