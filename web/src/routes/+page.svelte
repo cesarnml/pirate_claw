@@ -121,7 +121,7 @@
 		{
 			label: 'Total',
 			value: totalTracked,
-			detail: `${candidates.filter((candidate) => torrentDisplayState(candidate, liveHashes) === 'downloading').length} active torrents`,
+			detail: `${activeDownloads.filter(({ torrent }) => torrent.status === 'downloading' || torrent.status === 'seeding').length} active torrents`,
 			icon: LibraryBigIcon
 		},
 		{
