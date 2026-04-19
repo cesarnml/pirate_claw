@@ -173,6 +173,10 @@ export type Repository = {
     days: number,
     filters?: DistinctOutcomeFilters,
   ): DistinctUnmatchedOrFailedOutcome[];
+  setPirateClawDisposition(
+    identityKey: string,
+    disposition: PirateClawDisposition,
+  ): void;
 };
 
 export const DEFAULT_DATABASE_PATH = 'pirate-claw.db';
@@ -497,6 +501,9 @@ export function createRepository(database: Database): Repository {
         candidate_state.last_feed_item_id
       ),
       updated_at = excluded.updated_at`,
+  );
+  const setPirateClawDispositionStatement = database.query(
+    `UPDATE candidate_state SET pirate_claw_disposition = ?2 WHERE identity_key = ?1`,
   );
   const reconcileCandidateStateStatement = database.query(
     `UPDATE candidate_state
@@ -916,6 +923,13 @@ export function createRepository(database: Database): Repository {
       return (
         listRetryableCandidatesStatement.all(limit) as CandidateStateRow[]
       ).map(mapCandidateStateRow);
+    },
+
+    setPirateClawDisposition(
+      identityKey: string,
+      disposition: PirateClawDisposition,
+    ): void {
+      setPirateClawDispositionStatement.run(identityKey, disposition);
     },
 
     listSkippedNoMatchOutcomes(days: number): SkippedOutcomeRecord[] {

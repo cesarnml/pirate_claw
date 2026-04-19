@@ -4,6 +4,7 @@ import {
   fetchSessionInfo,
   fetchTorrentStats,
   pauseTorrent,
+  removeTorrent,
   resumeTorrent,
 } from './transmission';
 import type {
@@ -706,9 +707,8 @@ export function createApiFetch(
           { status: 400 },
         );
       }
-      return safeJson(() => ({
-        outcomes: repository.listSkippedNoMatchOutcomes(30),
-      }));
+      const outcomes = repository.listSkippedNoMatchOutcomes(30);
+      return safeJson(() => ({ outcomes }));
     }
 
     if (path === '/api/transmission/torrents' && request.method === 'GET') {
@@ -766,9 +766,6 @@ export function createApiFetch(
       path === '/api/transmission/torrent/pause' &&
       request.method === 'POST'
     ) {
-      const authError = checkWriteAuth(request, activeConfig);
-      if (authError) return authError;
-
       let body: unknown;
       try {
         body = await request.json();
@@ -829,9 +826,6 @@ export function createApiFetch(
       path === '/api/transmission/torrent/resume' &&
       request.method === 'POST'
     ) {
-      const authError = checkWriteAuth(request, activeConfig);
-      if (authError) return authError;
-
       let body: unknown;
       try {
         body = await request.json();
@@ -885,6 +879,137 @@ export function createApiFetch(
           { status: 500 },
         );
       }
+      return Response.json({ ok: true });
+    }
+
+    if (
+      path === '/api/transmission/torrent/remove' &&
+      request.method === 'POST'
+    ) {
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json(
+          { ok: false, error: 'invalid json body' },
+          { status: 400 },
+        );
+      }
+
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        !('hash' in body) ||
+        typeof (body as Record<string, unknown>).hash !== 'string'
+      ) {
+        return Response.json(
+          { ok: false, error: 'hash is required' },
+          { status: 400 },
+        );
+      }
+
+      const hash = (body as Record<string, string>).hash;
+      const candidates = repository.listCandidateStates();
+      const candidate = candidates.find(
+        (c) => c.transmissionTorrentHash === hash,
+      );
+
+      if (!candidate) {
+        return Response.json(
+          { ok: false, error: 'candidate not found' },
+          { status: 400 },
+        );
+      }
+
+      const displayState = deriveTorrentDisplayState(candidate);
+      if (displayState === 'removed' || displayState === 'deleted') {
+        return Response.json(
+          {
+            ok: false,
+            error: `torrent cannot be removed in state: ${displayState}`,
+          },
+          { status: 400 },
+        );
+      }
+
+      const result = await removeTorrent(
+        activeConfig.transmission,
+        hash,
+        false,
+      );
+      if (!result.ok) {
+        return Response.json(
+          { ok: false, error: result.message },
+          { status: 500 },
+        );
+      }
+
+      if (displayState === 'downloading' || displayState === 'paused') {
+        repository.setPirateClawDisposition(candidate.identityKey, 'removed');
+      }
+
+      return Response.json({ ok: true });
+    }
+
+    if (
+      path === '/api/transmission/torrent/remove-and-delete' &&
+      request.method === 'POST'
+    ) {
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json(
+          { ok: false, error: 'invalid json body' },
+          { status: 400 },
+        );
+      }
+
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        !('hash' in body) ||
+        typeof (body as Record<string, unknown>).hash !== 'string'
+      ) {
+        return Response.json(
+          { ok: false, error: 'hash is required' },
+          { status: 400 },
+        );
+      }
+
+      const hash = (body as Record<string, string>).hash;
+      const candidates = repository.listCandidateStates();
+      const candidate = candidates.find(
+        (c) => c.transmissionTorrentHash === hash,
+      );
+
+      if (!candidate) {
+        return Response.json(
+          { ok: false, error: 'candidate not found' },
+          { status: 400 },
+        );
+      }
+
+      const displayState = deriveTorrentDisplayState(candidate);
+      if (displayState === 'removed' || displayState === 'deleted') {
+        return Response.json(
+          {
+            ok: false,
+            error: `torrent cannot be removed in state: ${displayState}`,
+          },
+          { status: 400 },
+        );
+      }
+
+      const result = await removeTorrent(activeConfig.transmission, hash, true);
+      if (!result.ok) {
+        return Response.json(
+          { ok: false, error: result.message },
+          { status: 500 },
+        );
+      }
+
+      repository.setPirateClawDisposition(candidate.identityKey, 'deleted');
       return Response.json({ ok: true });
     }
 
