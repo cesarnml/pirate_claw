@@ -610,7 +610,8 @@ function deriveCandidateDisplayStatus(candidate: CandidateStateRecord): string {
   if (candidate.pirateClawDisposition) return candidate.pirateClawDisposition;
   if (!candidate.transmissionTorrentHash) return candidate.status;
   if (candidate.transmissionPercentDone === 1) return 'completed';
-  if (candidate.reconciledAt && candidate.transmissionStatusCode === undefined) return 'missing';
+  if (candidate.reconciledAt && candidate.transmissionStatusCode === undefined)
+    return 'missing';
   if (candidate.transmissionStatusCode === 0) return 'paused';
   return 'downloading';
 }
