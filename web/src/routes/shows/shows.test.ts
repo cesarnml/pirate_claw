@@ -122,7 +122,7 @@ describe('/shows', () => {
 		expect(screen.getByText('HBO')).toBeInTheDocument();
 		expect(screen.getByText('IN LIBRARY')).toBeInTheDocument();
 		expect(screen.getByText('7')).toBeInTheDocument();
-		expect(screen.getByText(/Watched/)).toBeInTheDocument();
+		expect(screen.getByText(/watched/i)).toBeInTheDocument();
 		expect(screen.getByText('8.1')).toBeInTheDocument();
 	});
 

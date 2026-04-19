@@ -1,4 +1,4 @@
-import type { CandidateStateRecord, MovieBreakdown } from '$lib/types';
+import type { CandidateStateRecord, MovieBreakdown, ShowBreakdown } from '$lib/types';
 
 // ── Date / time ──────────────────────────────────────────────────────────────
 
@@ -154,6 +154,21 @@ export function movieBackdropSrc(backdropUrl: string | undefined): string {
 	} catch {
 		return MOVIE_BACKDROP_FALLBACK;
 	}
+}
+
+// ── Show display helpers ──────────────────────────────────────────────────────
+
+export function showDisplayTitle(show: ShowBreakdown): string {
+	return show.tmdb?.name ?? show.normalizedTitle;
+}
+
+export function showHref(normalizedTitle: string): string {
+	return `/shows/${encodeURIComponent(normalizedTitle.toLowerCase())}`;
+}
+
+/** Format 0–1 fraction as a rounded percentage string. */
+export function formatPercent(value: number): string {
+	return `${Math.round(value * 100)}%`;
 }
 
 // ── Torrent display helpers ───────────────────────────────────────────────────
