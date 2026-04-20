@@ -103,9 +103,10 @@
 		torrent: TorrentStatSnapshot,
 		candidate: CandidateStateRecord | null
 	): 'downloading' | 'seeding' | 'paused' | 'completed' | 'removed' | 'deleted' {
-		if (candidate?.pirateClawDisposition) return candidate.pirateClawDisposition;
+		if (candidate?.pirateClawDisposition === 'deleted') return 'deleted';
 		if (torrent.status === 'seeding') return 'seeding';
 		if (torrent.percentDone === 1) return 'completed';
+		if (candidate?.pirateClawDisposition === 'removed') return 'removed';
 		if (torrent.status === 'stopped') return 'paused';
 		return 'downloading';
 	}

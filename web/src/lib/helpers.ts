@@ -82,11 +82,12 @@ export function candidateTitle(candidate: CandidateStateRecord): string {
 	return candidate.normalizedTitle;
 }
 
-export function candidatePosterUrl(candidate: CandidateStateRecord): string | null {
+export function candidatePosterUrl(candidate: CandidateStateRecord): string {
 	if (candidate.tmdb && 'posterUrl' in candidate.tmdb && candidate.tmdb.posterUrl) {
 		return candidate.tmdb.posterUrl;
 	}
-	return null;
+	if (candidate.mediaType === 'movie') return MOVIE_BACKDROP_FALLBACK;
+	return TV_SHOW_BACKDROP_FALLBACK;
 }
 
 export function initialBox(title: string): string {
@@ -213,9 +214,10 @@ export function torrentDisplayState(
 	},
 	liveHashes: Set<string>
 ): TorrentDisplayState {
-	if (candidate.pirateClawDisposition) return candidate.pirateClawDisposition;
+	if (candidate.pirateClawDisposition === 'deleted') return 'deleted';
 	if (!candidate.transmissionTorrentHash) return 'queued';
 	if (candidate.transmissionPercentDone === 1) return 'completed';
+	if (candidate.pirateClawDisposition === 'removed') return 'removed';
 	if (!liveHashes.has(candidate.transmissionTorrentHash)) return 'missing';
 	if (candidate.transmissionStatusCode === 0) return 'paused';
 	return 'downloading';

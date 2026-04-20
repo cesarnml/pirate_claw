@@ -610,11 +610,12 @@ function formatRecentRuns(runs: RunSummaryRecord[]): string[] {
 }
 
 function deriveCandidateDisplayStatus(candidate: CandidateStateRecord): string {
-  if (candidate.pirateClawDisposition) return candidate.pirateClawDisposition;
+  if (candidate.pirateClawDisposition === 'deleted') return 'deleted';
   if (!candidate.transmissionTorrentHash) return candidate.status;
   if (candidate.reconciledAt && candidate.transmissionStatusCode === undefined)
     return candidate.status;
   if (candidate.transmissionPercentDone === 1) return 'completed';
+  if (candidate.pirateClawDisposition === 'removed') return 'removed';
   if (candidate.transmissionStatusCode === 0) return 'paused';
   return 'downloading';
 }

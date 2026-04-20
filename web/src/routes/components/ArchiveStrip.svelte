@@ -3,6 +3,7 @@
 	import StatusChip from '$lib/components/StatusChip.svelte';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
 	import type { CandidateStateRecord } from '$lib/types';
+	import { Badge } from '$lib/components/ui/badge';
 
 	type ArchiveItem = CandidateStateRecord & { queuedAt: string };
 
@@ -30,29 +31,33 @@
 					{@const posterUrl = candidatePosterUrl(item)}
 					<a
 						href={archiveHref(item)}
-						class="group border-border bg-background/45 overflow-hidden rounded-3xl border transition-transform hover:-translate-y-0.5"
+						aria-label={`${candidateTitle(item)} COMPLETED ${formatShortDate(item.queuedAt)}`}
+						class="group border-border bg-background/45 relative overflow-hidden rounded-3xl border transition-transform hover:-translate-y-0.5"
 					>
-						{#if posterUrl}
-							<img
-								src={posterUrl}
-								alt={candidateTitle(item)}
-								class="aspect-2/3 w-full object-cover"
-								loading="lazy"
-							/>
-						{:else}
-							<div
-								class="bg-muted text-muted-foreground flex aspect-2/3 w-full items-center justify-center text-xs font-medium"
+						<StatusChip
+							status="completed"
+							class="absolute top-3 left-2 z-1 bg-emerald-800/80 text-[9px]"
+						/>
+						{#if item.mediaType === 'tv' && item.season != null && item.episode != null}
+							<Badge
+								class="absolute top-3.5 right-2.5 z-1 bg-red-900/60 text-[10px] font-bold text-amber-50"
 							>
-								No poster
-							</div>
+								S{`${item.season}`.padStart(2, '0')}E{`${item.episode}`.padStart(2, '0')}
+							</Badge>
 						{/if}
-
-						<div class="space-y-2 p-3">
+						<img
+							src={posterUrl}
+							alt={candidateTitle(item)}
+							class="aspect-2/3 w-full object-cover"
+							loading="lazy"
+						/>
+						<div class="relative space-y-2 p-3">
+							<Badge
+								variant="outline"
+								class="absolute bottom-12 left-1/2 -translate-x-1/2 bg-slate-800/30"
+								>{formatShortDate(item.queuedAt)}</Badge
+							>
 							<p class="truncate text-sm font-medium">{candidateTitle(item)}</p>
-							<div class="flex flex-wrap items-center justify-between gap-1">
-								<StatusChip status="completed" />
-								<p class="text-muted-foreground text-xs">{formatShortDate(item.queuedAt)}</p>
-							</div>
 						</div>
 					</a>
 				{/each}
