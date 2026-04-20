@@ -18,3 +18,4 @@ notes/private/
 .claude/*.lock
 pirate-claw.config.minimal.json
 pirate-claw.db
+.codex-clone-*/
