@@ -1,0 +1,212 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { Button } from '$lib/components/ui/button';
+	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
+	import type { RuntimeConfig } from '$lib/types';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import ActivityIcon from '@lucide/svelte/icons/activity';
+	import CableIcon from '@lucide/svelte/icons/cable';
+
+	interface Props {
+		canWrite: boolean;
+		currentEtag: string | null;
+		writeDisabledTooltip: string;
+		connected: boolean;
+		host: string;
+		port: string;
+		version: string;
+		authToken: string;
+		url: string;
+		downloadTarget: string;
+		runtime: RuntimeConfig;
+		showRows: string[];
+		testingConnection: boolean;
+		runtimeMessage?: string;
+		enhanceTestConnection: SubmitFunction;
+		enhanceSaveRuntime: SubmitFunction;
+	}
+
+	const {
+		canWrite,
+		currentEtag,
+		writeDisabledTooltip,
+		connected,
+		host,
+		port,
+		version,
+		authToken,
+		url,
+		downloadTarget,
+		runtime,
+		showRows,
+		testingConnection,
+		runtimeMessage,
+		enhanceTestConnection,
+		enhanceSaveRuntime
+	}: Props = $props();
+</script>
+
+<Card class="bg-card/75 rounded-[30px] border-white/10">
+	<CardHeader class="space-y-4">
+		<div class="flex items-center justify-between gap-3">
+			<div class="space-y-1">
+				<p class="text-primary font-mono text-xs font-semibold tracking-[0.2em] uppercase">
+					01 · Transmission Protocol
+				</p>
+				<h2 class="text-2xl font-semibold tracking-[-0.03em]">Transmission Protocol</h2>
+			</div>
+			<div class="text-muted-foreground inline-flex items-center gap-2 text-xs uppercase">
+				<span
+					class={`inline-block size-2 rounded-full ${connected ? 'bg-emerald-400' : 'bg-rose-400'}`}
+					aria-label={connected ? 'connected' : 'disconnected'}
+				></span>
+				{connected ? 'Connected' : 'Unavailable'}
+			</div>
+		</div>
+	</CardHeader>
+	<CardContent class="space-y-6">
+		<div class="grid gap-3 sm:grid-cols-2">
+			<div class="border-border bg-background/50 rounded-2xl border p-4">
+				<p class="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">Host</p>
+				<p class="mt-2 text-lg font-semibold">{host}</p>
+			</div>
+			<div class="border-border bg-background/50 rounded-2xl border p-4">
+				<p class="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">Port</p>
+				<p class="mt-2 text-lg font-semibold">{port}</p>
+			</div>
+			<div class="border-border bg-background/50 rounded-2xl border p-4">
+				<p class="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">
+					RPC Version
+				</p>
+				<p class="mt-2 text-lg font-semibold">{version}</p>
+			</div>
+			<div class="border-border bg-background/50 rounded-2xl border p-4">
+				<p class="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase">
+					Auth Token
+				</p>
+				<p class="mt-2 text-lg font-semibold">{authToken}</p>
+			</div>
+		</div>
+
+		<div class="grid gap-3 text-sm sm:grid-cols-2">
+			<div>
+				<p class="text-muted-foreground">URL</p>
+				<p class="mt-1 break-all">{url}</p>
+			</div>
+			<div>
+				<p class="text-muted-foreground">Download target</p>
+				<p class="mt-1 break-all">{downloadTarget}</p>
+			</div>
+		</div>
+
+		<form method="POST" action="?/testConnection" use:enhance={enhanceTestConnection}>
+			<Button type="submit" variant="outline" class="rounded-full" disabled={testingConnection}>
+				<CableIcon class="size-4" />
+				{#if testingConnection}
+					Checking…
+				{:else}
+					Test Connection
+				{/if}
+			</Button>
+		</form>
+
+		<form
+			method="POST"
+			action="?/saveRuntime"
+			class="space-y-4 border-t border-white/8 pt-5"
+			use:enhance={enhanceSaveRuntime}
+		>
+			<input type="hidden" name="runtimeIfMatch" value={currentEtag ?? ''} />
+			{#each showRows as name}
+				<input type="hidden" name="currentShow" value={name} />
+			{/each}
+
+			<div class="space-y-2">
+				<p
+					class="text-muted-foreground font-mono text-xs font-semibold tracking-[0.18em] uppercase"
+				>
+					Runtime Controls
+				</p>
+				<p class="text-muted-foreground text-sm">
+					Daemon timers and the API listen port still require a restart after save.
+				</p>
+			</div>
+
+			<div class="grid gap-3 sm:grid-cols-2">
+				<label class="grid gap-1 text-sm">
+					<span class="text-muted-foreground">Run interval (minutes)</span>
+					<input
+						name="runIntervalMinutes"
+						type="number"
+						min="1"
+						step="1"
+						value={runtime.runIntervalMinutes}
+						disabled={!canWrite}
+						title={!canWrite ? writeDisabledTooltip : undefined}
+						class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+					/>
+				</label>
+				<label class="grid gap-1 text-sm">
+					<span class="text-muted-foreground">Reconcile interval (seconds)</span>
+					<input
+						name="reconcileIntervalSeconds"
+						type="number"
+						min="1"
+						step="1"
+						value={runtime.reconcileIntervalSeconds}
+						disabled={!canWrite}
+						title={!canWrite ? writeDisabledTooltip : undefined}
+						class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+					/>
+				</label>
+				<label class="grid gap-1 text-sm">
+					<span class="text-muted-foreground">TMDB refresh interval</span>
+					<input
+						name="tmdbRefreshIntervalMinutes"
+						type="number"
+						min="0"
+						step="1"
+						value={runtime.tmdbRefreshIntervalMinutes ?? 0}
+						disabled={!canWrite}
+						title={!canWrite ? writeDisabledTooltip : undefined}
+						class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+					/>
+				</label>
+				<label class="grid gap-1 text-sm">
+					<span class="text-muted-foreground">API port</span>
+					<input
+						name="apiPort"
+						type="number"
+						min="1"
+						max="65535"
+						step="1"
+						value={runtime.apiPort ?? ''}
+						placeholder="unset"
+						disabled={!canWrite}
+						title={!canWrite ? writeDisabledTooltip : undefined}
+						class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+					/>
+				</label>
+			</div>
+
+			{#if runtimeMessage}
+				<p class="text-destructive text-xs">{runtimeMessage}</p>
+			{/if}
+
+			<div class="flex flex-wrap items-center gap-3">
+				<Button
+					type="submit"
+					class="rounded-full px-5"
+					disabled={!canWrite || !currentEtag}
+					title={!canWrite ? writeDisabledTooltip : undefined}
+				>
+					<ActivityIcon class="size-4" />
+					Save runtime
+				</Button>
+				<p class="text-muted-foreground text-xs">
+					Revision <code>{currentEtag ?? 'missing'}</code>
+				</p>
+			</div>
+		</form>
+	</CardContent>
+</Card>

@@ -2,6 +2,7 @@ import type {
 	CandidateStateRecord,
 	MovieBreakdown,
 	PirateClawDisposition,
+	RunSummaryRecord,
 	ShowBreakdown
 } from '$lib/types';
 
@@ -58,6 +59,38 @@ export function formatEta(eta: number): string {
 	const minutes = Math.floor((eta % 3600) / 60);
 	if (hours > 0) return `${hours}h ${minutes}m`;
 	return `${minutes}m`;
+}
+
+export function formatTransferRate(bytesPerSec: number | undefined): string {
+	if (typeof bytesPerSec !== 'number' || bytesPerSec <= 0) return 'Idle';
+	return formatSpeed(bytesPerSec);
+}
+
+export function parseHostPortFromUrl(value: string): { host: string; port: string } {
+	try {
+		const url = new URL(value);
+		return {
+			host: url.hostname || 'unknown',
+			port: url.port || (url.protocol === 'https:' ? '443' : '80')
+		};
+	} catch {
+		return { host: value, port: 'unknown' };
+	}
+}
+
+export function maskConfiguredValue(configured: boolean): string {
+	return configured ? '••••••••' : 'not configured';
+}
+
+export function totalRunItems(summary: RunSummaryRecord | null): number | null {
+	if (!summary) return null;
+	return Object.values(summary.counts).reduce((sum, count) => sum + count, 0);
+}
+
+export function formatCycleLoad(durationMs: number | undefined): string {
+	if (typeof durationMs !== 'number' || durationMs <= 0) return 'Unavailable';
+	if (durationMs >= 60_000) return `${(durationMs / 60_000).toFixed(1)} min`;
+	return `${(durationMs / 1000).toFixed(1)} sec`;
 }
 
 // ── Candidate display helpers ─────────────────────────────────────────────────
