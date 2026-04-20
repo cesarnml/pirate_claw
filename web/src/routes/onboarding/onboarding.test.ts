@@ -14,7 +14,7 @@ const feedOnlyConfigFixture = feedOnlyConfig as AppConfig;
 const configWithMoviesFixture = configWithMovies as AppConfig;
 const configWithTvDefaultsFixture = configWithTvDefaults as AppConfig;
 
-const sharedLayoutData = { health: null, transmissionSession: null };
+const sharedLayoutData = { health: null, transmissionSession: null, plexConfigured: false };
 
 function renderPage(data: Record<string, unknown>) {
 	return render(Page, {

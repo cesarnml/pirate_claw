@@ -40,7 +40,11 @@ Must return zero matches.
 - Right-click on `paused` row: Resume, Remove, Remove + Delete Data visible
 - Right-click on `completed` row: Remove, Remove + Delete Data visible
 - Missing candidates show Mark Removed / Mark Deleted inline buttons
+- Missing rows remain visible as `missing` until explicit dispose action; no automatic `deleted` inference
+- Previously completed rows return to archive/history after explicit `removed` disposition (completion remains sticky)
 - Queue button in FeedEventLogCard: in-flight, success, failure states all work
+- md collapsed sidebar status hover panel renders above page content (no ArchiveStrip overlap)
+- Sidebar status footer shows Plex state dot/label in both expanded and md-collapsed views
 
 ### 5. Typecheck
 
@@ -80,3 +84,11 @@ Each doc must reflect Phase 20 as delivered, not pending:
 ## Exit Condition
 
 All checks above pass. Phase 20 is closed.
+
+## Post-Ship Drift Guard (2026-04-20)
+
+Additional UI polish landed after initial Phase 20 closeout and is now part of delivered behavior:
+
+- Sidebar operations footer includes Plex configured/unavailable status.
+- md collapsed status info panel includes the Plex row and uses top-layer stacking over artwork.
+- Missing/completed semantics remain intentional: `missing` is observational, while `removed`/`deleted` are explicit operator dispositions.

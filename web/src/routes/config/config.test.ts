@@ -47,7 +47,7 @@ const mockConfig: AppConfig = {
 	}
 };
 
-const sharedLayoutData = { health: null, transmissionSession: null };
+const sharedLayoutData = { health: null, transmissionSession: null, plexConfigured: false };
 
 function renderPage(data: Record<string, unknown>) {
 	return render(Page, {

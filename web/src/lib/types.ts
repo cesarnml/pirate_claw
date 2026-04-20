@@ -164,6 +164,12 @@ export type RuntimeConfig = {
 	tmdbRefreshIntervalMinutes?: number;
 };
 
+export type PlexConfig = {
+	url: string;
+	token: string;
+	refreshIntervalMinutes: number;
+};
+
 export type AppConfig = {
 	feeds: FeedConfig[];
 	tv: TvRule[];
@@ -172,6 +178,7 @@ export type AppConfig = {
 	movies: MoviePolicy;
 	transmission: TransmissionConfig;
 	runtime: RuntimeConfig;
+	plex?: PlexConfig;
 };
 
 export type OnboardingState = 'initial_empty' | 'partial_setup' | 'ready' | 'writes_disabled';

@@ -40,7 +40,8 @@ describe('+layout.svelte', () => {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
 					health: mockHealth,
-					transmissionSession: mockSession
+					transmissionSession: mockSession,
+					plexConfigured: true
 				}
 			}
 		});
@@ -64,6 +65,8 @@ describe('+layout.svelte', () => {
 		expect(screen.getAllByText('1h 1m 1s').length).toBeGreaterThanOrEqual(1);
 		expect(screen.getAllByText('Transmission').length).toBeGreaterThanOrEqual(1);
 		expect(screen.getAllByText('Connected').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('Plex').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('Configured').length).toBeGreaterThanOrEqual(1);
 	});
 
 	it('surfaces unavailable shell status when shared API data is missing', () => {
@@ -72,7 +75,8 @@ describe('+layout.svelte', () => {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
 					health: null,
-					transmissionSession: null
+					transmissionSession: null,
+					plexConfigured: false
 				}
 			}
 		});

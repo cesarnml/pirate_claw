@@ -10,6 +10,12 @@
 
 **Ships (on `main`):** Pause, resume, remove, remove-with-delete torrent actions; missing-torrent disposition resolution; manual requeue for candidates still in `failed` after a Transmission enqueue failure; startup migration dropping `lifecycle_status` and adding `pirate_claw_disposition`; reconciler guard for terminal dispositions.
 
+**Post-ship UI refinements (on `main`):**
+
+- Missing torrents remain explicit in Torrent Manager until the operator resolves them as `removed` or `deleted`; this preserves ambiguity when Transmission-side deletion intent is unknown.
+- Completion remains sticky for archive/history presentation once observed (`transmissionPercentDone === 1` or `transmissionDoneDate` present), even if the torrent later disappears from Transmission.
+- Sidebar operations status includes Plex configuration state alongside daemon and Transmission so operators can see ingestion + library readiness in one place.
+
 **Defers:** Router extraction (future Hono migration); multi-torrent bulk actions; audit log.
 
 ---
@@ -91,6 +97,7 @@ In-flight: menu disabled while request is in flight. On failure: inline error di
 - **Remove** → valid from `downloading` or `paused`. Removes torrent from Transmission (data preserved on disk). Writes `pirateClawDisposition = 'removed'`. If candidate was `completed` at time of removal, no disposition write (stays completed).
 - **Remove + Delete Data** → valid from `downloading`, `paused`, or `completed`. Removes torrent and deletes local data via Transmission RPC `delete-local-data: true`. Writes `pirateClawDisposition = 'deleted'`.
 - **Mark Removed / Mark Deleted** → valid only from `missing`. No Transmission RPC call (torrent is already gone). Writes `pirateClawDisposition` to resolve limbo.
+- **Missing after prior completion** → still treated as `missing` until explicit disposition. Pirate Claw does not infer `deleted` from absence alone.
 
 ---
 

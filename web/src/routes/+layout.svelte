@@ -38,6 +38,7 @@
 
 	const daemonUptime = $derived(formatUptime(data.health?.uptime ?? null));
 	const transmissionConnected = $derived(data.transmissionSession !== null);
+	const plexConfigured = $derived(data.plexConfigured === true);
 	const showSidebar = $derived($page.url.pathname !== '/onboarding');
 </script>
 
@@ -53,14 +54,19 @@
 	<div class="flex h-full w-full flex-col">
 		<SidebarBrand onclick={closeMobileNav} onclose={closeMobileNav} />
 		<SidebarNav {nav} onclick={closeMobileNav} />
-		<SidebarStatusFooter {daemonUptime} daemonHealthy={!!data.health} {transmissionConnected} />
+		<SidebarStatusFooter
+			{daemonUptime}
+			daemonHealthy={!!data.health}
+			{transmissionConnected}
+			{plexConfigured}
+		/>
 	</div>
 {/snippet}
 
 <div class="dark bg-background text-foreground flex h-screen overflow-hidden">
 	{#if showSidebar}
 		<aside
-			class="border-border bg-card/60 hidden h-screen shrink-0 border-r backdrop-blur md:flex md:w-16 lg:w-56"
+			class="border-border bg-card/60 relative z-40 hidden h-screen shrink-0 border-r backdrop-blur md:flex md:w-16 lg:w-56"
 		>
 			{@render sidebarContent()}
 		</aside>

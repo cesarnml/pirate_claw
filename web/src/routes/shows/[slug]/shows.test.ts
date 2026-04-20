@@ -4,9 +4,10 @@ import Page from './+page.svelte';
 import type { ShowBreakdown, TorrentStatSnapshot } from '$lib/types';
 import type { PageData } from './$types';
 
-const sharedLayoutData: Pick<PageData, 'health' | 'transmissionSession'> = {
+const sharedLayoutData: Pick<PageData, 'health' | 'transmissionSession' | 'plexConfigured'> = {
 	health: null,
-	transmissionSession: null
+	transmissionSession: null,
+	plexConfigured: false
 };
 
 const detailShow: ShowBreakdown = {

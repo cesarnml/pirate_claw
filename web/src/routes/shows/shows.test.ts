@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import Page from './+page.svelte';
 import type { ShowBreakdown, TorrentStatSnapshot } from '$lib/types';
 
-const sharedLayoutData = { health: null, transmissionSession: null };
+const sharedLayoutData = { health: null, transmissionSession: null, plexConfigured: false };
 
 const exampleShow: ShowBreakdown = {
 	normalizedTitle: 'The Example Show',

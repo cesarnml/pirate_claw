@@ -3,8 +3,9 @@
 		daemonUptime: string;
 		daemonHealthy: boolean;
 		transmissionConnected: boolean;
+		plexConfigured: boolean;
 	}
-	let { daemonUptime, daemonHealthy, transmissionConnected }: Props = $props();
+	let { daemonUptime, daemonHealthy, transmissionConnected, plexConfigured }: Props = $props();
 </script>
 
 <!-- collapsed sidebar: dots only with custom hover tooltip -->
@@ -21,11 +22,16 @@
 				class:bg-emerald-400={transmissionConnected}
 				class:bg-amber-400={!transmissionConnected}
 			></div>
+			<div
+				class="h-2.5 w-2.5 shrink-0 rounded-full"
+				class:bg-emerald-400={plexConfigured}
+				class:bg-amber-400={!plexConfigured}
+			></div>
 		</div>
 
 		<!-- tooltip: appears on hover of the whole panel -->
 		<div
-			class="pointer-events-none absolute bottom-0 left-full ml-2 w-44 rounded-xl border border-white/20 bg-slate-950 p-3 opacity-0 shadow-xl transition-opacity delay-75 duration-200 group-hover:opacity-100"
+			class="pointer-events-none absolute bottom-0 left-full z-[100] ml-2 w-44 rounded-xl border border-white/20 bg-slate-950 p-3 opacity-0 shadow-xl transition-opacity delay-75 duration-200 group-hover:opacity-100"
 		>
 			<div class="flex items-center justify-between gap-2">
 				<span class="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase"
@@ -53,6 +59,21 @@
 						class="h-2 w-2 shrink-0 rounded-full"
 						class:bg-emerald-400={transmissionConnected}
 						class:bg-amber-400={!transmissionConnected}
+					></div>
+				</div>
+			</div>
+			<div class="mt-2 flex items-center justify-between gap-2">
+				<span class="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase"
+					>Plex</span
+				>
+				<div class="flex items-center gap-1.5">
+					<span class="text-foreground text-xs"
+						>{plexConfigured ? 'Configured' : 'Unavailable'}</span
+					>
+					<div
+						class="h-2 w-2 shrink-0 rounded-full"
+						class:bg-emerald-400={plexConfigured}
+						class:bg-amber-400={!plexConfigured}
 					></div>
 				</div>
 			</div>
@@ -94,6 +115,22 @@
 				class:bg-emerald-400={transmissionConnected}
 				class:bg-amber-400={!transmissionConnected}
 				title={transmissionConnected ? 'Transmission · connected' : 'Transmission unavailable'}
+			></div>
+		</div>
+		<div class="mt-3 flex items-center justify-between gap-3">
+			<div class="min-w-0">
+				<p class="text-muted-foreground text-[11px] font-semibold tracking-[0.22em] uppercase">
+					Plex
+				</p>
+				<p class="text-foreground mt-1 text-sm font-medium">
+					{plexConfigured ? 'Configured' : 'Unavailable'}
+				</p>
+			</div>
+			<div
+				class="h-2.5 w-2.5 shrink-0 rounded-full"
+				class:bg-emerald-400={plexConfigured}
+				class:bg-amber-400={!plexConfigured}
+				title={plexConfigured ? 'Plex configured' : 'Plex unavailable'}
 			></div>
 		</div>
 	</div>

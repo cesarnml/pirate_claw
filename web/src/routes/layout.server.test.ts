@@ -21,6 +21,13 @@ describe('layout server load', () => {
 				downloadSpeed: 0,
 				uploadSpeed: 0,
 				activeTorrentCount: 0
+			})
+			.mockResolvedValueOnce({
+				plex: {
+					url: 'http://localhost:32400',
+					token: '[redacted]',
+					refreshIntervalMinutes: 30
+				}
 			});
 
 		const result = await load({} as never);
@@ -32,7 +39,8 @@ describe('layout server load', () => {
 				downloadSpeed: 0,
 				uploadSpeed: 0,
 				activeTorrentCount: 0
-			}
+			},
+			plexConfigured: true
 		});
 	});
 
@@ -43,13 +51,15 @@ describe('layout server load', () => {
 
 			apiFetchMock
 				.mockRejectedValueOnce(new Error('health down'))
-				.mockRejectedValueOnce(new Error('tx down'));
+				.mockRejectedValueOnce(new Error('tx down'))
+				.mockRejectedValueOnce(new Error('config down'));
 
 			const result = await load({} as never);
 
 			expect(result).toEqual({
 				health: null,
-				transmissionSession: null
+				transmissionSession: null,
+				plexConfigured: false
 			});
 		} finally {
 			errorSpy.mockRestore();

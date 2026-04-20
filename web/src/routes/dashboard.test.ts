@@ -79,6 +79,7 @@ const mockTorrent = (overrides: Partial<TorrentStatSnapshot> = {}): TorrentStatS
 const baseData = {
 	health: mockHealth,
 	transmissionSession: null,
+	plexConfigured: false,
 	transmissionTorrents: [],
 	candidates: [],
 	runSummaries: [],
