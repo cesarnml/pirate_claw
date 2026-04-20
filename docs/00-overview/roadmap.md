@@ -525,6 +525,51 @@ Current status:
 - shipped on `main`; product contract: [`docs/01-product/phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)
 - delivery record: [`docs/02-delivery/phase-20/implementation-plan.md`](../02-delivery/phase-20/implementation-plan.md)
 
+## Phase 21: Bootstrap Contract and Zero Hand-Edited Files
+
+Goal:
+
+- remove the operator requirement to create, copy, or hand-edit config/env files before first use
+- define a valid starter-state contract the system can create automatically
+- make bootstrap state explicit across daemon, API, and web surfaces
+
+Current status:
+
+- product definition only; see [`docs/01-product/phase-21-bootstrap-contract.md`](../01-product/phase-21-bootstrap-contract.md)
+
+## Phase 22: Browser-Only Setup and Installer Flow
+
+Goal:
+
+- move a fresh install from starter state to a working ingestion-ready setup entirely through the browser
+- unify onboarding and config editing around one dependency-ordered setup flow
+
+Current status:
+
+- product definition only; see [`docs/01-product/phase-22-browser-only-setup.md`](../01-product/phase-22-browser-only-setup.md)
+
+## Phase 23: Synology Supervision and Restart Completion
+
+Goal:
+
+- make restart-backed setup/config changes dependable under Synology supervision
+- complete the browser-only operator story by removing the need to babysit daemon restarts manually
+
+Current status:
+
+- product definition only; see [`docs/01-product/phase-23-synology-supervision-and-restart.md`](../01-product/phase-23-synology-supervision-and-restart.md)
+
+## Phase 24: UX/UI Polish After Functional Completion
+
+Goal:
+
+- perform broad UX/UI refinement only after bootstrap, browser-only setup, and Synology restart completion are in place
+- improve cohesion, clarity, and visual trust across operational and shelf-like views
+
+Current status:
+
+- product definition only; see [`docs/01-product/phase-24-ux-ui-polish-after-functional-completion.md`](../01-product/phase-24-ux-ui-polish-after-functional-completion.md)
+
 ## Phase 25: v1.0.0 Release and Schema Versioning
 
 Goal:
@@ -549,15 +594,21 @@ These items are still explicitly deferred or not yet assigned a numbered phase:
 The following items are **mapped** to numbered phases (no longer “unbounded” deferrals):
 
 - **Config editor via web UI** — Phase 13 (runtime subset); Phase 14 (feeds, movies, TV defaults); Phase 16 (unified UX)
-- **Visual polish / design system iteration** — Phase 12 (baseline); Phase 19 (full Obsidian Tide redesign)
+- **Visual polish / design system iteration** — Phase 12 (baseline); Phase 19 (full Obsidian Tide redesign); Phase 24 (post-functional completion polish)
 - **Plex Media Server enrichment** — Phase 18
+- **Zero hand-edited bootstrap** — Phase 21
+- **Browser-only first-run setup** — Phase 22
+- **Synology restart-backed completion** — Phase 23
 - **v1.0.0 release / schema versioning** — Phase 25
 - **Dashboard Transmission proxy** — Phase 20
 
 ## Current Planning Posture
 
 - product phases `01`–`19` are implemented in the current delivery stack; **Phase 19** is delivered via `P19.01`–`P19.08`
-- **Phase 20** (dashboard torrent proxy) is **shipped** on `main`; **Phase 25** (v1.0.0 / schema versioning) remains product-definition-first until its tickets are approved and implemented
+- **Phase 20** (dashboard torrent proxy) is **shipped** on `main`
+- **Phases 21–23** are the current product-completion planning buckets: bootstrap contract, browser-only setup, and Synology restart-backed operation
+- **Phase 24** is explicitly sequenced after Phases 21–23 as UX/UI polish after functional completion
+- **Phase 25** (v1.0.0 / schema versioning) remains the release/versioning ceremony after product-completion phases are done
 - engineering epic write-ups **`EE01`–`EE09`** live under `docs/03-engineering/` (orchestrator, PR hygiene, and delivery workflow tooling)
 - each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
 - smaller bounded changes can still proceed as standalone PR work without inventing a new phase
@@ -576,4 +627,4 @@ Working notes:
 - promote durable technical choices into ADRs
 - numbered phases are planning buckets, not a promise of strict implementation sequence when dependencies allow independent work
 
-Last verified against `README.md` and active delivery plans: 2026-04-19 (Phase 19 and Phase 20 delivered on `main`; Phase 25 v1 release is the next numbered product bucket).
+Last verified against `README.md` and active delivery plans: 2026-04-21 (Phase 20 delivered on `main`; Phases 21–24 are the next product-planning buckets; Phase 25 remains the release/versioning phase).

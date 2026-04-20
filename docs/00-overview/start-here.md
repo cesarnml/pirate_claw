@@ -10,7 +10,7 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through **Phase 19** in the current delivery stack (product phases 01–19; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–19 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec is the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI. **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) is the dashboard-as-Transmission-proxy product contract; that scope is **shipped on `main`**. **Phase 25** ([`phase-25-v1-release-and-schema-versioning.md`](../01-product/phase-25-v1-release-and-schema-versioning.md)) is the v1.0.0 / schema-versioning release ceremony (product definition only until tickets land).
+Pirate Claw is implemented through **Phase 19** in the current delivery stack (product phases 01–19; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–19 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec is the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI. **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) is the dashboard-as-Transmission-proxy product contract; that scope is **shipped on `main`**. **Phases 21–24** now define the product-completion path after that shipped dashboard slice: bootstrap contract, browser-only setup, Synology restart-backed completion, then UX/UI polish. **Phase 25** ([`phase-25-v1-release-and-schema-versioning.md`](../01-product/phase-25-v1-release-and-schema-versioning.md)) is the v1.0.0 / schema-versioning release ceremony after those product-completion phases land.
 
 Current delivered surface:
 
@@ -50,23 +50,23 @@ Current product boundary:
 - daemon HTTP API with read endpoints plus bounded write controls (`/api/config*`, `/api/daemon/restart`, `/api/transmission/ping`, and Phase 19 TV-detail TMDB refresh) when `runtime.apiPort` is configured; **Phase 20** (shipped) adds Transmission torrent lifecycle JSON actions, missing-torrent dispose, and `POST /api/candidates/:id/requeue` on the same port — requeue requires the daemon process to host the Transmission downloader alongside the API
 - TMDB metadata is display-only and does not gate RSS intake
 
-Still deferred (Phase 25+ and later):
+Still deferred (beyond the current Phase 21–25 planning sequence):
 
-- v1.0.0 release and config/DB schema versioning (Phase 25)
 - remote feed capture
 - hosted persistence
 - download renaming or organization rules
 - Synology archiving
 - ingestion redesign beyond the local SQLite model
 
-Last verified against `README.md` and Phase 19 delivery artifacts: 2026-04-19.
+Last verified against `README.md`, roadmap, and active product docs: 2026-04-21.
 
 Current planning focus:
 
 - see [`roadmap.md`](./roadmap.md) for numbered phases and what is implemented on `main`
 - use the roadmap to confirm whether the request is a bounded standalone change or needs a new approved phase/epic planning pass
 - treat the current Phase 07 config surface and the current extracted delivery-orchestrator module boundaries as the baseline for future work
-- Phase 25 (`schemaVersion`, tagged v1, `VERSIONING.md`, changelog) is the remaining numbered release exit; keep Phase 20 dashboard torrent work in [`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md), not under the Phase 19 contract
+- the next product-completion planning buckets are Phase 21 (bootstrap contract), Phase 22 (browser-only setup), Phase 23 (Synology supervision/restart completion), and Phase 24 (post-functional UX/UI polish)
+- Phase 25 (`schemaVersion`, tagged v1, `VERSIONING.md`, changelog) is the release/versioning ceremony after those product-completion phases; keep Phase 20 dashboard torrent work in [`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md), not under the Phase 19 contract
 
 ## Read These Docs By Task Type
 
