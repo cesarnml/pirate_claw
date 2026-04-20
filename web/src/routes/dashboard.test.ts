@@ -219,6 +219,48 @@ describe('/', () => {
 		);
 	});
 
+	it('shows removed completed archive items when doneDate exists without percentDone', () => {
+		render(Page, {
+			data: {
+				...baseData,
+				candidates: [
+					mockCandidate({
+						identityKey: 'removed-complete',
+						mediaType: 'movie',
+						normalizedTitle: 'Removed Complete',
+						pirateClawDisposition: 'removed',
+						transmissionPercentDone: undefined,
+						transmissionDoneDate: '2024-01-02T00:00:00Z',
+						queuedAt: '2024-01-02T00:00:00Z'
+					})
+				]
+			}
+		});
+
+		expect(screen.getByTestId('archive-grid')).toHaveTextContent('Removed Complete');
+	});
+
+	it('shows removed archive history when completion telemetry is missing', () => {
+		render(Page, {
+			data: {
+				...baseData,
+				candidates: [
+					mockCandidate({
+						identityKey: 'removed-history',
+						mediaType: 'movie',
+						normalizedTitle: 'Removed History',
+						pirateClawDisposition: 'removed',
+						transmissionPercentDone: undefined,
+						transmissionDoneDate: undefined,
+						queuedAt: '2024-01-03T00:00:00Z'
+					})
+				]
+			}
+		});
+
+		expect(screen.getByTestId('archive-grid')).toHaveTextContent('Removed History');
+	});
+
 	it('keeps the onboarding prompt behavior intact', () => {
 		writeOnboardingDismissed(true);
 		render(Page, {

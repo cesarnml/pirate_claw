@@ -55,7 +55,7 @@
 							<Badge
 								variant="outline"
 								class="absolute bottom-12 left-1/2 -translate-x-1/2 bg-slate-800/30"
-								>{formatShortDate(item.queuedAt)}</Badge
+								>{formatShortDate(item.transmissionDoneDate ?? item.queuedAt)}</Badge
 							>
 							<p class="truncate text-sm font-medium">{candidateTitle(item)}</p>
 						</div>

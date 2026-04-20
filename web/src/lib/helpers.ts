@@ -150,7 +150,7 @@ export function safeHttpsUrl(value: string | undefined): string | null {
 }
 
 /** Served from `static/` in SvelteKit — used when TMDB backdrop is missing or not https. */
-export const MOVIE_BACKDROP_FALLBACK = '/movie-backdrop-fallback.jpeg';
+export const MOVIE_BACKDROP_FALLBACK = '/movie-backdrop-fallback.webp';
 
 export function movieBackdropSrc(backdropUrl: string | undefined): string {
 	if (!backdropUrl) return MOVIE_BACKDROP_FALLBACK;
@@ -163,7 +163,7 @@ export function movieBackdropSrc(backdropUrl: string | undefined): string {
 }
 
 /** Served from `static/` in SvelteKit — used when a TV show has no usable TMDB backdrop. */
-export const TV_SHOW_BACKDROP_FALLBACK = '/tv-show-backdrop-fallback.jpeg';
+export const TV_SHOW_BACKDROP_FALLBACK = '/tv-show-backdrop-fallback.webp';
 
 /**
  * Full-bleed show card background: prefers TMDB backdrop (https), else poster, else static fallback.

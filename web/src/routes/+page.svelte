@@ -56,7 +56,10 @@
 		candidates
 			.filter(
 				(candidate): candidate is CandidateStateRecord & { queuedAt: string } =>
-					candidate.transmissionPercentDone === 1 && !!candidate.queuedAt
+					(candidate.transmissionPercentDone === 1 ||
+						!!candidate.transmissionDoneDate ||
+						candidate.pirateClawDisposition === 'removed') &&
+					!!candidate.queuedAt
 			)
 			.sort((a, b) => b.queuedAt.localeCompare(a.queuedAt))
 			.slice(0, 6)

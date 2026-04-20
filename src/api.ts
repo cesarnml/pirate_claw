@@ -1195,10 +1195,16 @@ export function createApiFetch(
 // --- Candidate visibility ---
 
 // A candidate is visible when it has no disposition, or when it was removed
-// after a completed download (file landed in Plex; removal was just housekeeping).
+// after being queued (history rows remain visible even if reconcile later drops
+// completion telemetry like percentDone/doneDate).
 function isCandidateVisible(c: CandidateStateRecord): boolean {
+  const isCompleted =
+    c.transmissionPercentDone === 1 || c.transmissionDoneDate !== undefined;
   if (!c.pirateClawDisposition) return true;
-  if (c.pirateClawDisposition === 'removed' && c.transmissionPercentDone === 1)
+  if (
+    c.pirateClawDisposition === 'removed' &&
+    (isCompleted || c.queuedAt !== undefined)
+  )
     return true;
   return false;
 }

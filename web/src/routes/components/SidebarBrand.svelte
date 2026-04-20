@@ -15,7 +15,7 @@
 		class="focus-visible:ring-ring flex items-center gap-3 rounded-2xl focus-visible:ring-2 focus-visible:outline-none"
 	>
 		<img
-			src="/pirate-claw-logo.png"
+			src="/pirate-claw-logo.webp"
 			alt=""
 			width="44"
 			height="44"

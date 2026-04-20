@@ -72,7 +72,7 @@
 				<div class="flex items-center justify-between gap-3 px-4 py-3">
 					<a href="/" class="flex items-center gap-3" aria-label="Home">
 						<img
-							src="/pirate-claw-logo.png"
+							src="/pirate-claw-logo.webp"
 							alt=""
 							width="40"
 							height="40"

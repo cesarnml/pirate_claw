@@ -334,7 +334,7 @@
 								<StatusChip status={getTorrentDisplayStatus(torrent)} />
 							</div>
 							{#if torrent.percentDone !== 1}
-								<div class="mt-4">
+								<div class="mt-1">
 									<div class="text-primary/80 mb-2 flex items-center justify-end text-xs">
 										<p class="font-medium">{(torrent.percentDone * 100).toFixed(0)}%</p>
 									</div>

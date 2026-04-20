@@ -335,6 +335,64 @@ describe('GET /api/candidates', () => {
       db.close();
     }
   });
+
+  it('keeps removed completed candidates visible when doneDate is present', async () => {
+    const candidates = [
+      movieCandidate({
+        identityKey: 'movie:done|2024',
+        pirateClawDisposition: 'removed',
+        transmissionPercentDone: undefined,
+        transmissionDoneDate: '2026-04-20T10:00:00.000Z',
+      }),
+      movieCandidate({
+        identityKey: 'movie:not-done|2024',
+        pirateClawDisposition: 'removed',
+        transmissionPercentDone: undefined,
+        transmissionDoneDate: undefined,
+      }),
+    ];
+    const deps = createDeps({ listCandidateStates: () => candidates as never });
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/candidates'),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.candidates).toHaveLength(1);
+    expect(body.candidates[0].identityKey).toBe('movie:done|2024');
+  });
+
+  it('keeps removed queued candidates visible when completion telemetry is missing', async () => {
+    const candidates = [
+      movieCandidate({
+        identityKey: 'movie:historical-removed|2024',
+        pirateClawDisposition: 'removed',
+        queuedAt: '2026-04-20T10:00:00.000Z',
+        transmissionPercentDone: undefined,
+        transmissionDoneDate: undefined,
+      }),
+      movieCandidate({
+        identityKey: 'movie:hidden-removed|2024',
+        pirateClawDisposition: 'removed',
+        queuedAt: undefined,
+        transmissionPercentDone: undefined,
+        transmissionDoneDate: undefined,
+      }),
+    ];
+    const deps = createDeps({ listCandidateStates: () => candidates as never });
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/candidates'),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.candidates).toHaveLength(1);
+    expect(body.candidates[0].identityKey).toBe(
+      'movie:historical-removed|2024',
+    );
+  });
 });
 
 describe('GET /api/status — error handling', () => {
