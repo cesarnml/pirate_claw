@@ -40,6 +40,9 @@
 	const transmissionConnected = $derived(data.transmissionSession !== null);
 	const plexConfigured = $derived(data.plexConfigured === true);
 	const showSidebar = $derived($page.url.pathname !== '/onboarding');
+	const setupState = $derived(data.setupState ?? 'partially_configured');
+	const isStarter = $derived(setupState === 'starter');
+	const isPartiallyConfigured = $derived(setupState === 'partially_configured');
 </script>
 
 <svelte:head>
@@ -105,7 +108,35 @@
 		{/if}
 
 		<main class="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8 lg:px-10">
-			{@render children()}
+			{#if isStarter}
+				<div
+					class="flex flex-col items-center justify-center gap-4 py-24 text-center"
+					data-testid="starter-mode-splash"
+				>
+					<img
+						src="/pirate-claw-logo.webp"
+						alt="Pirate Claw"
+						width="80"
+						height="80"
+						class="rounded-2xl opacity-60"
+					/>
+					<h1 class="text-foreground text-2xl font-semibold">Pirate Claw is not yet configured</h1>
+					<p class="text-muted-foreground max-w-sm text-sm">
+						Edit <code class="font-mono">config.json</code> to connect Transmission, Plex, and set your
+						media preferences. Then restart the daemon.
+					</p>
+				</div>
+			{:else}
+				{#if isPartiallyConfigured}
+					<div
+						class="bg-warning/10 border-warning/30 text-warning mb-4 rounded-lg border px-4 py-2 text-sm"
+						data-testid="partial-config-banner"
+					>
+						Setup incomplete — some services may be unavailable until configuration is complete.
+					</div>
+				{/if}
+				{@render children()}
+			{/if}
 		</main>
 	</div>
 

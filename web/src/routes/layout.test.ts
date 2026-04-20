@@ -41,7 +41,8 @@ describe('+layout.svelte', () => {
 				data: {
 					health: mockHealth,
 					transmissionSession: mockSession,
-					plexConfigured: true
+					plexConfigured: true,
+					setupState: 'ready' as const
 				}
 			}
 		});
@@ -76,7 +77,8 @@ describe('+layout.svelte', () => {
 				data: {
 					health: null,
 					transmissionSession: null,
-					plexConfigured: false
+					plexConfigured: false,
+					setupState: 'partially_configured' as const
 				}
 			}
 		});
@@ -88,5 +90,57 @@ describe('+layout.svelte', () => {
 
 		expect(sidebarQueries.getAllByText('Unavailable').length).toBeGreaterThanOrEqual(2);
 		expect(sidebarQueries.getByText('Transmission')).toBeInTheDocument();
+	});
+
+	it('renders starter-mode splash and hides children when setupState is starter', () => {
+		render(Layout, {
+			props: {
+				children: (() => {}) as unknown as import('svelte').Snippet,
+				data: {
+					health: null,
+					transmissionSession: null,
+					plexConfigured: false,
+					setupState: 'starter' as const
+				}
+			}
+		});
+
+		expect(screen.getByTestId('starter-mode-splash')).toBeInTheDocument();
+		expect(screen.getByText('Pirate Claw is not yet configured')).toBeInTheDocument();
+		expect(screen.queryByTestId('partial-config-banner')).not.toBeInTheDocument();
+	});
+
+	it('renders partial-config banner when setupState is partially_configured', () => {
+		render(Layout, {
+			props: {
+				children: (() => {}) as unknown as import('svelte').Snippet,
+				data: {
+					health: mockHealth,
+					transmissionSession: mockSession,
+					plexConfigured: true,
+					setupState: 'partially_configured' as const
+				}
+			}
+		});
+
+		expect(screen.getByTestId('partial-config-banner')).toBeInTheDocument();
+		expect(screen.queryByTestId('starter-mode-splash')).not.toBeInTheDocument();
+	});
+
+	it('renders no setup indicator when setupState is ready', () => {
+		render(Layout, {
+			props: {
+				children: (() => {}) as unknown as import('svelte').Snippet,
+				data: {
+					health: mockHealth,
+					transmissionSession: mockSession,
+					plexConfigured: true,
+					setupState: 'ready' as const
+				}
+			}
+		});
+
+		expect(screen.queryByTestId('starter-mode-splash')).not.toBeInTheDocument();
+		expect(screen.queryByTestId('partial-config-banner')).not.toBeInTheDocument();
 	});
 });

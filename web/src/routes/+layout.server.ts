@@ -2,11 +2,14 @@ import { apiFetch } from '$lib/server/api';
 import type { AppConfig, DaemonHealth, SessionInfo } from '$lib/types';
 import type { LayoutServerLoad } from './$types';
 
+type SetupStateResponse = { state: 'starter' | 'partially_configured' | 'ready' };
+
 export const load: LayoutServerLoad = async () => {
-	const [healthResult, sessionResult, configResult] = await Promise.allSettled([
+	const [healthResult, sessionResult, configResult, setupStateResult] = await Promise.allSettled([
 		apiFetch<DaemonHealth>('/api/health'),
 		apiFetch<SessionInfo>('/api/transmission/session'),
-		apiFetch<AppConfig>('/api/config')
+		apiFetch<AppConfig>('/api/config'),
+		apiFetch<SetupStateResponse>('/api/setup/state')
 	]);
 
 	if (healthResult.status === 'rejected') {
@@ -21,9 +24,17 @@ export const load: LayoutServerLoad = async () => {
 		console.error('[layout] failed to load /api/config:', configResult.reason);
 	}
 
+	if (setupStateResult.status === 'rejected') {
+		console.error('[layout] failed to load /api/setup/state:', setupStateResult.reason);
+	}
+
 	return {
 		health: healthResult.status === 'fulfilled' ? healthResult.value : null,
 		transmissionSession: sessionResult.status === 'fulfilled' ? sessionResult.value : null,
-		plexConfigured: configResult.status === 'fulfilled' && configResult.value.plex !== undefined
+		plexConfigured: configResult.status === 'fulfilled' && configResult.value.plex !== undefined,
+		setupState:
+			setupStateResult.status === 'fulfilled'
+				? setupStateResult.value.state
+				: 'partially_configured'
 	};
 };

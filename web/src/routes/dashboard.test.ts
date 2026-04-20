@@ -80,6 +80,7 @@ const baseData = {
 	health: mockHealth,
 	transmissionSession: null,
 	plexConfigured: false,
+	setupState: 'ready' as const,
 	transmissionTorrents: [],
 	candidates: [],
 	runSummaries: [],

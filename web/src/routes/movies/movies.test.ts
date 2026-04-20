@@ -4,10 +4,14 @@ import Page from './+page.svelte';
 import type { MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
 import type { PageData } from './$types';
 
-const sharedLayoutData: Pick<PageData, 'health' | 'transmissionSession' | 'plexConfigured'> = {
+const sharedLayoutData: Pick<
+	PageData,
+	'health' | 'transmissionSession' | 'plexConfigured' | 'setupState'
+> = {
 	health: null,
 	transmissionSession: null,
-	plexConfigured: false
+	plexConfigured: false,
+	setupState: 'ready' as const
 };
 
 const mockMovie = (overrides: Partial<MovieBreakdown> = {}): MovieBreakdown => ({
