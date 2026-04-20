@@ -60,7 +60,7 @@ function validateRuntimeBounds(
 		return { ok: false, message: `Field "${field}" has invalid value.` };
 	}
 
-	if (field === 'runIntervalMinutes' || field === 'reconcileIntervalMinutes') {
+	if (field === 'runIntervalMinutes' || field === 'reconcileIntervalSeconds') {
 		return value > 0 ? { ok: true } : { ok: false, message: `Field "${field}" has invalid value.` };
 	}
 
@@ -152,13 +152,13 @@ export const actions: Actions = {
 		}
 
 		const runIntervalMinutes = parseOptionalInt(formData.get('runIntervalMinutes'));
-		const reconcileIntervalMinutes = parseOptionalInt(formData.get('reconcileIntervalMinutes'));
+		const reconcileIntervalSeconds = parseOptionalInt(formData.get('reconcileIntervalSeconds'));
 		const tmdbRefreshIntervalMinutes = parseOptionalInt(formData.get('tmdbRefreshIntervalMinutes'));
 		const apiPort = parseOptionalInt(formData.get('apiPort'));
 
 		const invalidRuntimeField = [
 			runIntervalMinutes,
-			reconcileIntervalMinutes,
+			reconcileIntervalSeconds,
 			tmdbRefreshIntervalMinutes,
 			apiPort
 		].some((value) => Number.isNaN(value));
@@ -168,7 +168,7 @@ export const actions: Actions = {
 
 		for (const [field, value] of [
 			['runIntervalMinutes', runIntervalMinutes],
-			['reconcileIntervalMinutes', reconcileIntervalMinutes],
+			['reconcileIntervalSeconds', reconcileIntervalSeconds],
 			['tmdbRefreshIntervalMinutes', tmdbRefreshIntervalMinutes],
 			['apiPort', apiPort]
 		] as const) {
@@ -181,7 +181,7 @@ export const actions: Actions = {
 		const payload = {
 			runtime: {
 				runIntervalMinutes,
-				reconcileIntervalMinutes,
+				reconcileIntervalSeconds,
 				tmdbRefreshIntervalMinutes: tmdbRefreshIntervalMinutes ?? 0,
 				...(apiPort === undefined ? {} : { apiPort })
 			},

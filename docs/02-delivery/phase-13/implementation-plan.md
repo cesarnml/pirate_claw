@@ -14,7 +14,7 @@ Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.m
 
 ## Grill-Me decisions locked for this phase
 
-- Editable subset is runtime-only in v1: `runtime.apiPort`, `runtime.runIntervalMinutes`, `runtime.reconcileIntervalMinutes`, `runtime.tmdbRefreshIntervalMinutes`.
+- Editable subset is runtime-only in v1: `runtime.apiPort`, `runtime.runIntervalMinutes`, `runtime.reconcileIntervalSeconds`, `runtime.tmdbRefreshIntervalMinutes`.
 - Write token model is config + env override: `runtime.apiWriteToken` with `PIRATE_CLAW_API_WRITE_TOKEN` precedence.
 - `.env.example` must be updated as part of this phase.
 

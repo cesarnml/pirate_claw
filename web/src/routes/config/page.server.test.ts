@@ -28,7 +28,7 @@ describe('config page server actions', () => {
 							transmission: { url: 'http://localhost:9091', username: '', password: '' },
 							runtime: {
 								runIntervalMinutes: 60,
-								reconcileIntervalMinutes: 60,
+								reconcileIntervalSeconds: 60,
 								artifactDir: '/tmp',
 								artifactRetentionDays: 7
 							}
@@ -61,7 +61,7 @@ describe('config page server actions', () => {
 							transmission: { url: 'http://localhost:9091', username: '', password: '' },
 							runtime: {
 								runIntervalMinutes: 60,
-								reconcileIntervalMinutes: 60,
+								reconcileIntervalSeconds: 60,
 								artifactDir: '/tmp',
 								artifactRetentionDays: 7
 							}
@@ -92,7 +92,7 @@ describe('config page server actions', () => {
 							transmission: { url: 'http://localhost:9091', username: '', password: '' },
 							runtime: {
 								runIntervalMinutes: 60,
-								reconcileIntervalMinutes: 60,
+								reconcileIntervalSeconds: 60,
 								artifactDir: '/tmp',
 								artifactRetentionDays: 7
 							}
@@ -327,7 +327,7 @@ describe('config page server actions', () => {
 			const body = new URLSearchParams();
 			body.set('runtimeIfMatch', '"rev-1"');
 			body.set('runIntervalMinutes', '30');
-			body.set('reconcileIntervalMinutes', '60');
+			body.set('reconcileIntervalSeconds', '60');
 			body.set('tmdbRefreshIntervalMinutes', '0');
 			body.append('currentShow', 'Breaking Bad');
 			body.append('currentShow', 'Better Call Saul');

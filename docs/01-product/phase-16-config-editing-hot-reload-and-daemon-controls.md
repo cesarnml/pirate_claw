@@ -37,7 +37,7 @@ Phase 16 should leave Pirate Claw in a state where:
 **Hot reload scope (API-layer only)**
 
 - config changes from any of the Phase 13/14 write endpoints already take effect immediately for API reads via the `configHolder.current` pattern — this is already implemented
-- polling intervals (`runIntervalMinutes`, `reconcileIntervalMinutes`) are read once at daemon startup and held in `setInterval` timers; changing them requires a daemon restart
+- polling intervals (`runIntervalMinutes`, `reconcileIntervalSeconds`) are read once at daemon startup and held in `setInterval` timers; changing them requires a daemon restart
 - the UI makes this explicit: after saving runtime interval fields, the success toast reads "Saved — restart the daemon for interval changes to take effect"
 - no changes to `daemon.ts` interval handling in Phase 16
 

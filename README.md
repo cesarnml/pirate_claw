@@ -101,8 +101,8 @@ Config file: `pirate-claw.config.json` (see [`pirate-claw.config.example.json`](
     }
   },
   "runtime": {
-    "runIntervalMinutes": 30,
-    "reconcileIntervalMinutes": 1,
+    "runIntervalMinutes": 15,
+    "reconcileIntervalSeconds": 30,
     "artifactDir": ".pirate-claw/runtime",
     "artifactRetentionDays": 7,
     "apiPort": 5555

@@ -10,6 +10,9 @@ import {
   validateConfig,
 } from '../src/config';
 
+const RUN_INTERVAL_MINUTES_DEFAULT = 15;
+const RECONCILE_INTERVAL_SECONDS_DEFAULT = 30;
+
 /** Avoid coupling tests to a developer's real `PIRATE_CLAW_API_WRITE_TOKEN` in `.env`. */
 function envWithoutProcessWriteToken(): Record<string, string | undefined> {
   const copy = { ...process.env } as Record<string, string | undefined>;
@@ -279,8 +282,12 @@ describe('validateConfig', () => {
     const config = validateConfig(createMinimalConfig());
 
     expect(config.runtime).toEqual(DEFAULT_RUNTIME_CONFIG);
-    expect(config.runtime.runIntervalMinutes).toBe(30);
-    expect(config.runtime.reconcileIntervalMinutes).toBe(1);
+    expect(config.runtime.runIntervalMinutes).toBe(
+      RUN_INTERVAL_MINUTES_DEFAULT,
+    );
+    expect(config.runtime.reconcileIntervalSeconds).toBe(
+      RECONCILE_INTERVAL_SECONDS_DEFAULT,
+    );
     expect(config.runtime.artifactDir).toBe('.pirate-claw/runtime');
     expect(config.runtime.artifactRetentionDays).toBe(7);
   });
@@ -289,12 +296,16 @@ describe('validateConfig', () => {
     const config = validateConfig({
       ...createMinimalConfig(),
       runtime: {
-        runIntervalMinutes: 15,
+        runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
       },
     });
 
-    expect(config.runtime.runIntervalMinutes).toBe(15);
-    expect(config.runtime.reconcileIntervalMinutes).toBe(1);
+    expect(config.runtime.runIntervalMinutes).toBe(
+      RUN_INTERVAL_MINUTES_DEFAULT,
+    );
+    expect(config.runtime.reconcileIntervalSeconds).toBe(
+      RECONCILE_INTERVAL_SECONDS_DEFAULT,
+    );
     expect(config.runtime.artifactDir).toBe('.pirate-claw/runtime');
     expect(config.runtime.artifactRetentionDays).toBe(7);
     expect(config.runtime.tmdbRefreshIntervalMinutes).toBe(360);
@@ -306,7 +317,7 @@ describe('validateConfig', () => {
         ...createMinimalConfig(),
         runtime: {
           runIntervalMinutes: 10,
-          reconcileIntervalMinutes: 5,
+          reconcileIntervalSeconds: 5,
           artifactDir: '/custom/path',
           artifactRetentionDays: 14,
         },
@@ -317,7 +328,7 @@ describe('validateConfig', () => {
 
     expect(config.runtime).toEqual({
       runIntervalMinutes: 10,
-      reconcileIntervalMinutes: 5,
+      reconcileIntervalSeconds: 5,
       artifactDir: '/custom/path',
       artifactRetentionDays: 14,
       tmdbRefreshIntervalMinutes: 360,
@@ -335,7 +346,7 @@ describe('validateConfig', () => {
     expect(() =>
       validateConfig({
         ...createMinimalConfig(),
-        runtime: { reconcileIntervalMinutes: -1 },
+        runtime: { reconcileIntervalSeconds: -1 },
       }),
     ).toThrow(/must be a finite positive number/);
   });
@@ -526,7 +537,9 @@ describe('validateConfig', () => {
       ],
     });
 
-    expect(config.feeds[0]?.pollIntervalMinutes).toBe(15);
+    expect(config.feeds[0]?.pollIntervalMinutes).toBe(
+      RUN_INTERVAL_MINUTES_DEFAULT,
+    );
     expect(config.feeds[1]?.pollIntervalMinutes).toBeUndefined();
   });
 

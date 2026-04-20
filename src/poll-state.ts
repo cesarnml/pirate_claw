@@ -69,7 +69,9 @@ export function isDueFeed(
   }
 
   const intervalMs =
-    (feed.pollIntervalMinutes ?? runtime.runIntervalMinutes) * 60 * 1000;
+    feed.pollIntervalMinutes !== undefined
+      ? feed.pollIntervalMinutes * 60 * 1000
+      : runtime.runIntervalMinutes * 60 * 1000;
   const lastPolled = Date.parse(record.lastPolledAt);
 
   if (Number.isNaN(lastPolled)) {

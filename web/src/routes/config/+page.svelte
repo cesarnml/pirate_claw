@@ -450,13 +450,13 @@
 								/>
 							</label>
 							<label class="grid gap-1 text-sm">
-								<span class="text-muted-foreground">Reconcile interval (minutes)</span>
+								<span class="text-muted-foreground">Reconcile interval (seconds)</span>
 								<input
-									name="reconcileIntervalMinutes"
+									name="reconcileIntervalSeconds"
 									type="number"
 									min="1"
 									step="1"
-									value={config.runtime.reconcileIntervalMinutes}
+									value={config.runtime.reconcileIntervalSeconds}
 									disabled={!canWrite}
 									title={!canWrite ? WRITE_DISABLED_TOOLTIP : undefined}
 									class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'bun:test';
 import { daemonOptionsFromConfig, runDaemonLoop } from '../src/daemon';
 import type { CycleResult } from '../src/runtime-artifacts';
 
+const RUN_INTERVAL_MINUTES_DEFAULT = 15;
+
 describe('daemon', () => {
   it('runs initial run and reconcile cycles on startup', async () => {
     const log: string[] = [];
@@ -304,20 +306,20 @@ describe('daemon', () => {
 
   it('derives daemon options from runtime config', () => {
     const options = daemonOptionsFromConfig({
-      runIntervalMinutes: 15,
-      reconcileIntervalMinutes: 2,
+      runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+      reconcileIntervalSeconds: 2,
       artifactDir: '.pirate-claw/runtime',
       artifactRetentionDays: 7,
     });
 
     expect(options.runIntervalMs).toBe(15 * 60 * 1000);
-    expect(options.reconcileIntervalMs).toBe(2 * 60 * 1000);
+    expect(options.reconcileIntervalMs).toBe(2 * 1000);
   });
 
   it('passes apiPort through daemonOptionsFromConfig', () => {
     const options = daemonOptionsFromConfig({
-      runIntervalMinutes: 15,
-      reconcileIntervalMinutes: 2,
+      runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+      reconcileIntervalSeconds: 2,
       artifactDir: '.pirate-claw/runtime',
       artifactRetentionDays: 7,
       apiPort: 8080,
@@ -329,8 +331,8 @@ describe('daemon', () => {
   it('passes plex refresh interval through daemonOptionsFromConfig', () => {
     const options = daemonOptionsFromConfig(
       {
-        runIntervalMinutes: 15,
-        reconcileIntervalMinutes: 2,
+        runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+        reconcileIntervalSeconds: 2,
         artifactDir: '.pirate-claw/runtime',
         artifactRetentionDays: 7,
       },

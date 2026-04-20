@@ -11,8 +11,8 @@ Daemon mode needs durable configuration for cadence and runtime output location.
 ## Scope
 
 - add runtime config fields:
-  - `runtime.runIntervalMinutes` (default `30`)
-  - `runtime.reconcileIntervalMinutes` (default `1`)
+  - `runtime.runIntervalMinutes` (default `15`)
+  - `runtime.reconcileIntervalSeconds` (default `30`)
   - `runtime.artifactDir` (default `.pirate-claw/runtime`)
   - `runtime.artifactRetentionDays` (default `7`)
 - add `feeds[].pollIntervalMinutes` as optional per-feed run override

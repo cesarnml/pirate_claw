@@ -23,6 +23,9 @@ import { TmdbCache } from '../src/tmdb/cache';
 import { movieMatchKey, tvMatchKey } from '../src/tmdb/keys';
 import { ensureTmdbSchema } from '../src/tmdb/schema';
 
+const RUN_INTERVAL_MINUTES_DEFAULT = 15;
+const RECONCILE_INTERVAL_SECONDS_DEFAULT = 30;
+
 function stubRepository(overrides: Partial<Repository> = {}): Repository {
   return {
     recordRun: () => ({ id: 1, startedAt: '', status: 'running' }),
@@ -70,8 +73,8 @@ function stubConfig(): AppConfig {
       password: 'pass',
     },
     runtime: {
-      runIntervalMinutes: 30,
-      reconcileIntervalMinutes: 1,
+      runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+      reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
       artifactDir: '.pirate-claw/runtime',
       artifactRetentionDays: 7,
     },
@@ -116,8 +119,8 @@ async function writeCompactTvConfigFile(path: string): Promise<void> {
       password: 'pass',
     },
     runtime: {
-      runIntervalMinutes: 30,
-      reconcileIntervalMinutes: 1,
+      runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+      reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
       artifactDir: '.pirate-claw/runtime',
       artifactRetentionDays: 7,
       apiWriteToken: 'write-token',
@@ -751,7 +754,9 @@ describe('GET /api/feeds', () => {
     expect(body.feeds[0].name).toBe('TV Feed');
     expect(body.feeds[0].lastPolledAt).toBe('2026-01-01T00:00:00Z');
     expect(typeof body.feeds[0].isDue).toBe('boolean');
-    expect(body.feeds[0].pollIntervalMinutes).toBe(30);
+    expect(body.feeds[0].pollIntervalMinutes).toBe(
+      RUN_INTERVAL_MINUTES_DEFAULT,
+    );
   });
 
   it('returns isDue true when never polled', async () => {
@@ -840,7 +845,7 @@ describe('PUT /api/config', () => {
           body: JSON.stringify({
             runtime: {
               runIntervalMinutes: 45,
-              reconcileIntervalMinutes: 2,
+              reconcileIntervalSeconds: 2,
               tmdbRefreshIntervalMinutes: 0,
             },
             tv: {
@@ -904,8 +909,8 @@ describe('PUT /api/config', () => {
           password: 'pass',
         },
         runtime: {
-          runIntervalMinutes: 30,
-          reconcileIntervalMinutes: 1,
+          runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+          reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
           artifactDir: '.pirate-claw/runtime',
           artifactRetentionDays: 7,
           apiWriteToken: 'write-token',
@@ -931,8 +936,8 @@ describe('PUT /api/config', () => {
           },
           body: JSON.stringify({
             runtime: {
-              runIntervalMinutes: 30,
-              reconcileIntervalMinutes: 1,
+              runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+              reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
               tmdbRefreshIntervalMinutes: 0,
             },
             tv: {
@@ -986,8 +991,8 @@ describe('PUT /api/config', () => {
           },
           body: JSON.stringify({
             runtime: {
-              runIntervalMinutes: 30,
-              reconcileIntervalMinutes: 1,
+              runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+              reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
               tmdbRefreshIntervalMinutes: 0,
             },
             tv: {
@@ -1038,8 +1043,8 @@ describe('PUT /api/config', () => {
           },
           body: JSON.stringify({
             runtime: {
-              runIntervalMinutes: 30,
-              reconcileIntervalMinutes: 1,
+              runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+              reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
               tmdbRefreshIntervalMinutes: 0,
             },
           }),
@@ -1089,7 +1094,7 @@ describe('PUT /api/config', () => {
           body: JSON.stringify({
             runtime: {
               runIntervalMinutes: 45,
-              reconcileIntervalMinutes: 2,
+              reconcileIntervalSeconds: 2,
               tmdbRefreshIntervalMinutes: 0,
             },
             tv: {
@@ -1157,7 +1162,7 @@ describe('PUT /api/config', () => {
           body: JSON.stringify({
             runtime: {
               runIntervalMinutes: 45,
-              reconcileIntervalMinutes: 2,
+              reconcileIntervalSeconds: 2,
               tmdbRefreshIntervalMinutes: 0,
             },
             tv: {
@@ -1185,8 +1190,8 @@ describe('PUT /api/config', () => {
           },
           body: JSON.stringify({
             runtime: {
-              runIntervalMinutes: 30,
-              reconcileIntervalMinutes: 1,
+              runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+              reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
               tmdbRefreshIntervalMinutes: 0,
             },
             tv: {
@@ -2071,8 +2076,8 @@ describe('buildFeedStatuses', () => {
       },
     };
     const runtime = {
-      runIntervalMinutes: 30,
-      reconcileIntervalMinutes: 1,
+      runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+      reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
       artifactDir: '',
       artifactRetentionDays: 7,
     };
@@ -2094,8 +2099,8 @@ describe('buildFeedStatuses', () => {
       feeds: { Feed: { lastPolledAt: new Date().toISOString() } },
     };
     const runtime = {
-      runIntervalMinutes: 30,
-      reconcileIntervalMinutes: 1,
+      runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+      reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
       artifactDir: '',
       artifactRetentionDays: 7,
     };

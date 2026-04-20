@@ -157,7 +157,7 @@ export type TransmissionConfig = {
 
 export type RuntimeConfig = {
 	runIntervalMinutes: number;
-	reconcileIntervalMinutes: number;
+	reconcileIntervalSeconds: number;
 	artifactDir: string;
 	artifactRetentionDays: number;
 	apiPort?: number;

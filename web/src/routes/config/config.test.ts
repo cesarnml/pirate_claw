@@ -40,8 +40,8 @@ const mockConfig: AppConfig = {
 		password: '[redacted]'
 	},
 	runtime: {
-		runIntervalMinutes: 30,
-		reconcileIntervalMinutes: 1,
+		runIntervalMinutes: 15,
+		reconcileIntervalSeconds: 30,
 		artifactDir: '.pirate-claw/runtime',
 		artifactRetentionDays: 7
 	}

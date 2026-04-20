@@ -37,8 +37,8 @@ Phase 04 should leave Pirate Claw in a state where a local operator can run one 
 
 The config shape should gain a runtime block and per-feed polling override:
 
-- `runtime.runIntervalMinutes` (default `30`)
-- `runtime.reconcileIntervalMinutes` (default `1`)
+- `runtime.runIntervalMinutes` (default `15`)
+- `runtime.reconcileIntervalSeconds` (default `30`)
 - `runtime.artifactDir` (default `.pirate-claw/runtime`)
 - `runtime.artifactRetentionDays` (default `7`)
 - `feeds[].pollIntervalMinutes` (optional; feed-specific run interval override)

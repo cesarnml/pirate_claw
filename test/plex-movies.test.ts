@@ -11,6 +11,9 @@ import {
 import { ensurePlexSchema } from '../src/plex/schema';
 import type { Repository } from '../src/repository';
 
+const RUN_INTERVAL_MINUTES_DEFAULT = 15;
+const RECONCILE_INTERVAL_SECONDS_DEFAULT = 30;
+
 function stubRepository(): Repository {
   return {
     startRun: () => ({ id: 1, startedAt: '', status: 'running' }),
@@ -256,8 +259,8 @@ describe('plex movie enrichment', () => {
           password: 'pass',
         },
         runtime: {
-          runIntervalMinutes: 30,
-          reconcileIntervalMinutes: 1,
+          runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+          reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
           artifactDir: '.pirate-claw/runtime',
           artifactRetentionDays: 7,
         },

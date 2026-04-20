@@ -44,7 +44,7 @@ export type TransmissionConfig = {
 
 export type RuntimeConfig = {
   runIntervalMinutes: number;
-  reconcileIntervalMinutes: number;
+  reconcileIntervalSeconds: number;
   artifactDir: string;
   artifactRetentionDays: number;
   apiPort?: number;
@@ -75,8 +75,8 @@ export type PlexConfig = {
 };
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
-  runIntervalMinutes: 30,
-  reconcileIntervalMinutes: 1,
+  runIntervalMinutes: 15,
+  reconcileIntervalSeconds: 30,
   artifactDir: '.pirate-claw/runtime',
   artifactRetentionDays: 7,
   tmdbRefreshIntervalMinutes: 360,
@@ -740,11 +740,11 @@ function validateRuntime(
         runtime.runIntervalMinutes,
         `${path} runtime runIntervalMinutes`,
       ) ?? DEFAULT_RUNTIME_CONFIG.runIntervalMinutes,
-    reconcileIntervalMinutes:
+    reconcileIntervalSeconds:
       optionalPositiveNumber(
-        runtime.reconcileIntervalMinutes,
-        `${path} runtime reconcileIntervalMinutes`,
-      ) ?? DEFAULT_RUNTIME_CONFIG.reconcileIntervalMinutes,
+        runtime.reconcileIntervalSeconds,
+        `${path} runtime reconcileIntervalSeconds`,
+      ) ?? DEFAULT_RUNTIME_CONFIG.reconcileIntervalSeconds,
     artifactDir:
       optionalString(runtime.artifactDir, `${path} runtime artifactDir`) ??
       DEFAULT_RUNTIME_CONFIG.artifactDir,

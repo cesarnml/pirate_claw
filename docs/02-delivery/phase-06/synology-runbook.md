@@ -429,8 +429,8 @@ Example minimal config for validation:
     }
   },
   "runtime": {
-    "runIntervalMinutes": 30,
-    "reconcileIntervalMinutes": 1,
+    "runIntervalMinutes": 15,
+    "reconcileIntervalSeconds": 30,
     "artifactDir": "/data/runtime",
     "artifactRetentionDays": 7
   }
@@ -871,8 +871,8 @@ Example: enabling the daemon HTTP API. Add `"apiPort"` to the `runtime` block in
 
 ```json
 "runtime": {
-  "runIntervalMinutes": 30,
-  "reconcileIntervalMinutes": 1,
+  "runIntervalMinutes": 15,
+  "reconcileIntervalSeconds": 30,
   "artifactDir": "/data/runtime",
   "artifactRetentionDays": 7,
   "apiPort": 5555

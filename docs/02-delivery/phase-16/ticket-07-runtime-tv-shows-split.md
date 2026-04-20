@@ -17,7 +17,7 @@ Split the existing `saveSettings` action (which bundles TV show names and runtim
 
 **`saveRuntime` action** (extracted from `saveSettings`):
 
-- Reads: `runtimeIfMatch`, `runIntervalMinutes`, `reconcileIntervalMinutes`, `tmdbRefreshIntervalMinutes`, `apiPort`.
+- Reads: `runtimeIfMatch`, `runIntervalMinutes`, `reconcileIntervalSeconds`, `tmdbRefreshIntervalMinutes`, `apiPort`.
 - Same validation logic as the existing `saveSettings` runtime path.
 - Sends `PUT /api/config` with body `{ runtime: { ... } }`.
 - Returns: `{ runtimeSuccess: true, message: 'Runtime settings saved.', etag }` or `fail(status, { runtimeMessage, etag })`.

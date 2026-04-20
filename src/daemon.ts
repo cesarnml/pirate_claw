@@ -18,7 +18,7 @@ export function daemonOptionsFromConfig(
   const tmdbMin = runtime.tmdbRefreshIntervalMinutes;
   return {
     runIntervalMs: runtime.runIntervalMinutes * 60 * 1000,
-    reconcileIntervalMs: runtime.reconcileIntervalMinutes * 60 * 1000,
+    reconcileIntervalMs: runtime.reconcileIntervalSeconds * 1000,
     apiPort: runtime.apiPort,
     tmdbRefreshIntervalMs:
       tmdbMin != null && tmdbMin > 0 ? tmdbMin * 60 * 1000 : undefined,

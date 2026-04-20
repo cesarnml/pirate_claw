@@ -11,6 +11,9 @@ import {
   openDatabase,
 } from '../src/repository';
 
+const RUN_INTERVAL_MINUTES_DEFAULT = 15;
+const RECONCILE_INTERVAL_SECONDS_DEFAULT = 30;
+
 const tempDirs: string[] = [];
 const openDatabases: Database[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
@@ -608,8 +611,8 @@ describe('pirate-claw config show', () => {
         password: 'pass',
       },
       runtime: {
-        runIntervalMinutes: 30,
-        reconcileIntervalMinutes: 1,
+        runIntervalMinutes: RUN_INTERVAL_MINUTES_DEFAULT,
+        reconcileIntervalSeconds: RECONCILE_INTERVAL_SECONDS_DEFAULT,
         artifactDir: '.pirate-claw/runtime',
         artifactRetentionDays: 7,
         tmdbRefreshIntervalMinutes: 360,
