@@ -61,24 +61,22 @@
 
 <Card
 	class="group bg-card/72 relative overflow-hidden rounded-[30px] border-white/10 shadow-[0_24px_80px_rgba(2,6,23,0.18)] transition-colors"
->
+	><div class="absolute inset-0">
+		<img
+			src={heroBackdropSrc}
+			alt={heroBackdropAlt}
+			class="h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-[1.05]"
+			loading="lazy"
+		/>
+		<div
+			class="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.28),rgba(15,23,42,0.96)_52%,rgba(15,23,42,1))]"
+		></div>
+	</div>
 	<a
 		href={showHref(props.show.normalizedTitle)}
 		class="text-foreground focus-visible:ring-ring relative block min-h-76 w-full cursor-pointer text-left no-underline transition-colors focus-visible:ring-2 focus-visible:outline-none"
 		aria-label={`Open show details for ${title}`}
 	>
-		<div class="absolute inset-0">
-			<img
-				src={heroBackdropSrc}
-				alt={heroBackdropAlt}
-				class="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.05]"
-				loading="lazy"
-			/>
-			<div
-				class="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.28),rgba(15,23,42,0.96)_52%,rgba(15,23,42,1))]"
-			></div>
-		</div>
-
 		<div class="relative flex min-h-76 min-w-0 flex-col justify-between p-5 pb-20">
 			<div class="space-y-4">
 				<div class="flex items-start justify-between gap-3">

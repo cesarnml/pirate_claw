@@ -58,7 +58,7 @@
 		<img
 			src={backdropUrl}
 			alt=""
-			class="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.05]"
+			class="h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-[1.05]"
 			loading="lazy"
 		/>
 		<div
