@@ -88,13 +88,16 @@
 			!!(form as { movieTargetSuccess?: boolean } | undefined)?.movieTargetSuccess
 	);
 	const showDoneStep = $derived(showPreStepsDone && minimumComplete && !showMovieTargetStep);
+	const initialReadinessState = $derived(data.readinessState ?? 'not_ready');
 
 	let readinessState = $state<ReadinessState>('not_ready');
 	let readinessInterval: ReturnType<typeof setInterval> | undefined;
 
 	$effect(() => {
 		if (!showDoneStep) return;
-		if (data.readinessState) readinessState = data.readinessState as ReadinessState;
+		if (readinessState === 'not_ready' && initialReadinessState !== 'not_ready') {
+			readinessState = initialReadinessState;
+		}
 		if (!browser || readinessState === 'ready') return;
 		async function pollReadiness() {
 			try {
@@ -885,12 +888,13 @@
 
 				<div class="flex flex-wrap items-center gap-3">
 					<a
-						href="/"
+						href={readinessState === 'ready' ? '/' : undefined}
 						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] {readinessState !==
 						'ready'
 							? 'pointer-events-none opacity-50'
 							: ''}"
 						aria-disabled={readinessState !== 'ready'}
+						tabindex={readinessState !== 'ready' ? -1 : undefined}
 					>
 						Go to Dashboard
 					</a>

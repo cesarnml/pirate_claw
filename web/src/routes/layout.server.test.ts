@@ -111,6 +111,31 @@ describe('layout server load', () => {
 		expect(result.setupState).toBe('partially_configured');
 	});
 
+	it('normalizes unknown readinessState values to not_ready', async () => {
+		const { load } = await import('./+layout.server');
+
+		apiFetchMock
+			.mockResolvedValueOnce({ uptime: 1, startedAt: '2024-01-01T00:00:00Z' })
+			.mockResolvedValueOnce({
+				version: '3.0',
+				downloadSpeed: 0,
+				uploadSpeed: 0,
+				activeTorrentCount: 0
+			})
+			.mockResolvedValueOnce({
+				plex: { url: 'http://localhost:32400', token: '', refreshIntervalMinutes: 30 }
+			})
+			.mockResolvedValueOnce({
+				state: 'mystery',
+				configState: 'ready',
+				transmissionReachable: true,
+				daemonLive: true
+			});
+
+		const result = (await load({} as never)) as { readinessState: string };
+		expect(result.readinessState).toBe('not_ready');
+	});
+
 	it('tolerates unavailable shared endpoints and returns nulls', async () => {
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		try {
