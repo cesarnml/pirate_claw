@@ -511,7 +511,7 @@ describe('onboarding page server', () => {
 	});
 
 	describe('testTransmission', () => {
-		it('uses the read-only transmission session endpoint', async () => {
+		it('uses the read-only transmission status endpoint', async () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: {}
 			}));
@@ -519,14 +519,9 @@ describe('onboarding page server', () => {
 			apiRequestMock.mockResolvedValue(
 				new Response(
 					JSON.stringify({
-						version: '3.00',
-						downloadSpeed: 0,
-						uploadSpeed: 0,
-						activeTorrentCount: 0,
-						cumulativeDownloadedBytes: 0,
-						cumulativeUploadedBytes: 0,
-						currentDownloadedBytes: 0,
-						currentUploadedBytes: 0
+						compatibility: 'recommended',
+						url: 'http://localhost:9091/transmission/rpc',
+						reachable: true
 					}),
 					{ status: 200 }
 				)
@@ -535,7 +530,10 @@ describe('onboarding page server', () => {
 			const result = await actions.testTransmission({} as never);
 
 			expect((result as { transmissionReachable?: boolean }).transmissionReachable).toBe(true);
-			expect(apiRequestMock).toHaveBeenCalledWith('/api/transmission/session');
+			expect((result as { transmissionCompatibility?: string }).transmissionCompatibility).toBe(
+				'recommended'
+			);
+			expect(apiRequestMock).toHaveBeenCalledWith('/api/setup/transmission/status');
 		});
 	});
 

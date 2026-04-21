@@ -3,7 +3,6 @@ import type {
 	AppConfig,
 	DaemonHealth,
 	ReadinessResponse,
-	ReadinessState,
 	SessionInfo,
 	SetupState
 } from '$lib/types';
@@ -13,12 +12,6 @@ function normalizeSetupState(state: unknown): SetupState {
 	return state === 'starter' || state === 'partially_configured' || state === 'ready'
 		? state
 		: 'partially_configured';
-}
-
-function normalizeReadinessState(state: unknown): ReadinessState {
-	return state === 'not_ready' || state === 'ready_pending_restart' || state === 'ready'
-		? state
-		: 'not_ready';
 }
 
 export const load: LayoutServerLoad = async () => {
@@ -52,6 +45,6 @@ export const load: LayoutServerLoad = async () => {
 		transmissionSession: sessionResult.status === 'fulfilled' ? sessionResult.value : null,
 		plexConfigured: configResult.status === 'fulfilled' && configResult.value.plex !== undefined,
 		setupState: normalizeSetupState(readiness?.configState),
-		readinessState: normalizeReadinessState(readiness?.state)
+		readinessState: readiness?.state ?? 'not_ready'
 	};
 };

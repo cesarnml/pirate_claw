@@ -7,7 +7,8 @@
 		writeOnboardingDismissed,
 		writeOnboardingPath
 	} from '$lib/onboarding';
-	import type { ReadinessState } from '$lib/types';
+	import TransmissionCompatibilityBadge from '$lib/components/TransmissionCompatibilityBadge.svelte';
+	import type { ReadinessState, TransmissionCompatibility } from '$lib/types';
 	import type { ActionData, PageData } from './$types';
 
 	const ALL_RESOLUTIONS = ['2160p', '1080p', '720p', '480p'];
@@ -28,6 +29,13 @@
 	);
 	const transmissionTested = $derived(
 		(form as { transmissionReachable?: boolean } | undefined)?.transmissionReachable !== undefined
+	);
+	const transmissionCompatibility = $derived(
+		(form as { transmissionCompatibility?: TransmissionCompatibility } | undefined)
+			?.transmissionCompatibility ?? null
+	);
+	const transmissionAdvisory = $derived(
+		(form as { transmissionAdvisory?: string | null } | undefined)?.transmissionAdvisory ?? null
 	);
 
 	const hasTvFeed = $derived((data.config?.feeds ?? []).some((feed) => feed.mediaType === 'tv'));
@@ -88,16 +96,13 @@
 			!!(form as { movieTargetSuccess?: boolean } | undefined)?.movieTargetSuccess
 	);
 	const showDoneStep = $derived(showPreStepsDone && minimumComplete && !showMovieTargetStep);
-	const initialReadinessState = $derived(data.readinessState ?? 'not_ready');
 
 	let readinessState = $state<ReadinessState>('not_ready');
 	let readinessInterval: ReturnType<typeof setInterval> | undefined;
 
 	$effect(() => {
 		if (!showDoneStep) return;
-		if (readinessState === 'not_ready' && initialReadinessState !== 'not_ready') {
-			readinessState = initialReadinessState;
-		}
+		if (data.readinessState) readinessState = data.readinessState as ReadinessState;
 		if (!browser || readinessState === 'ready') return;
 		async function pollReadiness() {
 			try {
@@ -254,15 +259,14 @@
 						Test connection
 					</button>
 				</form>
-				{#if transmissionTested}
-					<p
-						class={transmissionReachable
-							? 'text-sm text-emerald-400'
-							: 'text-muted-foreground text-sm'}
-					>
-						{transmissionReachable
-							? 'Transmission is reachable.'
-							: 'Transmission is not reachable. Update your config and reload.'}
+				{#if transmissionTested && transmissionCompatibility}
+					<TransmissionCompatibilityBadge
+						compatibility={transmissionCompatibility}
+						advisory={transmissionAdvisory ?? undefined}
+					/>
+				{:else if transmissionTested && !transmissionReachable}
+					<p class="text-muted-foreground text-sm">
+						Transmission is not reachable. Update your config and reload.
 					</p>
 				{/if}
 			</div>
@@ -888,13 +892,12 @@
 
 				<div class="flex flex-wrap items-center gap-3">
 					<a
-						href={readinessState === 'ready' ? '/' : undefined}
+						href="/"
 						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] {readinessState !==
 						'ready'
 							? 'pointer-events-none opacity-50'
 							: ''}"
 						aria-disabled={readinessState !== 'ready'}
-						tabindex={readinessState !== 'ready' ? -1 : undefined}
 					>
 						Go to Dashboard
 					</a>
