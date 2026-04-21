@@ -340,9 +340,7 @@ export const actions: Actions = {
 	testTransmission: async () => {
 		try {
 			const response = await apiRequest('/api/setup/transmission/status');
-			const status = response.ok
-				? ((await response.json()) as TransmissionStatusResponse)
-				: null;
+			const status = response.ok ? ((await response.json()) as TransmissionStatusResponse) : null;
 			const compatibility: TransmissionCompatibility = status?.compatibility ?? 'not_reachable';
 			return {
 				transmissionReachable: status?.reachable ?? false,
