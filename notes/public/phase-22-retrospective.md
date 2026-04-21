@@ -9,6 +9,7 @@ _Phase 22: Browser-Only Setup and Installer Flow — P22.01–P22.06_
 Phase 22 shipped across stacked PRs [#200](https://github.com/cesarnml/Pirate-Claw/pull/200) through [#204](https://github.com/cesarnml/Pirate-Claw/pull/204) on branches `agents/p22-01-starter-config-cleanup-and-movies-optional-schema` through `agents/p22-05-transmission-compatibility-status-display` (plus this doc-only P22.06 close-out).
 
 Delivered scope:
+
 - **P22.01** — `movies` made optional in `AppConfig`. `validateOptionalMoviePolicy` added. `_starter` configs no longer include a `movies` block. Backend + tests updated.
 - **P22.02** — `getSetupState` readiness condition rewritten: URL equality replaced with media-type-aware target checking. Six new test cases covering all branches.
 - **P22.03** — Dependency-ordered 6-step setup wizard in the onboarding page (Transmission → Write key → Media dirs → Feed → Target → Summary). `PUT /api/config/transmission/download-dirs` added. Summary step gates "Go to Dashboard" on `setupState`.
