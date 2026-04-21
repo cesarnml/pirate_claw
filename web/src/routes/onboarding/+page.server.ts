@@ -339,20 +339,15 @@ export const actions: Actions = {
 
 	testTransmission: async () => {
 		try {
-			const [pingResponse, statusResponse] = await Promise.all([
-				apiRequest('/api/transmission/ping', { method: 'POST' }),
-				apiRequest('/api/setup/transmission/status')
-			]);
-			const reachable = pingResponse.ok;
-			const status = statusResponse.ok
-				? ((await statusResponse.json()) as TransmissionStatusResponse)
+			const response = await apiRequest('/api/setup/transmission/status');
+			const status = response.ok
+				? ((await response.json()) as TransmissionStatusResponse)
 				: null;
 			const compatibility: TransmissionCompatibility = status?.compatibility ?? 'not_reachable';
-			const advisory = status?.advisory;
 			return {
-				transmissionReachable: reachable,
+				transmissionReachable: status?.reachable ?? false,
 				transmissionCompatibility: compatibility,
-				transmissionAdvisory: advisory ?? null
+				transmissionAdvisory: status?.advisory ?? null
 			};
 		} catch {
 			return {

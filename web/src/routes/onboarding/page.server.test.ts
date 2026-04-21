@@ -509,4 +509,89 @@ describe('onboarding page server', () => {
 			);
 		});
 	});
+
+	describe('testTransmission', () => {
+		it('uses the read-only transmission status endpoint', async () => {
+			vi.doMock('$env/dynamic/private', () => ({
+				env: {}
+			}));
+			const { actions } = await import('./+page.server');
+			apiRequestMock.mockResolvedValue(
+				new Response(
+					JSON.stringify({
+						compatibility: 'recommended',
+						url: 'http://localhost:9091/transmission/rpc',
+						reachable: true
+					}),
+					{ status: 200 }
+				)
+			);
+
+			const result = await actions.testTransmission({} as never);
+
+			expect((result as { transmissionReachable?: boolean }).transmissionReachable).toBe(true);
+			expect(
+				(result as { transmissionCompatibility?: string }).transmissionCompatibility
+			).toBe('recommended');
+			expect(apiRequestMock).toHaveBeenCalledWith('/api/setup/transmission/status');
+		});
+	});
+
+	describe('saveDownloadDirs', () => {
+		it('returns fail(400) when ifMatch is missing', async () => {
+			vi.doMock('$env/dynamic/private', () => ({
+				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
+			}));
+			const { actions } = await import('./+page.server');
+
+			const body = new URLSearchParams();
+			body.set('tvDir', '/data/tv');
+
+			const result = await actions.saveDownloadDirs({
+				request: new Request('http://localhost/onboarding', {
+					method: 'POST',
+					headers: { 'content-type': 'application/x-www-form-urlencoded' },
+					body
+				})
+			} as never);
+
+			expect((result as { status?: number }).status).toBe(400);
+			expect(
+				(result as { data?: { downloadDirsMessage?: string } }).data?.downloadDirsMessage
+			).toContain('Missing config revision');
+			expect(apiRequestMock).not.toHaveBeenCalled();
+		});
+
+		it('sends an empty object when both fields are blank so existing download dirs can be cleared', async () => {
+			vi.doMock('$env/dynamic/private', () => ({
+				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
+			}));
+			const { actions } = await import('./+page.server');
+			apiRequestMock.mockResolvedValue(
+				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
+			);
+
+			const body = new URLSearchParams();
+			body.set('ifMatch', '"rev-1"');
+			body.set('tvDir', '');
+			body.set('movieDir', '');
+
+			const result = await actions.saveDownloadDirs({
+				request: new Request('http://localhost/onboarding', {
+					method: 'POST',
+					headers: { 'content-type': 'application/x-www-form-urlencoded' },
+					body
+				})
+			} as never);
+
+			expect((result as { downloadDirsSuccess?: boolean }).downloadDirsSuccess).toBe(true);
+			expect(apiRequestMock).toHaveBeenCalledWith(
+				'/api/config/transmission/download-dirs',
+				expect.objectContaining({
+					method: 'PUT',
+					body: JSON.stringify({})
+				})
+			);
+		});
+	});
 });
