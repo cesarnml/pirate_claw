@@ -137,8 +137,23 @@ describe('config page server actions', () => {
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
 			const { actions } = await import('./+page.server');
-			apiRequestMock.mockResolvedValue(
-				new Response(JSON.stringify({ ok: true, version: '3.00 (bb6b5a062ef)' }), { status: 200 })
+			apiRequestMock.mockImplementation((url: string) =>
+				url === '/api/setup/transmission/status'
+					? Promise.resolve(
+							new Response(
+								JSON.stringify({
+									compatibility: 'recommended',
+									url: 'http://localhost:9091/transmission/rpc',
+									reachable: true
+								}),
+								{ status: 200 }
+							)
+						)
+					: Promise.resolve(
+							new Response(JSON.stringify({ ok: true, version: '3.00 (bb6b5a062ef)' }), {
+								status: 200
+							})
+						)
 			);
 
 			const result = await actions.testConnection({
@@ -147,6 +162,7 @@ describe('config page server actions', () => {
 
 			expect((result as { pingOk?: boolean }).pingOk).toBe(true);
 			expect((result as { version?: string }).version).toBe('3.00 (bb6b5a062ef)');
+			expect((result as { compatibility?: string }).compatibility).toBe('recommended');
 			expect(apiRequestMock).toHaveBeenCalledWith(
 				'/api/transmission/ping',
 				expect.objectContaining({ method: 'POST' })
@@ -158,8 +174,23 @@ describe('config page server actions', () => {
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
 			const { actions } = await import('./+page.server');
-			apiRequestMock.mockResolvedValue(
-				new Response(JSON.stringify({ ok: false, error: 'connection refused' }), { status: 502 })
+			apiRequestMock.mockImplementation((url: string) =>
+				url === '/api/setup/transmission/status'
+					? Promise.resolve(
+							new Response(
+								JSON.stringify({
+									compatibility: 'not_reachable',
+									url: 'http://localhost:9091/transmission/rpc',
+									reachable: false
+								}),
+								{ status: 200 }
+							)
+						)
+					: Promise.resolve(
+							new Response(JSON.stringify({ ok: false, error: 'connection refused' }), {
+								status: 502
+							})
+						)
 			);
 
 			const result = await actions.testConnection({
