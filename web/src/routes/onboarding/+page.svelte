@@ -20,6 +20,15 @@
 	let movieResolutions = $state<string[]>([]);
 	let movieCodecs = $state<string[]>([]);
 	let movieCodecPolicy = $state<'prefer' | 'require'>('prefer');
+
+	const transmissionUrl = $derived(data.config?.transmission?.url ?? '');
+	const transmissionReachable = $derived(
+		(form as { transmissionReachable?: boolean } | undefined)?.transmissionReachable ?? false
+	);
+	const transmissionTested = $derived(
+		(form as { transmissionReachable?: boolean } | undefined)?.transmissionReachable !== undefined
+	);
+
 	const hasTvFeed = $derived((data.config?.feeds ?? []).some((feed) => feed.mediaType === 'tv'));
 	const hasMovieFeed = $derived(
 		(data.config?.feeds ?? []).some((feed) => feed.mediaType === 'movie')
@@ -38,33 +47,46 @@
 		if (hasMovieFeed) return 'movie';
 		return 'tv';
 	});
+
+	// Step visibility
+	const transmissionConfigured = $derived(transmissionUrl.length > 0);
+	const writeAccessEnabled = $derived(data.canWrite);
+
+	const showTransmissionStep = $derived(!transmissionConfigured);
+	const showWriteKeyStep = $derived(transmissionConfigured && !writeAccessEnabled);
+	// Simpler: show feed step when transmission+writeKey are done and no feeds yet
+	const showPreStepsDone = $derived(transmissionConfigured && writeAccessEnabled);
+	const hasFeeds = $derived(data.onboarding?.hasFeeds ?? false);
+
 	const showTvTargetStep = $derived(
-		(data.onboarding?.hasFeeds ?? false) &&
+		showPreStepsDone &&
+			hasFeeds &&
 			!(data.onboarding?.hasTvTargets ?? false) &&
 			!(data.onboarding?.hasMovieTargets ?? false) &&
 			onboardingPath !== 'movie'
 	);
 	const showMovieTargetStep = $derived(
-		(data.onboarding?.hasFeeds ?? false) &&
+		showPreStepsDone &&
+			hasFeeds &&
 			!(data.onboarding?.hasMovieTargets ?? false) &&
 			(onboardingPath === 'movie' || onboardingPath === 'both') &&
 			(onboardingPath !== 'both' ||
 				(data.onboarding?.hasTvTargets ?? false) ||
-				!!form?.tvTargetSuccess)
+				!!(form as { tvTargetSuccess?: boolean } | undefined)?.tvTargetSuccess)
 	);
 	const hasExistingMoviePolicy = $derived(
-		(data.config?.movies.resolutions.length ?? 0) > 0 ||
-			(data.config?.movies.codecs.length ?? 0) > 0
+		(data.config?.movies?.resolutions?.length ?? 0) > 0 ||
+			(data.config?.movies?.codecs?.length ?? 0) > 0
 	);
-	const movieStepTitle = $derived(
-		onboardingPath === 'both' ? 'Step 4 — Add a movie target' : 'Step 3 — Add a movie target'
+	const movieStepLabel = $derived(
+		onboardingPath === 'both' ? 'Step 6 — Add a movie target' : 'Step 5 — Add a movie target'
 	);
 	const minimumComplete = $derived(
 		(data.onboarding?.minimumComplete ?? false) ||
-			!!form?.tvTargetSuccess ||
-			!!form?.movieTargetSuccess
+			!!(form as { tvTargetSuccess?: boolean } | undefined)?.tvTargetSuccess ||
+			!!(form as { movieTargetSuccess?: boolean } | undefined)?.movieTargetSuccess
 	);
-	const showDoneStep = $derived(minimumComplete && !showMovieTargetStep);
+	const showDoneStep = $derived(showPreStepsDone && minimumComplete && !showMovieTargetStep);
 	const configuredFeedCount = $derived(data.config?.feeds.length ?? 0);
 	const firstFeedLabel = $derived(
 		configuredFeedCount > 0
@@ -72,10 +94,12 @@
 			: null
 	);
 	const hasTvSummary = $derived(
-		(data.onboarding?.hasTvTargets ?? false) || !!form?.tvTargetSuccess
+		(data.onboarding?.hasTvTargets ?? false) ||
+			!!(form as { tvTargetSuccess?: boolean } | undefined)?.tvTargetSuccess
 	);
 	const hasMovieSummary = $derived(
-		(data.onboarding?.hasMovieTargets ?? false) || !!form?.movieTargetSuccess
+		(data.onboarding?.hasMovieTargets ?? false) ||
+			!!(form as { movieTargetSuccess?: boolean } | undefined)?.movieTargetSuccess
 	);
 
 	$effect(() => {
@@ -90,9 +114,9 @@
 	$effect(() => {
 		tvResolutions = [...(data.config?.tvDefaults?.resolutions ?? [])];
 		tvCodecs = [...(data.config?.tvDefaults?.codecs ?? [])];
-		movieResolutions = [...(data.config?.movies.resolutions ?? [])];
-		movieCodecs = [...(data.config?.movies.codecs ?? [])];
-		movieCodecPolicy = data.config?.movies.codecPolicy ?? 'prefer';
+		movieResolutions = [...(data.config?.movies?.resolutions ?? [])];
+		movieCodecs = [...(data.config?.movies?.codecs ?? [])];
+		movieCodecPolicy = data.config?.movies?.codecPolicy ?? 'prefer';
 	});
 
 	function dismissOnboarding() {
@@ -139,8 +163,7 @@
 	<h1 class="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Onboarding</h1>
 	<p class="text-muted-foreground max-w-2xl text-sm leading-6 sm:text-base">
 		Stand up Pirate Claw with the minimum viable config, then continue in the dashboard for deeper
-		tuning. This flow keeps your first feed and first target narrow, reversible, and ready for the
-		wider Phase 19 redesign.
+		tuning.
 	</p>
 </section>
 
@@ -149,15 +172,6 @@
 		message={data.error}
 		class="border-border/80 bg-card/85 mt-6 rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-sm"
 	/>
-{:else if data.onboarding?.state === 'writes_disabled'}
-	<Alert
-		class="border-border/80 bg-card/85 mt-6 rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-sm"
-	>
-		<AlertTitle>Config writes are disabled</AlertTitle>
-		<AlertDescription>
-			Enable config writes before using onboarding. You can still review the existing dashboard.
-		</AlertDescription>
-	</Alert>
 {:else}
 	<section class="mt-8 space-y-6">
 		{#if !showDoneStep}
@@ -171,18 +185,129 @@
 					{#if data.onboarding?.state === 'partial_setup'}
 						You already saved part of your config. Continue onboarding here or return to the
 						<a href="/config" class="text-primary font-medium hover:underline">Config page</a>.
+					{:else if data.onboarding?.state === 'writes_disabled'}
+						Config writes are disabled — set <code>PIRATE_CLAW_API_WRITE_TOKEN</code> to proceed.
 					{:else}
-						Start by choosing your feed path and saving your first RSS feed.
+						Start by verifying Transmission is reachable, then add your first feed.
 					{/if}
 				</AlertDescription>
 			</Alert>
 		{/if}
 
-		{#if !(data.onboarding?.hasFeeds ?? false)}
+		{#if showTransmissionStep}
+			<!-- Step 1: Transmission -->
 			<div
 				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
 			>
-				<h2 class="text-lg font-semibold tracking-tight">Step 1 — Feed type</h2>
+				<h2 class="text-lg font-semibold tracking-tight">Step 1 — Verify Transmission</h2>
+				<p class="text-muted-foreground text-sm">
+					Transmission is not configured yet. Set the URL, username, and password in your config
+					file, then reload this page.
+				</p>
+				<dl class="grid gap-3 text-sm sm:grid-cols-2">
+					<div class="space-y-1">
+						<dt class="text-muted-foreground">URL</dt>
+						<dd class="font-mono text-xs">{transmissionUrl || '(not set)'}</dd>
+					</div>
+				</dl>
+				<form method="POST" action="?/testTransmission">
+					<button
+						type="submit"
+						class="border-border bg-background/55 hover:bg-muted/80 inline-flex h-10 items-center rounded-xl border px-4 text-sm transition-colors"
+					>
+						Test connection
+					</button>
+				</form>
+				{#if transmissionTested}
+					<p
+						class={transmissionReachable
+							? 'text-sm text-emerald-400'
+							: 'text-muted-foreground text-sm'}
+					>
+						{transmissionReachable
+							? 'Transmission is reachable.'
+							: 'Transmission is not reachable. Update your config and reload.'}
+					</p>
+				{/if}
+			</div>
+		{:else if showWriteKeyStep}
+			<!-- Step 2: Write-access key -->
+			<div
+				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
+			>
+				<h2 class="text-lg font-semibold tracking-tight">Step 2 — Enable Config Writes</h2>
+				<p class="text-muted-foreground text-sm">
+					Config writes are disabled. Set <code>PIRATE_CLAW_API_WRITE_TOKEN</code> in your
+					environment or <code>.env</code> file next to the config, then restart the daemon.
+				</p>
+				<a href="/config" class="text-muted-foreground text-sm hover:underline">
+					Review existing config
+				</a>
+			</div>
+		{:else if showPreStepsDone && !hasFeeds && !(form as { downloadDirsSuccess?: boolean } | undefined)?.downloadDirsSuccess}
+			<!-- Step 3: Media directories (optional) -->
+			<div
+				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
+			>
+				<h2 class="text-lg font-semibold tracking-tight">Step 3 — Media Directories (optional)</h2>
+				<p class="text-muted-foreground text-sm">
+					Set per-media-type download directories. Leave blank to use the Transmission default.
+				</p>
+				<form method="POST" action="?/saveDownloadDirs" class="space-y-4">
+					<input type="hidden" name="ifMatch" value={data.etag ?? ''} />
+					<div class="grid gap-3 sm:grid-cols-2">
+						<div class="space-y-1">
+							<label for="tv-dir" class="text-sm font-medium">TV download directory</label>
+							<input
+								id="tv-dir"
+								name="tvDir"
+								type="text"
+								placeholder="/data/tv"
+								value={data.config?.transmission?.downloadDirs?.tv ?? ''}
+								class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+							/>
+						</div>
+						<div class="space-y-1">
+							<label for="movie-dir" class="text-sm font-medium">Movie download directory</label>
+							<input
+								id="movie-dir"
+								name="movieDir"
+								type="text"
+								placeholder="/data/movies"
+								value={data.config?.transmission?.downloadDirs?.movie ?? ''}
+								class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+							/>
+						</div>
+					</div>
+					{#if (form as { downloadDirsMessage?: string } | undefined)?.downloadDirsMessage}
+						<p
+							class:text-destructive={!(form as { downloadDirsSuccess?: boolean } | undefined)
+								?.downloadDirsSuccess}
+							class="text-sm"
+						>
+							{(form as { downloadDirsMessage?: string }).downloadDirsMessage}
+						</p>
+					{/if}
+					<div class="flex flex-wrap items-center gap-3">
+						<button
+							type="submit"
+							class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] disabled:opacity-50"
+							disabled={!data.etag}
+						>
+							Save directories
+						</button>
+						<a href="?/skipDownloadDirs" class="text-muted-foreground text-sm hover:underline">
+							Skip for now
+						</a>
+					</div>
+				</form>
+			</div>
+
+			<!-- Step 4: Feed type + first feed -->
+			<div
+				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
+			>
+				<h2 class="text-lg font-semibold tracking-tight">Step 4 — Feed type</h2>
 				<div class="flex flex-wrap gap-3">
 					<label
 						class="border-border bg-background/55 hover:bg-muted/80 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm transition-colors"
@@ -213,9 +338,16 @@
 			<div
 				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
 			>
-				<h2 class="text-lg font-semibold tracking-tight">Step 2 — Add your first feed</h2>
+				<h2 class="text-lg font-semibold tracking-tight">Step 4 — Add your first feed</h2>
 				<form method="POST" action="?/saveFeed" class="space-y-4">
-					<input type="hidden" name="ifMatch" value={form?.feedsEtag ?? data.etag ?? ''} />
+					<input
+						type="hidden"
+						name="ifMatch"
+						value={(form as { feedsEtag?: string } | undefined)?.feedsEtag ??
+							(form as { downloadDirsEtag?: string } | undefined)?.downloadDirsEtag ??
+							data.etag ??
+							''}
+					/>
 					<input type="hidden" name="onboardingPath" value={selectedPath} />
 					<input
 						type="hidden"
@@ -256,16 +388,134 @@
 							class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
 						/>
 					</div>
-					{#if form?.feedsMessage}
-						<p class:text-destructive={!(form?.feedsSuccess ?? false)} class="text-sm">
-							{form.feedsMessage}
+					{#if (form as { feedsMessage?: string } | undefined)?.feedsMessage}
+						<p
+							class:text-destructive={!(form as { feedsSuccess?: boolean } | undefined)
+								?.feedsSuccess}
+							class="text-sm"
+						>
+							{(form as { feedsMessage?: string }).feedsMessage}
 						</p>
 					{/if}
 					<div class="flex flex-wrap items-center gap-3">
 						<button
 							type="submit"
 							class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] disabled:opacity-50"
-							disabled={!(form?.feedsEtag ?? data.etag)}
+							disabled={!(
+								(form as { feedsEtag?: string } | undefined)?.feedsEtag ??
+								(form as { downloadDirsEtag?: string } | undefined)?.downloadDirsEtag ??
+								data.etag
+							)}
+						>
+							Save first feed
+						</button>
+						<button
+							type="button"
+							class="text-muted-foreground text-sm hover:underline"
+							onclick={dismissOnboarding}
+						>
+							Skip for now
+						</button>
+					</div>
+				</form>
+			</div>
+		{:else if !hasFeeds}
+			<!-- Step 4: Feed type + first feed (after dirs saved/skipped) -->
+			<div
+				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
+			>
+				<h2 class="text-lg font-semibold tracking-tight">Step 4 — Feed type</h2>
+				<div class="flex flex-wrap gap-3">
+					<label
+						class="border-border bg-background/55 hover:bg-muted/80 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm transition-colors"
+					>
+						<input type="radio" bind:group={selectedPath} value="tv" />
+						<span>TV</span>
+					</label>
+					<label
+						class="border-border bg-background/55 hover:bg-muted/80 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm transition-colors"
+					>
+						<input type="radio" bind:group={selectedPath} value="movie" />
+						<span>Movie</span>
+					</label>
+					<label
+						class="border-border bg-background/55 hover:bg-muted/80 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm transition-colors"
+					>
+						<input type="radio" bind:group={selectedPath} value="both" />
+						<span>Both</span>
+					</label>
+				</div>
+				<p class="text-muted-foreground text-sm">
+					{selectedPath === 'both'
+						? 'Both is supported. Save one feed first, then onboarding will guide TV and movie targets in order.'
+						: `Your first feed will default to ${feedMediaType.toUpperCase()}.`}
+				</p>
+			</div>
+
+			<div
+				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
+			>
+				<h2 class="text-lg font-semibold tracking-tight">Step 4 — Add your first feed</h2>
+				<form method="POST" action="?/saveFeed" class="space-y-4">
+					<input
+						type="hidden"
+						name="ifMatch"
+						value={(form as { feedsEtag?: string } | undefined)?.feedsEtag ?? data.etag ?? ''}
+					/>
+					<input type="hidden" name="onboardingPath" value={selectedPath} />
+					<input
+						type="hidden"
+						name="existingFeedsJson"
+						value={JSON.stringify(data.config?.feeds ?? [])}
+					/>
+					<div class="grid gap-3 sm:grid-cols-2">
+						<div class="space-y-1">
+							<label for="feed-name-2" class="text-sm font-medium">Feed name</label>
+							<input
+								id="feed-name-2"
+								name="feedName"
+								type="text"
+								placeholder="TV Feed"
+								class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+							/>
+						</div>
+						<div class="space-y-1">
+							<label for="feed-type-2" class="text-sm font-medium">Feed media type</label>
+							<select
+								id="feed-type-2"
+								name="feedMediaType"
+								bind:value={feedMediaType}
+								class="border-input bg-background/70 ring-offset-background h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+							>
+								<option value="tv">TV</option>
+								<option value="movie">Movie</option>
+							</select>
+						</div>
+					</div>
+					<div class="space-y-1">
+						<label for="feed-url-2" class="text-sm font-medium">Feed URL</label>
+						<input
+							id="feed-url-2"
+							name="feedUrl"
+							type="url"
+							placeholder="https://example.com/feed.rss"
+							class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+						/>
+					</div>
+					{#if (form as { feedsMessage?: string } | undefined)?.feedsMessage}
+						<p
+							class:text-destructive={!(form as { feedsSuccess?: boolean } | undefined)
+								?.feedsSuccess}
+							class="text-sm"
+						>
+							{(form as { feedsMessage?: string }).feedsMessage}
+						</p>
+					{/if}
+					<div class="flex flex-wrap items-center gap-3">
+						<button
+							type="submit"
+							class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] disabled:opacity-50"
+							disabled={!((form as { feedsEtag?: string } | undefined)?.feedsEtag ?? data.etag)}
 						>
 							Save first feed
 						</button>
@@ -283,7 +533,7 @@
 			<Alert
 				class="border-border/80 bg-card/85 rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-sm"
 			>
-				<AlertTitle>Step 3 — Add a TV target</AlertTitle>
+				<AlertTitle>Step 5 — Add a TV target</AlertTitle>
 				<AlertDescription>
 					Your first feed is saved. Add a TV show and optional defaults without replacing any
 					existing shows already in config.
@@ -295,7 +545,11 @@
 				action="?/saveTvTarget"
 				class="border-border/80 bg-card/80 space-y-4 rounded-2xl border p-6 shadow-lg shadow-black/20 backdrop-blur-sm"
 			>
-				<input type="hidden" name="ifMatch" value={form?.tvTargetEtag ?? data.etag ?? ''} />
+				<input
+					type="hidden"
+					name="ifMatch"
+					value={(form as { tvTargetEtag?: string } | undefined)?.tvTargetEtag ?? data.etag ?? ''}
+				/>
 				<input type="hidden" name="onboardingPath" value={onboardingPath} />
 				<input
 					type="hidden"
@@ -362,9 +616,13 @@
 					</div>
 				</div>
 
-				{#if form?.tvTargetMessage}
-					<p class:text-destructive={!(form?.tvTargetSuccess ?? false)} class="text-sm">
-						{form.tvTargetMessage}
+				{#if (form as { tvTargetMessage?: string } | undefined)?.tvTargetMessage}
+					<p
+						class:text-destructive={!(form as { tvTargetSuccess?: boolean } | undefined)
+							?.tvTargetSuccess}
+						class="text-sm"
+					>
+						{(form as { tvTargetMessage?: string }).tvTargetMessage}
 					</p>
 				{/if}
 
@@ -372,7 +630,7 @@
 					<button
 						type="submit"
 						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] disabled:opacity-50"
-						disabled={!(form?.tvTargetEtag ?? data.etag)}
+						disabled={!((form as { tvTargetEtag?: string } | undefined)?.tvTargetEtag ?? data.etag)}
 					>
 						Save TV target
 					</button>
@@ -385,7 +643,7 @@
 			<Alert
 				class="border-border/80 bg-card/85 rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-sm"
 			>
-				<AlertTitle>{movieStepTitle}</AlertTitle>
+				<AlertTitle>{movieStepLabel}</AlertTitle>
 				<AlertDescription>
 					{#if onboardingPath === 'both'}
 						Your TV target is saved. Finish the guided flow by adding the first movie year target.
@@ -403,28 +661,31 @@
 				<input
 					type="hidden"
 					name="ifMatch"
-					value={form?.movieTargetEtag ?? form?.tvTargetEtag ?? data.etag ?? ''}
+					value={(form as { movieTargetEtag?: string } | undefined)?.movieTargetEtag ??
+						(form as { tvTargetEtag?: string } | undefined)?.tvTargetEtag ??
+						data.etag ??
+						''}
 				/>
 				<input type="hidden" name="onboardingPath" value={onboardingPath} />
 				<input
 					type="hidden"
 					name="existingMovieYearsJson"
-					value={JSON.stringify(data.config?.movies.years ?? [])}
+					value={JSON.stringify(data.config?.movies?.years ?? [])}
 				/>
 				<input
 					type="hidden"
 					name="existingMovieResolutionsJson"
-					value={JSON.stringify(data.config?.movies.resolutions ?? [])}
+					value={JSON.stringify(data.config?.movies?.resolutions ?? [])}
 				/>
 				<input
 					type="hidden"
 					name="existingMovieCodecsJson"
-					value={JSON.stringify(data.config?.movies.codecs ?? [])}
+					value={JSON.stringify(data.config?.movies?.codecs ?? [])}
 				/>
 				<input
 					type="hidden"
 					name="existingMovieCodecPolicy"
-					value={data.config?.movies.codecPolicy ?? 'prefer'}
+					value={data.config?.movies?.codecPolicy ?? 'prefer'}
 				/>
 				{#each movieResolutions as resolution}
 					<input type="hidden" name="movieResolution" value={resolution} />
@@ -523,9 +784,13 @@
 					</p>
 				{/if}
 
-				{#if form?.movieTargetMessage}
-					<p class:text-destructive={!(form?.movieTargetSuccess ?? false)} class="text-sm">
-						{form.movieTargetMessage}
+				{#if (form as { movieTargetMessage?: string } | undefined)?.movieTargetMessage}
+					<p
+						class:text-destructive={!(form as { movieTargetSuccess?: boolean } | undefined)
+							?.movieTargetSuccess}
+						class="text-sm"
+					>
+						{(form as { movieTargetMessage?: string }).movieTargetMessage}
 					</p>
 				{/if}
 
@@ -533,7 +798,11 @@
 					<button
 						type="submit"
 						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] disabled:opacity-50"
-						disabled={!(form?.movieTargetEtag ?? form?.tvTargetEtag ?? data.etag)}
+						disabled={!(
+							(form as { movieTargetEtag?: string } | undefined)?.movieTargetEtag ??
+							(form as { tvTargetEtag?: string } | undefined)?.tvTargetEtag ??
+							data.etag
+						)}
 					>
 						Save movie target
 					</button>
@@ -573,12 +842,22 @@
 						<dt class="text-muted-foreground">Movie target</dt>
 						<dd class="font-medium">{hasMovieSummary ? 'Added' : 'Not added'}</dd>
 					</div>
+					{#if data.setupState}
+						<div class="space-y-1">
+							<dt class="text-muted-foreground">Setup state</dt>
+							<dd class="font-medium">{data.setupState}</dd>
+						</div>
+					{/if}
 				</dl>
 
 				<div class="flex flex-wrap items-center gap-3">
 					<a
 						href="/"
-						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)]"
+						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold shadow-[0_12px_30px_rgb(20_184_166_/_0.18)] {data.setupState !==
+						'ready'
+							? 'pointer-events-none opacity-50'
+							: ''}"
+						aria-disabled={data.setupState !== 'ready'}
 					>
 						Go to Dashboard
 					</a>
@@ -587,7 +866,7 @@
 					</a>
 				</div>
 			</div>
-		{:else if !(data.onboarding?.hasTvTargets ?? false) && !(data.onboarding?.hasMovieTargets ?? false)}
+		{:else if showPreStepsDone && !(data.onboarding?.hasTvTargets ?? false) && !(data.onboarding?.hasMovieTargets ?? false)}
 			<Alert
 				class="border-border/80 bg-card/85 rounded-2xl border shadow-lg shadow-black/20 backdrop-blur-sm"
 			>

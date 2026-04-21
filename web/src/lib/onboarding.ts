@@ -8,7 +8,7 @@ let onboardingPathFallback: 'tv' | 'movie' | 'both' = 'tv';
 export function deriveOnboardingStatus(config: AppConfig, canWrite: boolean): OnboardingStatus {
 	const hasFeeds = config.feeds.length > 0;
 	const hasTvTargets = config.tv.length > 0;
-	const hasMovieTargets = config.movies.years.length > 0;
+	const hasMovieTargets = (config.movies?.years?.length ?? 0) > 0;
 	const minimumComplete = hasFeeds && (hasTvTargets || hasMovieTargets);
 
 	if (minimumComplete) {

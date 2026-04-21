@@ -9,7 +9,11 @@ export const load: PageServerLoad = async () => {
 	const canWrite = !!env.PIRATE_CLAW_API_WRITE_TOKEN;
 
 	try {
-		const configResponse = await apiRequest('/api/config');
+		const [configResponse, setupStateResponse] = await Promise.all([
+			apiRequest('/api/config'),
+			apiRequest('/api/setup/state')
+		]);
+
 		if (!configResponse.ok) {
 			console.error('[onboarding] failed to load /api/config');
 			return {
@@ -17,17 +21,23 @@ export const load: PageServerLoad = async () => {
 				etag: null,
 				canWrite,
 				onboarding: null,
+				setupState: null,
 				error: 'Could not reach the API.'
 			};
 		}
 
 		const config = (await configResponse.json()) as AppConfig;
 		const etag = configResponse.headers.get('etag');
+		const setupState = setupStateResponse.ok
+			? ((await setupStateResponse.json()) as { state: string }).state
+			: null;
+
 		return {
 			config,
 			etag,
 			canWrite,
 			onboarding: deriveOnboardingStatus(config, canWrite),
+			setupState,
 			error: null
 		};
 	} catch (error) {
@@ -37,6 +47,7 @@ export const load: PageServerLoad = async () => {
 			etag: null,
 			canWrite,
 			onboarding: null,
+			setupState: null,
 			error: 'Could not reach the API.'
 		};
 	}
@@ -316,6 +327,70 @@ export const actions: Actions = {
 		} catch (error) {
 			console.error('[onboarding] saveMovieTarget failed:', error);
 			return fail(500, { movieTargetMessage: 'Could not save movie target.' });
+		}
+	},
+
+	testTransmission: async () => {
+		try {
+			const response = await apiRequest('/api/transmission/session');
+			const reachable = response.ok;
+			return { transmissionReachable: reachable };
+		} catch {
+			return { transmissionReachable: false };
+		}
+	},
+
+	saveDownloadDirs: async ({ request }) => {
+		const writeToken = env.PIRATE_CLAW_API_WRITE_TOKEN;
+		if (!writeToken) {
+			return fail(403, { downloadDirsMessage: 'Config writes are disabled.' });
+		}
+
+		const formData = await request.formData();
+		const ifMatch = String(formData.get('ifMatch') ?? '').trim();
+		if (!ifMatch) {
+			return fail(400, { downloadDirsMessage: 'Missing config revision. Reload and try again.' });
+		}
+
+		const tvDir = String(formData.get('tvDir') ?? '').trim();
+		const movieDir = String(formData.get('movieDir') ?? '').trim();
+		const downloadDirs: { tv?: string; movie?: string } = {};
+		if (tvDir) downloadDirs.tv = tvDir;
+		if (movieDir) downloadDirs.movie = movieDir;
+
+		try {
+			const response = await apiRequest('/api/config/transmission/download-dirs', {
+				method: 'PUT',
+				headers: {
+					'content-type': 'application/json',
+					authorization: `Bearer ${writeToken}`,
+					'if-match': ifMatch
+				},
+				body: JSON.stringify(downloadDirs)
+			});
+
+			if (!response.ok) {
+				let downloadDirsMessage = `Save failed (${response.status}).`;
+				try {
+					const body = (await response.json()) as { error?: string };
+					if (body.error) downloadDirsMessage = body.error;
+				} catch {
+					// keep fallback message
+				}
+				return fail(response.status, {
+					downloadDirsMessage,
+					downloadDirsEtag: response.headers.get('etag')
+				});
+			}
+
+			return {
+				downloadDirsSuccess: true,
+				downloadDirsMessage: 'Download directories saved.',
+				downloadDirsEtag: response.headers.get('etag')
+			};
+		} catch (error) {
+			console.error('[onboarding] saveDownloadDirs failed:', error);
+			return fail(500, { downloadDirsMessage: 'Could not save download directories.' });
 		}
 	}
 };
