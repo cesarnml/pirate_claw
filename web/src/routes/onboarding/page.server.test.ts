@@ -530,9 +530,9 @@ describe('onboarding page server', () => {
 			const result = await actions.testTransmission({} as never);
 
 			expect((result as { transmissionReachable?: boolean }).transmissionReachable).toBe(true);
-			expect(
-				(result as { transmissionCompatibility?: string }).transmissionCompatibility
-			).toBe('recommended');
+			expect((result as { transmissionCompatibility?: string }).transmissionCompatibility).toBe(
+				'recommended'
+			);
 			expect(apiRequestMock).toHaveBeenCalledWith('/api/setup/transmission/status');
 		});
 	});
