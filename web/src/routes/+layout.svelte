@@ -39,7 +39,11 @@
 	const daemonUptime = $derived(formatUptime(data.health?.uptime ?? null));
 	const transmissionConnected = $derived(data.transmissionSession !== null);
 	const plexConfigured = $derived(data.plexConfigured === true);
-	const showSidebar = $derived($page.url.pathname !== '/onboarding');
+	const isOnboarding = $derived($page.url.pathname === '/onboarding');
+	const showSidebar = $derived(!isOnboarding);
+	const setupState = $derived(data.setupState ?? 'partially_configured');
+	const isStarter = $derived(setupState === 'starter' && !isOnboarding);
+	const isPartiallyConfigured = $derived(setupState === 'partially_configured');
 </script>
 
 <svelte:head>
@@ -105,7 +109,41 @@
 		{/if}
 
 		<main class="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8 lg:px-10">
-			{@render children()}
+			{#if isStarter}
+				<div
+					class="flex flex-col items-center justify-center gap-4 py-24 text-center"
+					data-testid="starter-mode-splash"
+				>
+					<img
+						src="/pirate-claw-logo.webp"
+						alt="Pirate Claw"
+						width="80"
+						height="80"
+						class="rounded-2xl opacity-60"
+					/>
+					<h1 class="text-foreground text-2xl font-semibold">Pirate Claw is not yet configured</h1>
+					<p class="text-muted-foreground max-w-sm text-sm">
+						Use the setup wizard to connect Transmission, Plex, and configure your media
+						preferences.
+					</p>
+					<a
+						href="/onboarding"
+						class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium"
+					>
+						Open setup wizard
+					</a>
+				</div>
+			{:else}
+				{#if isPartiallyConfigured}
+					<div
+						class="bg-warning/10 border-warning/30 text-warning mb-4 rounded-lg border px-4 py-2 text-sm"
+						data-testid="partial-config-banner"
+					>
+						Setup incomplete — some services may be unavailable until configuration is complete.
+					</div>
+				{/if}
+				{@render children()}
+			{/if}
 		</main>
 	</div>
 

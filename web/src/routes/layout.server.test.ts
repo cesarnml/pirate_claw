@@ -32,7 +32,8 @@ describe('layout server load', () => {
 					token: '[redacted]',
 					refreshIntervalMinutes: 30
 				}
-			});
+			})
+			.mockResolvedValueOnce({ state: 'ready' });
 
 		const result = await load({} as never);
 
@@ -48,8 +49,49 @@ describe('layout server load', () => {
 				currentDownloadedBytes: 0,
 				currentUploadedBytes: 0
 			},
-			plexConfigured: true
+			plexConfigured: true,
+			setupState: 'ready'
 		});
+	});
+
+	it('returns setupState=starter when setup/state reports starter', async () => {
+		const { load } = await import('./+layout.server');
+
+		apiFetchMock
+			.mockResolvedValueOnce({ uptime: 1, startedAt: '2024-01-01T00:00:00Z' })
+			.mockResolvedValueOnce({
+				version: '3.0',
+				downloadSpeed: 0,
+				uploadSpeed: 0,
+				activeTorrentCount: 0
+			})
+			.mockResolvedValueOnce({
+				plex: { url: 'http://localhost:32400', token: '', refreshIntervalMinutes: 30 }
+			})
+			.mockResolvedValueOnce({ state: 'starter' });
+
+		const result = (await load({} as never)) as { setupState: string };
+		expect(result.setupState).toBe('starter');
+	});
+
+	it('normalizes unknown setup state values to partially_configured', async () => {
+		const { load } = await import('./+layout.server');
+
+		apiFetchMock
+			.mockResolvedValueOnce({ uptime: 1, startedAt: '2024-01-01T00:00:00Z' })
+			.mockResolvedValueOnce({
+				version: '3.0',
+				downloadSpeed: 0,
+				uploadSpeed: 0,
+				activeTorrentCount: 0
+			})
+			.mockResolvedValueOnce({
+				plex: { url: 'http://localhost:32400', token: '', refreshIntervalMinutes: 30 }
+			})
+			.mockResolvedValueOnce({ state: 'mystery' });
+
+		const result = (await load({} as never)) as { setupState: string };
+		expect(result.setupState).toBe('partially_configured');
 	});
 
 	it('tolerates unavailable shared endpoints and returns nulls', async () => {
@@ -60,14 +102,16 @@ describe('layout server load', () => {
 			apiFetchMock
 				.mockRejectedValueOnce(new Error('health down'))
 				.mockRejectedValueOnce(new Error('tx down'))
-				.mockRejectedValueOnce(new Error('config down'));
+				.mockRejectedValueOnce(new Error('config down'))
+				.mockRejectedValueOnce(new Error('setup down'));
 
 			const result = await load({} as never);
 
 			expect(result).toEqual({
 				health: null,
 				transmissionSession: null,
-				plexConfigured: false
+				plexConfigured: false,
+				setupState: 'partially_configured'
 			});
 		} finally {
 			errorSpy.mockRestore();
