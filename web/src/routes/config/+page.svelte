@@ -82,10 +82,10 @@
 		showRows = config.tv.map((rule) => rule.matchPattern ?? rule.name);
 		tvResolutions = [...(config.tvDefaults?.resolutions ?? [])];
 		tvCodecs = [...(config.tvDefaults?.codecs ?? [])];
-		movieYears = [...config.movies.years];
-		movieResolutions = [...config.movies.resolutions];
-		movieCodecs = [...config.movies.codecs];
-		movieCodecPolicy = config.movies.codecPolicy;
+		movieYears = [...(config.movies?.years ?? [])];
+		movieResolutions = [...(config.movies?.resolutions ?? [])];
+		movieCodecs = [...(config.movies?.codecs ?? [])];
+		movieCodecPolicy = config.movies?.codecPolicy ?? 'prefer';
 		feedsList = [...config.feeds];
 	});
 

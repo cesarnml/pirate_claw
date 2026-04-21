@@ -175,7 +175,7 @@ export type AppConfig = {
 	tv: TvRule[];
 	/** Present when the config file uses compact tv format with explicit defaults. */
 	tvDefaults?: { resolutions: string[]; codecs: string[] };
-	movies: MoviePolicy;
+	movies?: MoviePolicy;
 	transmission: TransmissionConfig;
 	runtime: RuntimeConfig;
 	plex?: PlexConfig;

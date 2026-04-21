@@ -841,6 +841,102 @@ export function createApiFetch(
       }
     }
 
+    if (
+      path === '/api/config/transmission/download-dirs' &&
+      request.method === 'PUT'
+    ) {
+      const authError = checkWriteAuth(request, activeConfig);
+      if (authError) return authError;
+
+      const etagError = checkEtag(request, activeConfig);
+      if (etagError) return etagError;
+
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json({ error: 'invalid json body' }, { status: 400 });
+      }
+
+      try {
+        if (!isRecord(body)) {
+          throw new ConfigError(
+            'Config file "request body" must be an object.',
+          );
+        }
+
+        const allowed = new Set(['tv', 'movie']);
+        for (const key of Object.keys(body)) {
+          if (!allowed.has(key)) {
+            throw new ConfigError(
+              `Config file "request body downloadDirs" has unknown key "${key}"; expected only "movie" and/or "tv".`,
+            );
+          }
+        }
+
+        const tvDir =
+          body.tv === undefined
+            ? undefined
+            : typeof body.tv === 'string'
+              ? body.tv
+              : (() => {
+                  throw new ConfigError(
+                    'Config file "request body downloadDirs tv" must be a string.',
+                  );
+                })();
+        const movieDir =
+          body.movie === undefined
+            ? undefined
+            : typeof body.movie === 'string'
+              ? body.movie
+              : (() => {
+                  throw new ConfigError(
+                    'Config file "request body downloadDirs movie" must be a string.',
+                  );
+                })();
+
+        const baseOnDisk = await readConfigFileRecord(configPath);
+        const existingTransmission = isRecord(baseOnDisk.transmission)
+          ? baseOnDisk.transmission
+          : {};
+        const downloadDirs: Record<string, string> = {};
+        if (tvDir !== undefined) downloadDirs.tv = tvDir;
+        if (movieDir !== undefined) downloadDirs.movie = movieDir;
+
+        const merged = {
+          ...baseOnDisk,
+          transmission: {
+            ...existingTransmission,
+            ...(Object.keys(downloadDirs).length > 0 ? { downloadDirs } : {}),
+          },
+        };
+
+        const validated = validateConfig(
+          merged,
+          'config',
+          await loadConfigEnv(configPath),
+        );
+        writeConfigAtomically(configPath, merged);
+        activeConfig = validated;
+        if (configHolder) {
+          configHolder.current = validated;
+        }
+
+        const redacted = redactConfig(activeConfig);
+        return Response.json(redacted, {
+          headers: { ETag: buildConfigEtag(redacted) },
+        });
+      } catch (error) {
+        if (error instanceof ConfigError) {
+          return Response.json({ error: error.message }, { status: 400 });
+        }
+        if (error instanceof ConfigWriteError) {
+          return jsonConfigWriteFailure();
+        }
+        return json500();
+      }
+    }
+
     if (path === '/api/config/feeds' && request.method === 'PUT') {
       const authError = checkWriteAuth(request, activeConfig);
       if (authError) return authError;

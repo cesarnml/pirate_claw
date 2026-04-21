@@ -67,7 +67,9 @@ describe('/onboarding', () => {
 			error: null
 		});
 
-		expect(screen.getByText('Config writes are disabled')).toBeInTheDocument();
+		expect(
+			screen.getByRole('heading', { name: 'Step 2 — Enable Config Writes' })
+		).toBeInTheDocument();
 	});
 
 	it('renders the first feed step for strict initial-empty config', () => {
@@ -85,9 +87,9 @@ describe('/onboarding', () => {
 			error: null
 		});
 
-		expect(screen.getByRole('heading', { name: 'Step 1 — Feed type' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Step 4 — Feed type' })).toBeInTheDocument();
 		expect(
-			screen.getByRole('heading', { name: 'Step 2 — Add your first feed' })
+			screen.getByRole('heading', { name: 'Step 4 — Add your first feed' })
 		).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save first feed' })).toBeInTheDocument();
 	});
@@ -126,7 +128,7 @@ describe('/onboarding', () => {
 			error: null
 		});
 
-		expect(screen.getByText('Step 3 — Add a TV target')).toBeInTheDocument();
+		expect(screen.getByText('Step 5 — Add a TV target')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save TV target' })).toBeInTheDocument();
 	});
 
@@ -195,8 +197,8 @@ describe('/onboarding', () => {
 			error: null
 		});
 
-		expect(screen.queryByText('Step 3 — Add a TV target')).not.toBeInTheDocument();
-		expect(screen.getByText('Step 3 — Add a movie target')).toBeInTheDocument();
+		expect(screen.queryByText('Step 5 — Add a TV target')).not.toBeInTheDocument();
+		expect(screen.getByText('Step 5 — Add a movie target')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save movie target' })).toBeInTheDocument();
 	});
 
@@ -246,7 +248,7 @@ describe('/onboarding', () => {
 			}
 		});
 
-		expect(screen.getByText('Step 4 — Add a movie target')).toBeInTheDocument();
+		expect(screen.getByText('Step 6 — Add a movie target')).toBeInTheDocument();
 		expect(screen.queryByText('Done')).not.toBeInTheDocument();
 	});
 
@@ -269,7 +271,7 @@ describe('/onboarding', () => {
 			error: null
 		});
 
-		expect(screen.getByText('Step 4 — Add a movie target')).toBeInTheDocument();
+		expect(screen.getByText('Step 6 — Add a movie target')).toBeInTheDocument();
 		expect(screen.queryByText('Done')).not.toBeInTheDocument();
 		writeOnboardingPath('tv');
 	});
