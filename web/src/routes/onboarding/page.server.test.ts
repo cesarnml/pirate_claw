@@ -19,7 +19,11 @@ describe('onboarding page server', () => {
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: '' }
 			}));
 			const { load } = await import('./+page.server');
-			apiRequestMock.mockResolvedValue(new Response(JSON.stringify(emptyConfig), { status: 200 }));
+			apiRequestMock.mockImplementation((url: string) =>
+				url === '/api/setup/state'
+					? Promise.resolve(new Response(JSON.stringify({ state: 'starter' }), { status: 200 }))
+					: Promise.resolve(new Response(JSON.stringify(emptyConfig), { status: 200 }))
+			);
 
 			const result = await load({} as never);
 			expect((result as { onboarding: { state: string } | null }).onboarding?.state).toBe(
@@ -32,8 +36,15 @@ describe('onboarding page server', () => {
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
 			const { load } = await import('./+page.server');
-			apiRequestMock.mockResolvedValue(
-				new Response(JSON.stringify(emptyConfig), { status: 200, headers: { etag: '"rev-1"' } })
+			apiRequestMock.mockImplementation((url: string) =>
+				url === '/api/setup/state'
+					? Promise.resolve(new Response(JSON.stringify({ state: 'starter' }), { status: 200 }))
+					: Promise.resolve(
+							new Response(JSON.stringify(emptyConfig), {
+								status: 200,
+								headers: { etag: '"rev-1"' }
+							})
+						)
 			);
 
 			const result = await load({} as never);
@@ -47,8 +58,17 @@ describe('onboarding page server', () => {
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
 			const { load } = await import('./+page.server');
-			apiRequestMock.mockResolvedValue(
-				new Response(JSON.stringify(feedOnlyConfig), { status: 200, headers: { etag: '"rev-2"' } })
+			apiRequestMock.mockImplementation((url: string) =>
+				url === '/api/setup/state'
+					? Promise.resolve(
+							new Response(JSON.stringify({ state: 'partially_configured' }), { status: 200 })
+						)
+					: Promise.resolve(
+							new Response(JSON.stringify(feedOnlyConfig), {
+								status: 200,
+								headers: { etag: '"rev-2"' }
+							})
+						)
 			);
 
 			const result = await load({} as never);
