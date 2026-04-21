@@ -31,21 +31,63 @@ It currently supports:
 - `pirate-claw plex-refresh` (when `plex` is configured: re-query Plex and update the SQLite library cache)
 - `pirate-claw config show`
 
-## Quick Start
+## First Boot (Zero File Editing)
+
+Pirate Claw creates its own starter config on first boot. No SSH, no vim, no hand-edited files required to reach the browser.
+
+### Mac (local dev / test)
+
+**Plex prerequisite:** Plex Media Server **1.19.0 or later**. Download the current release from [plex.tv/media-server-downloads](https://www.plex.tv/media-server-downloads/). Install as a normal Mac app and confirm it is running before starting Pirate Claw.
+
+**First-boot sequence:**
 
 1. Install dependencies: `bun install`
-2. Copy [`pirate-claw.config.example.json`](./pirate-claw.config.example.json) to `pirate-claw.config.json`
-3. Edit your feeds, TV/movie rules, and Transmission credentials
-4. Start Transmission and enable local RPC access
-5. Run:
+2. Start Transmission and enable remote access (RPC on port 9091)
+3. Start the daemon:
+
+```bash
+bun run daemon
+```
+
+4. Open the dashboard:
+
+```bash
+bun install --cwd web
+bun run --cwd web dev
+```
+
+5. Open **http://localhost:5173** — you will see the starter-mode state: _Pirate Claw is not yet configured._ No config file was needed.
+
+> **Note:** Mac launchd supervisor / auto-restart setup is covered in P23.
+
+### Synology NAS (production)
+
+**Plex prerequisite:** Plex Media Server **1.19.0 or later**. Check your installed version in **Package Center → Installed → Plex Media Server → Details**. If the listed version is below 1.19.0, open **Package Center → Update** and update Plex before proceeding.
+
+**First-boot sequence:**
+
+1. Start the Pirate Claw container or process on the NAS
+2. Open a browser at `http://<nas-ip>:<api-port>` (default port configured in `runtime.apiPort`)
+3. You will see the starter-mode state: _Pirate Claw is not yet configured._ No config editing was required.
+
+### Operator promise
+
+A fresh install reaches browser-visible starter mode without the operator touching any config file. The starter config is written automatically on first boot. Editing `pirate-claw.config.json` is an optional next step once you are in the browser.
+
+## Quick Start (Manual Config)
+
+To configure Pirate Claw from scratch instead of the zero-edit first-boot path:
+
+1. Install dependencies: `bun install`
+2. Copy [`pirate-claw.config.example.json`](./pirate-claw.config.example.json) to `pirate-claw.config.json` and edit your feeds, TV/movie rules, and Transmission credentials
+3. Start Transmission and enable local RPC access
+4. Run:
 
 ```bash
 ./bin/pirate-claw run --config ./pirate-claw.config.json
 ```
 
 Check state with `pirate-claw status`. Retry failed submissions with `pirate-claw retry-failed`. Reconcile tracked torrents from Transmission with `pirate-claw reconcile`.
-
-For the guided first-run path: start the daemon, open the dashboard, and use `/onboarding` to save your first feed and first target instead of editing the config by hand.
 
 ## Configuration
 
