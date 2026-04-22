@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { archiveHref, candidatePosterUrl, candidateTitle, formatShortDate } from '$lib/helpers';
-	import StatusChip from '$lib/components/StatusChip.svelte';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
 	import type { CandidateStateRecord } from '$lib/types';
 	import { Badge } from '$lib/components/ui/badge';
@@ -34,10 +33,9 @@
 						aria-label={`${candidateTitle(item)} COMPLETED ${formatShortDate(item.queuedAt)}`}
 						class="group border-border bg-background/45 relative overflow-hidden rounded-3xl border transition-transform hover:-translate-y-0.5"
 					>
-						<StatusChip
-							status="completed"
-							class="absolute top-3 left-2 z-1 bg-emerald-800/80 text-[9px]"
-						/>
+						<Badge class="absolute top-3 left-2 z-1 bg-emerald-600/80 text-[9px]">
+							{`${item.mediaType}`.toUpperCase()}
+						</Badge>
 						{#if item.mediaType === 'tv' && item.season != null && item.episode != null}
 							<Badge
 								class="absolute top-3.5 right-2.5 z-1 bg-red-900/60 text-[10px] font-bold text-amber-50"
