@@ -88,8 +88,9 @@ The orchestrator owns process mechanics:
 - durable local state under `.agents/delivery/<plan-key>/`
 - per-ticket handoff artifacts under `.agents/delivery/<plan-key>/handoffs/`
 - deterministic branch and worktree naming
-- copying a local `.env` into fresh ticket worktrees when the invoking worktree has one
+- copying a fixed repo-root ignored-file bootstrap allowlist into fresh ticket worktrees when those files exist in the invoking worktree and are missing in the target worktree (`.env`, `.env.local`, `.env.development`, `.env.test`, `.gitignore`)
 - bootstrapping fresh ticket worktrees using lockfile-aware package-manager defaults before implementation starts
+- materializing bounded delivery artifacts into started ticket worktrees so local continuation does not depend on manual artifact copying or rediscovery
 - stacked PR base chaining
 - idempotent PR open/update behavior for already-pushed ticket branches
 - a 6/12-minute AI-review polling loop after PR open (two checkpoints: 6 minutes and 12 minutes)
@@ -162,7 +163,15 @@ When a ticket starts, the orchestrator writes a handoff artifact under:
 
 That handoff is the narrow context that the next ticket worker should begin from alongside the current repo state and required docs.
 
-For the **first ticket in a new phase**, there may be no prior-ticket handoff context beyond the implementation plan, the ticket doc, and current repo state. That is expected, not a blocker.
+`start` must also leave the started ticket worktree locally self-sufficient for active-ticket continuation. In practice that means the target worktree receives:
+
+- `.agents/delivery/<plan-key>/state.json`
+- the current ticket handoff artifact
+- handoff and review artifacts for the current ticket and immediate predecessor only
+
+This is intentionally bounded context, not whole-phase mirroring.
+
+For the **first ticket in a new phase**, there may be no prior-ticket handoff or review artifacts beyond the implementation plan, the ticket doc, and current repo state. That is expected, not a blocker.
 
 The handoff includes:
 
@@ -174,7 +183,7 @@ The handoff includes:
 
 This does not automatically create a brand-new agent session, but it is the current repo mechanism for reducing reasoning carryover between tickets while preserving stacked branch continuity.
 
-For ticket `01`, `start` is the command that initializes the first ticket context for the phase. After `start`, use the generated handoff artifact if present; before that, do not treat the absence of a prior-ticket handoff as missing workflow state.
+For ticket `01`, `start` is the command that initializes the first ticket context for the phase. After `start`, read the locally materialized handoff artifact from the started ticket worktree; before that, do not treat the absence of a prior-ticket handoff as missing workflow state.
 
 **No read-ahead during the review window.** The agent does nothing while waiting on external AI review. The wait is free (LLM idle during subprocess sleep). Read-ahead during the window burns context that is dead weight at the next ticket boundary. Be sabaai sabaai.
 
@@ -421,9 +430,11 @@ State is written under:
 
 ### State file and primary checkout (multi-worktree)
 
-The orchestrator writes `state.json` **only in the repo directory where you run `deliver`** (the current working directory). If you use **one ticket worktree per ticket** and a **separate `main` clone** for `closeout-stack` or other commands, the `main` checkout’s delivery tree does **not** update automatically.
+For active ticket continuation, `start` writes the authoritative bounded continuation set into the started ticket worktree. That means the started worktree is the local source of truth for continuing that ticket.
 
-Fetched review artifacts under `reviews/` and generated handoff artifacts under `handoffs/` are written under the **same** path relative to the worktree where each command ran. Across a stacked phase, that means files are often **spread across multiple ticket worktrees** — the final worktree is **not** guaranteed to contain every `reviews/<ticket>-*.json` or `handoffs/<ticket>-handoff.md` produced earlier.
+The orchestrator also writes `state.json` in the repo directory where you run `deliver` (the current working directory). If you use **one ticket worktree per ticket** and a **separate `main` clone** for `closeout-stack` or other commands, the `main` checkout’s delivery tree does **not** update automatically.
+
+Fetched review artifacts under `reviews/` and generated handoff artifacts under `handoffs/` are still written under the **same** path relative to the worktree where each command ran. Across a stacked phase, full history is therefore often **spread across multiple ticket worktrees** — the final worktree is **not** guaranteed to contain every `reviews/<ticket>-*.json` or `handoffs/<ticket>-handoff.md` produced earlier.
 
 **Recommendation:**
 
@@ -448,7 +459,7 @@ for wt in /path/to/phase-wt-01 /path/to/phase-wt-02 /path/to/phase-wt-NN; do
 done
 ```
 
-**Stance:** Treat each **ticket worktree** as authoritative for the commands you run inside it; treat the **primary `main` copy** as the **aggregate mirror** — especially for `reviews/` and `handoffs/`, which must be **reconciled across all worktrees**, not only copied from the latest one. Until the orchestrator gains an explicit “mirror delivery artifacts to path” option, this manual merge is the reliable fix for stale or incomplete delivery state on `main`.
+**Stance:** Treat each **started ticket worktree** as authoritative for continuing its active ticket; treat the **primary `main` copy** as the **aggregate mirror** for full-phase history and closeout. Active-ticket continuation should not require scavenging across older worktrees, but aggregate `reviews/` and `handoffs/` still must be **reconciled across all worktrees**, not only copied from the latest one.
 
 ## PR Body Maintenance
 

@@ -40,6 +40,14 @@ const LOCK_FILES = [
   'package-lock.json',
 ] as const;
 
+const WORKTREE_BOOTSTRAP_FILES = [
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.test',
+  '.gitignore',
+] as const;
+
 export function parseGitWorktreeList(output: string): GitWorktreeEntry[] {
   const entries: GitWorktreeEntry[] = [];
   let current: GitWorktreeEntry | undefined;
@@ -164,18 +172,30 @@ export function findPrimaryWorktreePath(
   )?.path;
 }
 
+export async function copyLocalBootstrapFilesIfPresent(
+  sourceWorktreePath: string,
+  targetWorktreePath: string,
+): Promise<void> {
+  for (const file of WORKTREE_BOOTSTRAP_FILES) {
+    const sourceFilePath = resolve(sourceWorktreePath, file);
+    const targetFilePath = resolve(targetWorktreePath, file);
+
+    if (!existsSync(sourceFilePath) || existsSync(targetFilePath)) {
+      continue;
+    }
+
+    await copyFile(sourceFilePath, targetFilePath);
+  }
+}
+
 export async function copyLocalEnvIfPresent(
   sourceWorktreePath: string,
   targetWorktreePath: string,
 ): Promise<void> {
-  const sourceEnvPath = resolve(sourceWorktreePath, '.env');
-  const targetEnvPath = resolve(targetWorktreePath, '.env');
-
-  if (!existsSync(sourceEnvPath) || existsSync(targetEnvPath)) {
-    return;
-  }
-
-  await copyFile(sourceEnvPath, targetEnvPath);
+  await copyLocalBootstrapFilesIfPresent(
+    sourceWorktreePath,
+    targetWorktreePath,
+  );
 }
 
 export async function bootstrapWorktreeIfNeeded(

@@ -221,9 +221,14 @@ export async function startTicket(
       baseBranch: string,
     ) => void;
     bootstrapWorktreeIfNeeded: (worktreePath: string) => Promise<void>;
-    copyLocalEnvIfPresent: (
+    copyLocalBootstrapFilesIfPresent: (
       sourceWorktreePath: string,
       targetWorktreePath: string,
+    ) => Promise<void>;
+    materializeTicketContext?: (
+      state: DeliveryState,
+      sourceWorktreePath: string,
+      ticketId: string,
     ) => Promise<void>;
     relativeToRepo: (cwd: string, absolutePath: string) => string;
   },
@@ -257,6 +262,7 @@ export async function startTicket(
   }
 
   if (target.status === 'in_progress') {
+    await dependencies.materializeTicketContext?.(state, cwd, target.id);
     return state;
   }
 
@@ -269,26 +275,30 @@ export async function startTicket(
     );
   }
 
-  await dependencies.copyLocalEnvIfPresent(cwd, target.worktreePath);
+  await dependencies.copyLocalBootstrapFilesIfPresent(cwd, target.worktreePath);
   await dependencies.bootstrapWorktreeIfNeeded(target.worktreePath);
 
   const handoff = await writeTicketHandoff(state, cwd, target.id, {
     relativeToRepo: dependencies.relativeToRepo,
   });
 
-  return {
+  const nextState: DeliveryState = {
     ...state,
     tickets: state.tickets.map((ticket) =>
       ticket.id === target.id
         ? {
             ...ticket,
-            status: 'in_progress',
+            status: 'in_progress' as const,
             handoffPath: handoff.relativePath,
             handoffGeneratedAt: handoff.generatedAt,
           }
         : ticket,
     ),
   };
+
+  await dependencies.materializeTicketContext?.(nextState, cwd, target.id);
+
+  return nextState;
 }
 
 export function recordPostVerifySelfAudit(

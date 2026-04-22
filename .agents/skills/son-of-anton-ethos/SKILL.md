@@ -44,7 +44,7 @@ Commit the delivery plan and all ticket docs to the default branch before creati
 
 ### Required Behavior
 
-1. Re-read required repo docs at each ticket boundary. For ticket `01`, use the implementation plan, the ticket doc, and current repo state as the initial handoff context; for later tickets, re-read the generated handoff artifact as the source of truth.
+1. Re-read required repo docs at each ticket boundary. For ticket `01`, use the implementation plan, the ticket doc, and current repo state as the initial handoff context; for later tickets, re-read the handoff artifact materialized into the started ticket worktree as the source of truth.
 2. Use the supported orchestrator path, not ad hoc manual substitutes.
 3. Move one ticket at a time in order.
 4. For each ticket:
@@ -68,13 +68,13 @@ Commit the delivery plan and all ticket docs to the default branch before creati
 
 Treat `ticketBoundaryMode` in `orchestrator.config.json` as the contract for ticket-boundary behavior.
 
-- `cook`: default Son-of-Anton path. `advance` immediately starts the next ticket. Read the generated handoff and continue.
+- `cook`: default Son-of-Anton path. `advance` immediately starts the next ticket. Read the handoff materialized into the started worktree and continue.
 - `gated`: `advance` stops, tells the operator to reset context, and prints the canonical resume prompt for the next agent session. Prefer `/clear`; use `/compact` only when compressed carry-forward context is intentional.
 - `glide`: reserved/unimplemented — currently falls back to `gated` in repo-local code. Do not assume self-reset capability.
 
 Canonical `gated` resume prompt:
 
-`Immediately execute \`bun run deliver --plan <plan> start\`, read the generated handoff artifact as the source of truth for context, and implement <next-ticket-id>.`
+`Immediately execute \`bun run deliver --plan <plan> start\`, read the locally materialized handoff artifact in the started worktree as the source of truth for context, and implement <next-ticket-id>.`
 
 ### Codex Preflight
 
