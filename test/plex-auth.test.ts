@@ -127,6 +127,58 @@ describe('PlexAuthStore', () => {
       },
     });
   });
+
+  it('cancels other pending sessions after a successful finalization', async () => {
+    const path = await createDatabasePath();
+    const database = createDatabase(path);
+    const store = new PlexAuthStore(database);
+    const first = store.createSession({
+      oauthState: 'oauth-state-first',
+      codeVerifier: 'code-verifier-first',
+      redirectUri: 'http://localhost:5173/api/plex/auth/callback',
+      openedAt: '2026-04-22T09:00:00.000Z',
+      expiresAt: '2026-04-22T09:10:00.000Z',
+    });
+    const second = store.createSession({
+      oauthState: 'oauth-state-second',
+      codeVerifier: 'code-verifier-second',
+      redirectUri: 'http://localhost:5173/api/plex/auth/callback',
+      openedAt: '2026-04-22T09:01:00.000Z',
+      expiresAt: '2026-04-22T09:11:00.000Z',
+    });
+
+    const finalized = store.finalizeSession(first.session.id, {
+      refreshToken: 'refresh-token-123',
+      authenticatedAt: '2026-04-22T09:03:00.000Z',
+    });
+
+    expect(finalized.session.status).toBe('completed');
+    expect(store.getSnapshot('2026-04-22T09:04:00.000Z')).toMatchObject({
+      state: 'connected',
+      pendingSession: null,
+    });
+
+    const rows = database
+      .query(`SELECT id, status FROM plex_auth_sessions ORDER BY opened_at ASC`)
+      .all() as Array<{ id: string; status: string }>;
+    expect(rows).toEqual([
+      { id: first.session.id, status: 'completed' },
+      { id: second.session.id, status: 'cancelled' },
+    ]);
+
+    database.close();
+    openDatabases.pop();
+
+    const reloaded = new PlexAuthStore(createDatabase(path));
+    expect(reloaded.getSnapshot('2026-04-22T09:05:00.000Z')).toMatchObject({
+      state: 'connected',
+      identity: {
+        clientIdentifier: first.identity.clientIdentifier,
+        refreshToken: 'refresh-token-123',
+      },
+      pendingSession: null,
+    });
+  });
 });
 
 function createDatabase(path: string): Database {
