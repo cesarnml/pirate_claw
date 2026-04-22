@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import {
   assertReviewerFacingMarkdown,
@@ -13,7 +14,7 @@ import {
   buildPullRequestTitle,
   buildTicketHandoff,
   canAdvanceTicket,
-  copyLocalEnvIfPresent,
+  copyLocalBootstrapFilesIfPresent,
   createOptions,
   deriveBranchName,
   derivePlanKey,
@@ -63,6 +64,7 @@ import {
   formatAdvanceBoundaryGuidance,
   applyAdvanceBoundaryMode,
   formatStatus,
+  materializeTicketContext,
   resolveEffectiveAdvanceBoundaryMode,
   type DeliveryState,
 } from '../orchestrator';
@@ -72,6 +74,11 @@ async function readArtifactJson(cwd: string, relativePath: string) {
     string,
     unknown
   >;
+}
+
+async function writeFixture(path: string, content: string) {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, content, 'utf8');
 }
 import { getUsage, parseCliArgs } from '../cli';
 import { advanceToNextTicket } from '../ticket-flow';
@@ -1625,7 +1632,7 @@ describe('delivery orchestrator', () => {
     expect(changes).toContain('P3.01: pr https://example.test/pull/20 -> none');
   });
 
-  it('copies a local .env into a fresh ticket worktree when missing', async () => {
+  it('copies allowed ignored bootstrap files into a fresh ticket worktree when missing', async () => {
     const sourceDir = await mkdtemp(join(tmpdir(), 'orchestrator-source-'));
     const targetDir = await mkdtemp(join(tmpdir(), 'orchestrator-target-'));
 
@@ -1635,12 +1642,269 @@ describe('delivery orchestrator', () => {
         'TELEGRAM_CHAT_ID=123\n',
         'utf8',
       );
+      await writeFile(join(sourceDir, '.env.local'), 'LOCAL_ONLY=1\n', 'utf8');
+      await writeFile(join(sourceDir, '.gitignore'), '.agents/\n', 'utf8');
 
-      await copyLocalEnvIfPresent(sourceDir, targetDir);
+      await copyLocalBootstrapFilesIfPresent(sourceDir, targetDir);
 
       expect(await readFile(join(targetDir, '.env'), 'utf8')).toBe(
         'TELEGRAM_CHAT_ID=123\n',
       );
+      expect(await readFile(join(targetDir, '.env.local'), 'utf8')).toBe(
+        'LOCAL_ONLY=1\n',
+      );
+      expect(await readFile(join(targetDir, '.gitignore'), 'utf8')).toBe(
+        '.agents/\n',
+      );
+    } finally {
+      await rm(sourceDir, { recursive: true, force: true });
+      await rm(targetDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not overwrite existing ignored bootstrap files in the target worktree', async () => {
+    const sourceDir = await mkdtemp(join(tmpdir(), 'orchestrator-source-'));
+    const targetDir = await mkdtemp(join(tmpdir(), 'orchestrator-target-'));
+
+    try {
+      await writeFile(join(sourceDir, '.env'), 'SOURCE=1\n', 'utf8');
+      await writeFile(join(sourceDir, '.gitignore'), '.agents/\n', 'utf8');
+      await writeFile(join(targetDir, '.env'), 'TARGET=1\n', 'utf8');
+      await writeFile(join(targetDir, '.gitignore'), 'node_modules/\n', 'utf8');
+
+      await copyLocalBootstrapFilesIfPresent(sourceDir, targetDir);
+
+      expect(await readFile(join(targetDir, '.env'), 'utf8')).toBe(
+        'TARGET=1\n',
+      );
+      expect(await readFile(join(targetDir, '.gitignore'), 'utf8')).toBe(
+        'node_modules/\n',
+      );
+    } finally {
+      await rm(sourceDir, { recursive: true, force: true });
+      await rm(targetDir, { recursive: true, force: true });
+    }
+  });
+
+  it('materializes first-ticket continuation artifacts into the target worktree', async () => {
+    const sourceDir = await mkdtemp(join(tmpdir(), 'orchestrator-source-'));
+    const targetDir = await mkdtemp(join(tmpdir(), 'orchestrator-target-'));
+
+    try {
+      await writeFixture(
+        join(sourceDir, '.agents/delivery/phase-03/handoffs/p3-01-handoff.md'),
+        '# Ticket Handoff\n',
+      );
+
+      const state: DeliveryState = {
+        planKey: 'phase-03',
+        planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+        reviewPollIntervalMinutes: 6,
+        reviewPollMaxWaitMinutes: 12,
+        tickets: [
+          {
+            id: 'P3.01',
+            title: 'First ticket',
+            slug: 'first-ticket',
+            ticketFile: 'docs/ticket-01.md',
+            status: 'in_progress',
+            branch: 'agents/p3-01-first-ticket',
+            baseBranch: 'main',
+            worktreePath: targetDir,
+            handoffPath: '.agents/delivery/phase-03/handoffs/p3-01-handoff.md',
+          },
+        ],
+      };
+
+      await materializeTicketContext(state, sourceDir, 'P3.01');
+
+      expect(
+        await readFile(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/handoffs/p3-01-handoff.md',
+          ),
+          'utf8',
+        ),
+      ).toBe('# Ticket Handoff\n');
+      expect(
+        JSON.parse(
+          await readFile(
+            join(targetDir, '.agents/delivery/phase-03/state.json'),
+            'utf8',
+          ),
+        ),
+      ).toMatchObject({
+        planKey: 'phase-03',
+        tickets: [{ id: 'P3.01', worktreePath: targetDir }],
+      });
+    } finally {
+      await rm(sourceDir, { recursive: true, force: true });
+      await rm(targetDir, { recursive: true, force: true });
+    }
+  });
+
+  it('materializes only current and predecessor handoff/review artifacts into a started worktree', async () => {
+    const sourceDir = await mkdtemp(join(tmpdir(), 'orchestrator-source-'));
+    const targetDir = await mkdtemp(join(tmpdir(), 'orchestrator-target-'));
+
+    try {
+      await writeFixture(
+        join(sourceDir, '.agents/delivery/phase-03/handoffs/p3-01-handoff.md'),
+        'old\n',
+      );
+      await writeFixture(
+        join(sourceDir, '.agents/delivery/phase-03/handoffs/p3-02-handoff.md'),
+        'prev\n',
+      );
+      await writeFixture(
+        join(sourceDir, '.agents/delivery/phase-03/handoffs/p3-03-handoff.md'),
+        'current\n',
+      );
+      await writeFixture(
+        join(
+          sourceDir,
+          '.agents/delivery/phase-03/reviews/P3.01-ai-review.fetch.json',
+        ),
+        '{"old":true}\n',
+      );
+      await writeFixture(
+        join(
+          sourceDir,
+          '.agents/delivery/phase-03/reviews/P3.02-ai-review.fetch.json',
+        ),
+        '{"prev":true}\n',
+      );
+      await writeFixture(
+        join(
+          sourceDir,
+          '.agents/delivery/phase-03/reviews/P3.02-ai-review.triage.json',
+        ),
+        '{"triage":true}\n',
+      );
+      await writeFixture(
+        join(
+          sourceDir,
+          '.agents/delivery/phase-03/reviews/P3.03-ai-review.fetch.json',
+        ),
+        '{"current":true}\n',
+      );
+      await writeFixture(
+        join(targetDir, '.agents/delivery/phase-03/handoffs/p3-03-handoff.md'),
+        'stale\n',
+      );
+
+      const state: DeliveryState = {
+        planKey: 'phase-03',
+        planPath: 'docs/02-delivery/phase-03/implementation-plan.md',
+        statePath: '.agents/delivery/phase-03/state.json',
+        reviewsDirPath: '.agents/delivery/phase-03/reviews',
+        handoffsDirPath: '.agents/delivery/phase-03/handoffs',
+        reviewPollIntervalMinutes: 6,
+        reviewPollMaxWaitMinutes: 12,
+        tickets: [
+          {
+            id: 'P3.01',
+            title: 'Old ticket',
+            slug: 'old-ticket',
+            ticketFile: 'docs/ticket-01.md',
+            status: 'done',
+            branch: 'agents/p3-01-old-ticket',
+            baseBranch: 'main',
+            worktreePath: '/tmp/p3_01',
+            handoffPath: '.agents/delivery/phase-03/handoffs/p3-01-handoff.md',
+          },
+          {
+            id: 'P3.02',
+            title: 'Previous ticket',
+            slug: 'previous-ticket',
+            ticketFile: 'docs/ticket-02.md',
+            status: 'done',
+            branch: 'agents/p3-02-previous-ticket',
+            baseBranch: 'agents/p3-01-old-ticket',
+            worktreePath: '/tmp/p3_02',
+            handoffPath: '.agents/delivery/phase-03/handoffs/p3-02-handoff.md',
+          },
+          {
+            id: 'P3.03',
+            title: 'Current ticket',
+            slug: 'current-ticket',
+            ticketFile: 'docs/ticket-03.md',
+            status: 'in_progress',
+            branch: 'agents/p3-03-current-ticket',
+            baseBranch: 'agents/p3-02-previous-ticket',
+            worktreePath: targetDir,
+            handoffPath: '.agents/delivery/phase-03/handoffs/p3-03-handoff.md',
+          },
+        ],
+      };
+
+      await materializeTicketContext(state, sourceDir, 'P3.03');
+
+      expect(
+        await readFile(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/handoffs/p3-02-handoff.md',
+          ),
+          'utf8',
+        ),
+      ).toBe('prev\n');
+      expect(
+        await readFile(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/handoffs/p3-03-handoff.md',
+          ),
+          'utf8',
+        ),
+      ).toBe('current\n');
+      expect(
+        existsSync(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/handoffs/p3-01-handoff.md',
+          ),
+        ),
+      ).toBe(false);
+      expect(
+        existsSync(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/reviews/P3.01-ai-review.fetch.json',
+          ),
+        ),
+      ).toBe(false);
+      expect(
+        await readFile(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/reviews/P3.02-ai-review.fetch.json',
+          ),
+          'utf8',
+        ),
+      ).toBe('{"prev":true}\n');
+      expect(
+        await readFile(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/reviews/P3.02-ai-review.triage.json',
+          ),
+          'utf8',
+        ),
+      ).toBe('{"triage":true}\n');
+      expect(
+        await readFile(
+          join(
+            targetDir,
+            '.agents/delivery/phase-03/reviews/P3.03-ai-review.fetch.json',
+          ),
+          'utf8',
+        ),
+      ).toBe('{"current":true}\n');
     } finally {
       await rm(sourceDir, { recursive: true, force: true });
       await rm(targetDir, { recursive: true, force: true });
@@ -4263,7 +4527,7 @@ describe('delivery orchestrator', () => {
       expect(output).toContain('GATED BOUNDARY before starting EE7.02.');
       expect(output).toContain('Prefer /clear for minimum token use');
       expect(output).toContain(
-        'resume_prompt=Immediately execute `bun run deliver --plan docs/02-delivery/engineering-epic-07/implementation-plan.md start`, read the generated handoff artifact as the source of truth for context, and implement EE7.02.',
+        'resume_prompt=Immediately execute `bun run deliver --plan docs/02-delivery/engineering-epic-07/implementation-plan.md start`, read the locally materialized handoff artifact in the started worktree as the source of truth for context, and implement EE7.02.',
       );
     });
 
