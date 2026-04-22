@@ -2,7 +2,7 @@
 
 Pirate Claw is a local CLI for pulling media candidates from RSS feeds, matching them against your rules, and queueing approved downloads in Transmission.
 
-Phases **01–22** shipped the current core product: the CLI/runtime stack, Obsidian Tide dashboard, zero-file-edit bootstrap, browser-only setup flow, and the dashboard Transmission layer (Torrent Manager pause/resume/remove/remove-with-delete, missing-torrent disposition, Feed Event Log with failed-enqueue **Queue** retries, and matching daemon routes). The current follow-on planning sequence is **Phase 23**, **Phase 24**, and **Phase 25**; **Phase 26** remains the v1.0.0 / schema-versioning release ceremony (`schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, tagged release). See `docs/01-product/`.
+Phases **01–23** shipped the current core product: the CLI/runtime stack, Obsidian Tide dashboard, zero-file-edit bootstrap, browser-only setup flow, the dashboard Transmission layer (Torrent Manager pause/resume/remove/remove-with-delete, missing-torrent disposition, Feed Event Log with failed-enqueue **Queue** retries, and matching daemon routes), and browser-managed Plex auth with durable device identity plus best-effort silent renewal. The current follow-on planning sequence is **Phase 24** and **Phase 25**; **Phase 26** remains the v1.0.0 / schema-versioning release ceremony (`schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, tagged release). See `docs/01-product/`.
 
 It currently supports:
 
@@ -19,6 +19,7 @@ It currently supports:
 - daemon HTTP API with read endpoints and bounded config writes when `runtime.apiPort` is set
 - optional TMDB-backed posters, ratings, and metadata when a `tmdb` API key is configured
 - optional Plex-backed library status, watch counts, and last-watched timestamps when a `plex` server is configured
+- browser-managed Plex connect / reconnect from onboarding or `/config`, with durable device identity stored in SQLite and the current usable Plex credential persisted back into `plex.token`
 - browser dashboard (`web/`) with Obsidian Tide styling, starter-mode bootstrap, browser-only onboarding/setup, sidebar navigation, unified config editing, in-context daemon controls, poster-forward TV/movie views, live Transmission stats, dashboard panels for active downlinks and feed outcomes, Torrent Manager context actions (pause/resume/remove/remove-with-delete), missing-torrent disposition, and the failed-enqueue event log with **Queue** retries (deduped matched candidates whose Transmission enqueue failed and are still retryable)
 
 ## Commands
@@ -99,7 +100,7 @@ Config file: `pirate-claw.config.json` (see [`pirate-claw.config.example.json`](
 - `transmission` — RPC URL, credentials, optional `downloadDirs` per media type
 - `runtime` — daemon scheduling and artifacts; `apiPort` enables HTTP API; `apiWriteToken` enables config writes; `tmdbRefreshIntervalMinutes` controls background TMDB refresh (default 360, `0` disables)
 - `tmdb` — optional `apiKey` (or env `PIRATE_CLAW_TMDB_API_KEY`) and cache TTL overrides
-- `plex` — optional `url`, `token` (or env `PIRATE_CLAW_PLEX_TOKEN`), and `refreshIntervalMinutes` for read-only library/watch enrichment
+- `plex` — optional operator-managed `url`, the current usable `token` (normally browser-managed after Connect Plex; env override via `PIRATE_CLAW_PLEX_TOKEN` still works), and `refreshIntervalMinutes` for library/watch refresh cadence
 
 ```json
 {
@@ -205,7 +206,12 @@ Set `runtime.apiPort` to start an HTTP JSON API alongside the daemon:
 | `PUT /api/config`                                  | Bounded runtime + tv.shows write (token + `If-Match` required)                                                                                           |
 | `PUT /api/config/feeds`                            | Replace feeds array (token + `If-Match` required)                                                                                                        |
 | `PUT /api/config/movies`                           | Replace movie policy (token + `If-Match` required)                                                                                                       |
+| `PUT /api/config/plex`                             | Update the operator-managed Plex Media Server URL (token + `If-Match` required)                                                                          |
 | `PUT /api/config/tv/defaults`                      | Replace TV defaults (token + `If-Match` required)                                                                                                        |
+| `GET /api/plex/auth/status`                        | Current Plex auth state (`not_connected`, `connecting`, `connected`, `renewing`, reconnect-required variants)                                            |
+| `POST /api/plex/auth/start`                        | Begin the hosted Plex browser sign-in flow (token required)                                                                                              |
+| `POST /api/plex/auth/finalize`                     | Finalize the hosted Plex browser sign-in and persist the current Plex credential (token required)                                                        |
+| `POST /api/plex/auth/disconnect`                   | Clear the current Plex credential and cancel pending auth work (token + `If-Match` required)                                                             |
 | `POST /api/shows/:slug/tmdb/refresh`               | Refresh TMDB metadata for one TV show (token required)                                                                                                   |
 | `GET /api/transmission/session`                    | Transmission session stats                                                                                                                               |
 | `GET /api/transmission/torrents`                   | Live stats for torrents referenced by tracked candidates (progress, speed, ETA)                                                                          |
@@ -246,9 +252,9 @@ cd web && PIRATE_CLAW_API_URL=http://localhost:5555 PORT=5174 node build/index.j
 
 ## Current Scope
 
-Pirate Claw is a local operator tool for a personal NAS. The roadmap targets **Phase 25** (v1.0.0 / schema versioning) after the shipped Phase 20 Transmission dashboard work.
+Pirate Claw is a local operator tool for a personal NAS. The roadmap now targets **Phases 24–25** for restart-backed completion and UX polish before the **Phase 26** release/versioning ceremony.
 
-**Implemented (Phases 01–20):** RSS ingestion, policy matching, Transmission queuing, lifecycle reconciliation, TMDB enrichment, read dashboard, unified config editing from the UI, post-save daemon restart and Transmission ping controls, full feed and target management, onboarding/resume flow, explicit empty states across the dashboard and key routes, optional read-only Plex Media Server enrichment, the Phase 19 Obsidian Tide redesign with sidebar navigation, dashboard consolidation, poster-forward layouts, movie backdrops, Plex chips, and a TMDB refresh control on TV detail, **plus Phase 20** dashboard Transmission controls (Torrent Manager context actions, missing-torrent disposition, Feed Event Log / failed-enqueue list with **Queue** requeue).
+**Implemented (Phases 01–23):** RSS ingestion, policy matching, Transmission queuing, lifecycle reconciliation, TMDB enrichment, read dashboard, unified config editing from the UI, post-save daemon restart and Transmission ping controls, full feed and target management, onboarding/resume flow, explicit empty states across the dashboard and key routes, optional Plex Media Server enrichment, the Phase 19 Obsidian Tide redesign with sidebar navigation, dashboard consolidation, poster-forward layouts, movie backdrops, Plex chips, a TMDB refresh control on TV detail, **Phase 20** dashboard Transmission controls, and **Phase 23** browser-managed Plex connect / reconnect with durable device identity and best-effort silent renewal.
 
 **Implemented (Phase 20):** Dashboard Torrent Manager actions (pause, resume, remove, remove-with-delete), missing-torrent disposition, Transmission failures / requeue, related daemon JSON endpoints, and the `pirateClawDisposition` + derived display-state model (see `docs/01-product/phase-20-dashboard-torrent-actions.md`).
 

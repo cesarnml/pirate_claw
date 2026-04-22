@@ -558,7 +558,11 @@ Goal:
 
 Current status:
 
-- product definition and implementation plan drafted; see [`docs/01-product/phase-23-plex-browser-auth-and-credential-lifecycle.md`](../01-product/phase-23-plex-browser-auth-and-credential-lifecycle.md) and [`docs/02-delivery/phase-23/implementation-plan.md`](../02-delivery/phase-23/implementation-plan.md)
+- implemented in the current Phase 23 delivery stack
+- operators can connect Plex from onboarding or `/config` through Plex's hosted browser flow instead of manually extracting a token
+- Pirate Claw persists durable device identity and renewal state in SQLite while continuing to persist the current usable credential in `plex.token`
+- best-effort silent renewal now runs at startup, first Plex touch, and auth-failure retry paths; reconnect-required states stay explicit in the UI when renewal fails
+- Phase 24 should assume both `pirate-claw.db` and the config file containing `plex.token` survive restart/supervision boundaries together
 
 ## Phase 24: Synology Supervision and Restart Completion
 

@@ -10,7 +10,7 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through **Phase 19** in the current delivery stack (product phases 01–19; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–19 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec is the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI. **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) is the dashboard-as-Transmission-proxy product contract; that scope is **shipped on `main`**. **Phases 21–25** now define the product-completion path after that shipped dashboard slice: bootstrap contract, browser-only setup, Plex browser auth + credential lifecycle, Synology restart-backed completion, then UX/UI polish. **Phase 26** ([`phase-26-v1-release-and-schema-versioning.md`](../01-product/phase-26-v1-release-and-schema-versioning.md)) is the v1.0.0 / schema-versioning release ceremony after those product-completion phases land.
+Pirate Claw is implemented through **Phase 23** in the current delivery stack (product phases 01–23; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–23 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec remains the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI, **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) remains the dashboard-as-Transmission-proxy contract, and **Phase 23** ([`phase-23-plex-browser-auth-and-credential-lifecycle.md`](../01-product/phase-23-plex-browser-auth-and-credential-lifecycle.md)) is now the live Plex auth/lifecycle contract. **Phases 24–25** define the remaining product-completion path after that shipped Plex lifecycle slice: Synology restart-backed completion, then UX/UI polish. **Phase 26** ([`phase-26-v1-release-and-schema-versioning.md`](../01-product/phase-26-v1-release-and-schema-versioning.md)) is the v1.0.0 / schema-versioning release ceremony after those product-completion phases land.
 
 Current delivered surface:
 
@@ -32,7 +32,7 @@ Current delivered surface:
 - Phase 19 UI surface: Obsidian Tide design tokens, persistent left sidebar on desktop with mobile drawer fallback, four top-level routes (`/`, `/shows`, `/movies`, `/config`), poster-forward TV/movie views, show-detail TMDB refresh, and Plex chips/watch-state across supported library views
 - Phase 20 dashboard torrent proxy (shipped on `main`, see product doc above): Torrent Manager with live Transmission rows and context-menu pause, resume, remove, and remove-with-delete; Transmission failures card listing deduped enqueue failures with Queue-to-retry; daemon API and downloader wiring that support those flows
 - optional TMDB enrichment: `tmdb` config block and/or `PIRATE_CLAW_TMDB_API_KEY`, SQLite-backed cache, lazy enrichment on API reads, and an optional daemon background refresh cadence via `runtime.tmdbRefreshIntervalMinutes` (default 6 hours; set `0` to disable)
-- optional Plex enrichment: `plex` config block and/or `PIRATE_CLAW_PLEX_TOKEN`, SQLite-backed movie/show cache, background refresh sweeps, and read-only `plexStatus` / `watchCount` / `lastWatchedAt` fields on `/api/movies` and `/api/shows`
+- optional Plex enrichment with browser-managed auth: operator-managed `plex.url`, browser Connect/Reconnect flow in onboarding and `/config`, durable device identity and auth state in SQLite, current usable token persisted in `plex.token`, best-effort silent renewal, background refresh sweeps, and read-only `plexStatus` / `watchCount` / `lastWatchedAt` fields on `/api/movies` and `/api/shows`
 - Phase 16 config editing: unified `/config` accordion cards, per-section toast feedback, post-save daemon restart affordance, Transmission ping, and read-only tooltips when write auth is absent
 - Phase 17 onboarding and empty states: `/onboarding` guided first-run flow, strict initial-empty auto-trigger plus dismissal suppression/resume, blocked onboarding when writes are disabled, and explicit empty-state guidance across `/`, `/config`, `/shows`, `/movies`, and `/candidates/unmatched`
 
@@ -58,15 +58,15 @@ Still deferred (beyond the current Phase 21–25 planning sequence):
 - Synology archiving
 - ingestion redesign beyond the local SQLite model
 
-Last verified against `README.md`, roadmap, and active product docs: 2026-04-21.
+Last verified against `README.md`, roadmap, and active product docs: 2026-04-22.
 
 Current planning focus:
 
 - see [`roadmap.md`](./roadmap.md) for numbered phases and what is implemented on `main`
 - use the roadmap to confirm whether the request is a bounded standalone change or needs a new approved phase/epic planning pass
 - treat the current Phase 07 config surface and the current extracted delivery-orchestrator module boundaries as the baseline for future work
-- the next product-completion planning buckets are Phase 21 (bootstrap contract), Phase 22 (browser-only setup), Phase 23 (Plex browser auth + credential lifecycle), Phase 24 (Synology supervision/restart completion), and Phase 25 (post-functional UX/UI polish)
-- treat Phase 23 as a focused follow-on to the shipped Phase 22 setup flow, not as a rewrite of the Phase 22 contract
+- the next product-completion planning buckets are Phase 24 (Synology supervision/restart completion) and Phase 25 (post-functional UX/UI polish)
+- treat Phase 24 as a follow-on to the shipped Phase 23 browser-auth contract, not as a replacement for the new persisted Plex auth/device boundary
 - Phase 26 (`schemaVersion`, tagged v1, `VERSIONING.md`, changelog) is the release/versioning ceremony after those product-completion phases; keep Phase 20 dashboard torrent work in [`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md), not under the Phase 19 contract
 
 ## Read These Docs By Task Type

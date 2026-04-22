@@ -1,6 +1,6 @@
 # Phase 23 Implementation Plan
 
-**Status:** Not started — ticket decomposition proposed; awaiting developer approval.
+**Status:** Delivered in the active Phase 23 stack (`P23.01`–`P23.05`).
 
 Phase 23 replaces manual Plex token entry with browser-managed Plex auth, persists the device identity needed for renewal, and adds best-effort silent credential renewal plus explicit reconnect-required UI states when renewal fails.
 
@@ -18,7 +18,7 @@ Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.m
 
 - `plex.url` remains an explicit operator-managed PMS URL; Phase 23 does **not** own server discovery or selection
 - Phase 23 uses Plex's current recommended browser-oriented auth flow, not a nicer wrapper around manual token extraction
-- Phase 23 uses Plex Managed OAuth (redirect + refresh-token flow), not the PIN polling flow; PIN-derived `X-Plex-Token` behavior is too brittle for Pirate Claw's reconnect and renewal contract
+- Phase 23 uses Plex's current PIN + hosted-browser auth flow with durable device JWK identity; Pirate Claw does not ask the operator to poll or manually extract tokens
 - the current usable Plex credential continues to live in `plex.token`; no new JWT-specific config shape is introduced
 - Phase 23 scope is expanded beyond first-run connect to include persisted device identity plus best-effort silent renewal
 - renewal failures surface as reconnect-required UI state rather than a silent broken integration
