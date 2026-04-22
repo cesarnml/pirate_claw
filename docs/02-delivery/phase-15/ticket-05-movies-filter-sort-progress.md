@@ -120,7 +120,7 @@ return {
 - Status overlay chip (same color scheme as P15.03)
 - Genre badge from `tmdb?.genres[0]` when available
 
-### `web/src/routes/movies/movies.test.ts`
+### `web/test/routes/movies/movies.test.ts`
 
 Update tests to cover:
 

@@ -32,7 +32,7 @@ The reply text is generic: "Addressed during patch phase — see PR body for ful
 - `tools/delivery/review.ts` — `ReviewDependencies` type: add `replyToReviewThread` optional dependency
 - If Option A: `AiReviewComment` type in `review.ts` — add `databaseId?: number`
 - If Option A: GraphQL fetch query in `review.ts` — add `databaseId` to `reviewComments` node
-- `tools/delivery/orchestrator.test.ts` — add test for reply-then-resolve sequence; verify reply failure does not block resolution
+- `tools/delivery/test/orchestrator.test.ts` — add test for reply-then-resolve sequence; verify reply failure does not block resolution
 
 ## Acceptance Criteria
 

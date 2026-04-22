@@ -49,7 +49,7 @@ Build the shared toast infrastructure and save-feedback wiring that all card tic
 | Daemon restart triggered                     | success       | "Restarting… the page may become temporarily unavailable"         |
 | Daemon restart call failed                   | error         | "Restart failed — try again or restart manually"                  |
 
-### Tests — `web/src/routes/config/config.test.ts` or `page.server.test.ts`
+### Tests — `web/test/routes/config/config.test.ts` or `web/test/routes/config/page.server.test.ts`
 
 - `restartDaemon` action: disabled writes → fail 403; missing token → fail 401; happy path → `{ restarted: true }`.
 - Remove or update tests that assert on the old Alert-based feedback form fields if they exist.

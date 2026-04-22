@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import StatusChip from './StatusChip.svelte';
+import StatusChip from '../../../src/lib/components/StatusChip.svelte';
 
 describe('StatusChip', () => {
 	it('renders the supported vocabulary in uppercase form', () => {

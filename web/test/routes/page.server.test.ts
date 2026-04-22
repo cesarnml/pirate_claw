@@ -17,7 +17,7 @@ describe('dashboard page server load', () => {
 		vi.doMock('$env/dynamic/private', () => ({
 			env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 		}));
-		const { load } = await import('./+page.server');
+		const { load } = await import('../../src/routes/+page.server');
 
 		apiFetchMock
 			.mockResolvedValueOnce({ uptime: 1, startedAt: '2024-01-01T00:00:00Z' })
@@ -40,7 +40,7 @@ describe('dashboard page server load', () => {
 		vi.doMock('$env/dynamic/private', () => ({
 			env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 		}));
-		const { load } = await import('./+page.server');
+		const { load } = await import('../../src/routes/+page.server');
 
 		apiFetchMock
 			.mockResolvedValueOnce({ uptime: 1, startedAt: '2024-01-01T00:00:00Z' })
@@ -60,7 +60,7 @@ describe('dashboard page server load', () => {
 		vi.doMock('$env/dynamic/private', () => ({
 			env: { PIRATE_CLAW_API_WRITE_TOKEN: '' }
 		}));
-		const { load } = await import('./+page.server');
+		const { load } = await import('../../src/routes/+page.server');
 
 		apiFetchMock
 			.mockResolvedValueOnce({ uptime: 1, startedAt: '2024-01-01T00:00:00Z' })

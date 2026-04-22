@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
-import Page from './+page.svelte';
+import Page from '../../../src/routes/movies/+page.svelte';
 import type { MovieBreakdown, TorrentStatSnapshot } from '$lib/types';
-import type { PageData } from './$types';
+import type { PageData } from '../../../src/routes/movies/$types';
 
 const sharedLayoutData: Pick<
 	PageData,

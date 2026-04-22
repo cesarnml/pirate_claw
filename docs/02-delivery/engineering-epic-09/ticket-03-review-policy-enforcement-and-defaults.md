@@ -123,7 +123,7 @@ Son-of-Anton guidance is updated to describe:
 - `tools/delivery/orchestrator.ts`
 - `tools/delivery/ticket-flow.ts`
 - `tools/delivery/state.ts` if status/output rendering needs updates
-- `tools/delivery/orchestrator.test.ts`
+- `tools/delivery/test/orchestrator.test.ts`
 - `.agents/skills/son-of-anton-ethos/SKILL.md`
 - any docs/examples that show review-policy defaults
 

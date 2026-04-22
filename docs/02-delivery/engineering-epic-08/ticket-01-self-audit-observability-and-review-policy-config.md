@@ -50,7 +50,7 @@ surface exists; behavior is unchanged.
 - `tools/delivery/config.ts`
 - `tools/delivery/orchestrator.ts` (`TicketState`, `TicketStatus` rendering)
 - `tools/delivery/ticket-flow.ts` (`recordPostVerifySelfAudit`)
-- `tools/delivery/orchestrator.test.ts`
+- `tools/delivery/test/orchestrator.test.ts`
 
 ## Acceptance Criteria
 

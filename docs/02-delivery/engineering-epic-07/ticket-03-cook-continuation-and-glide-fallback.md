@@ -41,7 +41,7 @@ Repo default requirement:
 - `orchestrator.config.json`
 - `tools/delivery/orchestrator.ts`
 - `tools/delivery/ticket-flow.ts`
-- `tools/delivery/orchestrator.test.ts`
+- `tools/delivery/test/orchestrator.test.ts`
 
 ## Acceptance Criteria
 

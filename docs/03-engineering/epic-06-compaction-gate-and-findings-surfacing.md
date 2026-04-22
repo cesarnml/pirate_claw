@@ -83,7 +83,7 @@ exist):
 ```
 findings (2):
   [coderabbit] web/src/routes/candidates/unmatched/+page.svelte:58 — Add an explicit label for the search field. [minor]
-  [coderabbit] web/src/routes/candidates/unmatched/unmatched.test.ts:63 — Tighten the "no match" assertion to verify zero data rows. [nitpick]
+  [coderabbit] web/test/routes/candidates/unmatched/unmatched.test.ts:63 — Tighten the "no match" assertion to verify zero data rows. [nitpick]
 ```
 
 **Scope boundary:** Findings with `is_outdated: true` or `is_resolved: true` are

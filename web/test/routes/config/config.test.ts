@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import Page from './+page.svelte';
+import Page from '../../../src/routes/config/+page.svelte';
 import type { AppConfig } from '$lib/types';
 
 vi.mock('svelte-sonner', () => ({

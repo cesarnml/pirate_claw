@@ -43,7 +43,7 @@ PR #84's format (which received good reviewer feedback) is the reference: findin
 - `tools/delivery/pr-metadata.ts`
   - `buildResolvedFindingBullets`: allow thread resolution detail even when `effectiveContext === 'history'`
   - rendering section: prefer findings over commit bullets when `reviewStatus === 'patched'`
-- `tools/delivery/orchestrator.test.ts` — update stale-SHA + patched snapshots
+- `tools/delivery/test/orchestrator.test.ts` — update stale-SHA + patched snapshots
 
 ## Acceptance Criteria
 

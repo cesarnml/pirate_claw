@@ -22,4 +22,4 @@ Movies page is visually consistent with Phase 12; primary render and error paths
 
 Migrated the movies route to **shadcn** `Card` rows (poster + metadata), `Badge` with **`aria-label`** for TMDB rating, and the shared **destructive `Alert`** pattern for API errors. Metadata uses token-aligned `text-foreground` / `text-muted-foreground` instead of raw grays.
 
-Tests: **`web/src/routes/movies/movies.test.ts`** (happy path, empty, error).
+Tests: **`web/test/routes/movies/movies.test.ts`** (happy path, empty, error).

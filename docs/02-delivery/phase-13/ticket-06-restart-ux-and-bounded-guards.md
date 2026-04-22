@@ -8,7 +8,7 @@ Finalize Settings UX with explicit restart-required messaging and strict guardra
 
 - Add explicit “restart required” confirmation/notice on successful save in [`web/src/routes/config/+page.svelte`](../../../web/src/routes/config/+page.svelte).
 - Enforce server-side payload guardrails in [`web/src/routes/config/+page.server.ts`](../../../web/src/routes/config/+page.server.ts) so only approved runtime fields are forwarded.
-- Add/expand tests in [`web/src/routes/config/config.test.ts`](../../../web/src/routes/config/config.test.ts) covering:
+- Add/expand tests in [`web/test/routes/config/config.test.ts`](../../../web/test/routes/config/config.test.ts) covering:
   - successful save with restart message
   - conflict error rendering/handling
   - out-of-scope field rejection behavior

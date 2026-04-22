@@ -42,7 +42,7 @@ state; the operator should not have to compose it manually.
 - `tools/delivery/orchestrator.ts`
 - `tools/delivery/ticket-flow.ts` only if needed to protect handoff-creation
   ownership
-- `tools/delivery/orchestrator.test.ts`
+- `tools/delivery/test/orchestrator.test.ts`
 
 ## Acceptance Criteria
 

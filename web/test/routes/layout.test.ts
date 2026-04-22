@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { DaemonHealth, SessionInfo } from '$lib/types';
-import Layout from './+layout.svelte';
+import Layout from '../../src/routes/+layout.svelte';
 
 const { page } = vi.hoisted(() => ({
 	page: (() => {

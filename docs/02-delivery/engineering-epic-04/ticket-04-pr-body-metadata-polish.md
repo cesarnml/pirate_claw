@@ -60,7 +60,7 @@ Drop milliseconds, drop the `T`/`Z` ISO separators, keep UTC suffix.
 
 - `tools/delivery/pr-metadata.ts` — Summary section builder (ticket file line) and review status section (SHA lines, timestamp line)
 - Repo remote URL (owner/repo) needed for permalink and SHA links — derive from `gh repo view --json owner,name` or pass as context already available in the orchestrator
-- `tools/delivery/orchestrator.test.ts` — update any snapshot assertions that include these lines
+- `tools/delivery/test/orchestrator.test.ts` — update any snapshot assertions that include these lines
 
 ## Acceptance Criteria
 

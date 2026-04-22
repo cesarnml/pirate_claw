@@ -9,7 +9,7 @@ Migrate [`web/src/routes/candidates/+page.svelte`](../../../web/src/routes/candi
 - Preserve [`web/src/routes/candidates/+page.server.ts`](../../../web/src/routes/candidates/+page.server.ts) behavior and types (no API contract changes).
 - Replace ad hoc Tailwind markup with shared components (table, input/select for filters, badges for status/media type, etc.) consistent with the shell.
 - Keep existing behaviors: client-side sort, TV title links to `/shows/[slug]`, empty and error states.
-- Update [`web/src/routes/candidates/candidates.test.ts`](../../../web/src/routes/candidates/candidates.test.ts) for new DOM structure; keep the same behavioral assertions (columns, sort, empty, error).
+- Update [`web/test/routes/candidates/candidates.test.ts`](../../../web/test/routes/candidates/candidates.test.ts) for new DOM structure; keep the same behavioral assertions (columns, sort, empty, error).
 
 ## Out Of Scope
 

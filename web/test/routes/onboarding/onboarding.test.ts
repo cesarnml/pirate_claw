@@ -7,7 +7,7 @@ import feedOnlyConfig from '../../../../fixtures/api/config-feed-only.json';
 import configWithMovies from '../../../../fixtures/api/config-with-movies.json';
 import configWithTvDefaults from '../../../../fixtures/api/config-with-tv-defaults.json';
 import type { AppConfig } from '$lib/types';
-import Page from './+page.svelte';
+import Page from '../../../src/routes/onboarding/+page.svelte';
 
 const emptyConfigFixture = emptyConfig as AppConfig;
 const feedOnlyConfigFixture = feedOnlyConfig as AppConfig;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import Page from './+page.svelte';
+import Page from '../../../src/routes/shows/+page.svelte';
 import type { ShowBreakdown, TorrentStatSnapshot } from '$lib/types';
 
 const sharedLayoutData = {

@@ -88,7 +88,7 @@ in `orchestrator.config.json`.
 - `tools/delivery/ticket-flow.ts` (`recordCodexPreflight`, `openPullRequest` gate)
 - `tools/delivery/state.ts` (`statusRank`, state sync)
 - `tools/delivery/cli.ts` (register `codex-preflight` command)
-- `tools/delivery/orchestrator.test.ts`
+- `tools/delivery/test/orchestrator.test.ts`
 
 ## Acceptance Criteria
 

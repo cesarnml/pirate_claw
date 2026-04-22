@@ -8,7 +8,7 @@ Migrate [`web/src/routes/+page.svelte`](../../../web/src/routes/+page.svelte) to
 
 - Preserve [`web/src/routes/+page.server.ts`](../../../web/src/routes/+page.server.ts) data loading.
 - Restructure the dashboard using shadcn-svelte components (cards, lists, alerts for errors) for a consistent look with P12.02.
-- Update [`web/src/routes/dashboard.test.ts`](../../../web/src/routes/dashboard.test.ts) for any changed markup while preserving behavioral coverage.
+- Update [`web/test/routes/dashboard.test.ts`](../../../web/test/routes/dashboard.test.ts) for any changed markup while preserving behavioral coverage.
 
 ## Out Of Scope
 

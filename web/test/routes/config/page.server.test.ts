@@ -16,7 +16,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../src/routes/config/+page.server');
 
 			apiRequestMock
 				.mockResolvedValueOnce(
@@ -49,7 +49,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../src/routes/config/+page.server');
 
 			apiRequestMock
 				.mockResolvedValueOnce(
@@ -80,7 +80,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../src/routes/config/+page.server');
 
 			apiRequestMock
 				.mockResolvedValueOnce(
@@ -136,7 +136,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 			apiRequestMock.mockImplementation((url: string) =>
 				url === '/api/setup/transmission/status'
 					? Promise.resolve(
@@ -173,7 +173,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 			apiRequestMock.mockImplementation((url: string) =>
 				url === '/api/setup/transmission/status'
 					? Promise.resolve(
@@ -207,7 +207,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: {}
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const result = await actions.testConnection({
 				request: new Request('http://localhost/config', { method: 'POST' })
@@ -226,7 +226,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('ifMatch', '"rev-1"');
@@ -250,7 +250,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('showName', 'Test Show');
@@ -274,7 +274,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
 			);
@@ -308,7 +308,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('runIntervalMinutes', '15');
@@ -332,7 +332,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('runtimeIfMatch', '"rev-1"');
@@ -358,7 +358,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
 			);
@@ -394,7 +394,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('runtimeIfMatch', '"rev-1"');
@@ -421,7 +421,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: {}
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const result = await actions.restartDaemon({
 				request: new Request('http://localhost/config', { method: 'POST' })
@@ -435,7 +435,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: '' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 
 			const result = await actions.restartDaemon({
 				request: new Request('http://localhost/config', { method: 'POST' })
@@ -449,7 +449,7 @@ describe('config page server actions', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/config/+page.server');
 			apiRequestMock.mockResolvedValue(new Response(null, { status: 202 }));
 
 			const result = await actions.restartDaemon({

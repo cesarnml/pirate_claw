@@ -8,7 +8,7 @@ Migrate [`web/src/routes/shows/[slug]/+page.svelte`](../../../web/src/routes/sho
 
 - Preserve [`web/src/routes/shows/[slug]/+page.server.ts`](../../../web/src/routes/shows/[slug]/+page.server.ts).
 - Rebuild layout with shadcn-svelte (tables, cards, scroll areas, badges) while preserving information hierarchy and accessibility (keyboard, headings).
-- Update [`web/src/routes/shows/[slug]/shows.test.ts`](../../../web/src/routes/shows/[slug]/shows.test.ts).
+- Update [`web/test/routes/shows/[slug]/shows.test.ts`](../../../web/test/routes/shows/[slug]/shows.test.ts).
 
 ## Out Of Scope
 

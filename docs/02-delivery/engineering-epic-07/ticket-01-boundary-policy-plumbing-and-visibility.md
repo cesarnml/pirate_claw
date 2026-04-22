@@ -38,7 +38,7 @@ Behavioral constraint for this ticket:
 - `tools/delivery/config.ts`
 - `tools/delivery/cli.ts`
 - `tools/delivery/orchestrator.ts`
-- `tools/delivery/orchestrator.test.ts`
+- `tools/delivery/test/orchestrator.test.ts`
 - `orchestrator.config.json`
 
 ## Acceptance Criteria

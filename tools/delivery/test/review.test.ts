@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'bun:test';
 
-import type { AiReviewFetcherResult } from './orchestrator';
-import { buildStandaloneReviewStartedEvent } from './pr-metadata';
+import type { AiReviewFetcherResult } from '../orchestrator';
+import { buildStandaloneReviewStartedEvent } from '../pr-metadata';
 import {
   DEFAULT_REVIEW_POLLING_PROFILE,
   pollForAiReview,
   runAiReviewLifecycleWithAdapters,
   type ReviewPollingProfile,
-} from './review';
-import type { TicketReviewDependencies } from './review';
+} from '../review';
+import type { TicketReviewDependencies } from '../review';
 
 function emptyUndetected(): AiReviewFetcherResult {
   return {

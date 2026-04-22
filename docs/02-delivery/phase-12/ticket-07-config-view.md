@@ -7,7 +7,7 @@ Migrate [`web/src/routes/config/+page.svelte`](../../../web/src/routes/config/+p
 ## Scope
 
 - Preserve [`web/src/routes/config/+page.server.ts`](../../../web/src/routes/config/+page.server.ts).
-- Update [`web/src/routes/config/config.test.ts`](../../../web/src/routes/config/config.test.ts).
+- Update [`web/test/routes/config/config.test.ts`](../../../web/test/routes/config/config.test.ts).
 
 ## Out Of Scope
 

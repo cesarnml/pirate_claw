@@ -9,7 +9,7 @@ import type {
 	ReviewOutcomeRecord,
 	TorrentStatSnapshot
 } from '$lib/types';
-import Page from './+page.svelte';
+import Page from '../../src/routes/+page.svelte';
 
 const mockHealth: DaemonHealth = {
 	uptime: 3661000,

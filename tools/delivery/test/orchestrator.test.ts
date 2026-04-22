@@ -65,7 +65,7 @@ import {
   formatStatus,
   resolveEffectiveAdvanceBoundaryMode,
   type DeliveryState,
-} from './orchestrator';
+} from '../orchestrator';
 
 async function readArtifactJson(cwd: string, relativePath: string) {
   return JSON.parse(await readFile(join(cwd, relativePath), 'utf8')) as Record<
@@ -73,10 +73,10 @@ async function readArtifactJson(cwd: string, relativePath: string) {
     unknown
   >;
 }
-import { getUsage, parseCliArgs } from './cli';
-import { advanceToNextTicket } from './ticket-flow';
-import { normalizeDeliveryStateFromPersisted } from './state';
-import { resolveNativeReviewThreads } from './review';
+import { getUsage, parseCliArgs } from '../cli';
+import { advanceToNextTicket } from '../ticket-flow';
+import { normalizeDeliveryStateFromPersisted } from '../state';
+import { resolveNativeReviewThreads } from '../review';
 
 describe('delivery orchestrator', () => {
   it('parses an implementation plan into ordered tickets', () => {
@@ -4373,7 +4373,7 @@ describe('delivery orchestrator', () => {
               kind: 'finding',
               channel: 'inline_review',
               body: '**Tighten the "no match" assertion to verify zero data rows.**\n\nCurrent checks can pass even if rows still render.',
-              path: 'web/src/routes/candidates/unmatched/unmatched.test.ts',
+              path: 'web/test/routes/candidates/unmatched/unmatched.test.ts',
               line: 63,
               isOutdated: false,
               isResolved: false,
@@ -4391,7 +4391,7 @@ describe('delivery orchestrator', () => {
         '[coderabbit] web/src/routes/candidates/unmatched/+page.svelte:58 — Add an explicit label for the search field.',
       );
       expect(output).toContain(
-        '[coderabbit] web/src/routes/candidates/unmatched/unmatched.test.ts:63 — Tighten the "no match" assertion to verify zero data rows.',
+        '[coderabbit] web/test/routes/candidates/unmatched/unmatched.test.ts:63 — Tighten the "no match" assertion to verify zero data rows.',
       );
     });
 

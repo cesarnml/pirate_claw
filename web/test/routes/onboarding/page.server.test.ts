@@ -18,7 +18,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: '' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockImplementation((url: string) =>
 				url === '/api/setup/readiness'
 					? Promise.resolve(
@@ -45,7 +45,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockImplementation((url: string) =>
 				url === '/api/setup/readiness'
 					? Promise.resolve(
@@ -77,7 +77,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockImplementation((url: string) =>
 				url === '/api/setup/readiness'
 					? Promise.resolve(
@@ -111,7 +111,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('feedName', 'TV Feed');
@@ -137,7 +137,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(JSON.stringify({ error: 'Feed URL failed validation.' }), {
 					status: 400,
@@ -170,7 +170,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
 			);
@@ -213,7 +213,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('showName', 'Show Alpha');
@@ -237,7 +237,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock
 				.mockResolvedValueOnce(new Response(null, { status: 200, headers: { etag: '"rev-2"' } }))
 				.mockResolvedValueOnce(new Response(null, { status: 200, headers: { etag: '"rev-3"' } }));
@@ -281,7 +281,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock
 				.mockResolvedValueOnce(new Response(null, { status: 200, headers: { etag: '"rev-2"' } }))
 				.mockResolvedValueOnce(new Response(null, { status: 200, headers: { etag: '"rev-3"' } }));
@@ -314,7 +314,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock
 				.mockResolvedValueOnce(new Response(null, { status: 200, headers: { etag: '"rev-2"' } }))
 				.mockResolvedValueOnce(
@@ -342,7 +342,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(JSON.stringify({ error: 'TV defaults failed.' }), {
 					status: 400,
@@ -375,7 +375,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('ifMatch', '"rev-1"');
@@ -401,7 +401,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('ifMatch', '"rev-1"');
@@ -427,7 +427,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
 			);
@@ -470,7 +470,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
 			);
@@ -515,7 +515,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: {}
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(
 					JSON.stringify({
@@ -542,7 +542,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 
 			const body = new URLSearchParams();
 			body.set('tvDir', '/data/tv');
@@ -566,7 +566,7 @@ describe('onboarding page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../src/routes/onboarding/+page.server');
 			apiRequestMock.mockResolvedValue(
 				new Response(null, { status: 200, headers: { etag: '"rev-2"' } })
 			);

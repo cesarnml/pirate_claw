@@ -74,7 +74,7 @@ export type SkippedOutcomeRecord = {
 
 Add "Unmatched" link to the navigation in `web/src/routes/+layout.svelte` under Candidates (or as a sibling nav item). Match the existing nav link style.
 
-### `web/src/routes/candidates/unmatched/unmatched.test.ts`
+### `web/test/routes/candidates/unmatched/unmatched.test.ts`
 
 Tests anchored to `fixtures/api/outcomes-skipped-no-match.json`:
 

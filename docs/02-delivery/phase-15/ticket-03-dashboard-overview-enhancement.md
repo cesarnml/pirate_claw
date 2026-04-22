@@ -95,7 +95,7 @@ Replace the current Daemon card + Recent Runs table with the full dashboard layo
 - Each card: TMDB poster (`tmdb?.posterUrl`; graceful placeholder "No poster" when TMDB unconfigured), title, `completedAt` date formatted as "MMM D, YYYY"
 - Grid hidden when no completed candidates
 
-### `web/src/routes/dashboard.test.ts`
+### `web/test/routes/dashboard.test.ts`
 
 Update existing test file with new mock shapes anchored to the fixture snapshots. Add tests for:
 

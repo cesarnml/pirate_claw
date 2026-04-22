@@ -11,7 +11,7 @@ Install and wire **shadcn-svelte** (and required Tailwind/theme integration), re
 - Refactor [`web/src/routes/+layout.svelte`](../../../web/src/routes/+layout.svelte): header, navigation, main landmark, focus-visible behavior using shared primitives.
 - Global nav links: Home (`/`), Candidates (`/candidates`), Shows (`/shows`), **Movies (`/movies`)**, Config (`/config`).
 - Preserve [`web/src/lib/server/api.ts`](../../../web/src/lib/server/api.ts) and server-only env discipline for `PIRATE_CLAW_API_URL`.
-- Update [`web/src/routes/layout.test.ts`](../../../web/src/routes/layout.test.ts) for the new nav structure and any changed selectors.
+- Update [`web/test/routes/layout.test.ts`](../../../web/test/routes/layout.test.ts) for the new nav structure and any changed selectors.
 - Verify `bun run --cwd web build` succeeds and `docker build` using [`web/Dockerfile`](../../../web/Dockerfile) from repo root still succeeds (adjust Dockerfile only if the build pipeline requires it).
 
 ## Out Of Scope

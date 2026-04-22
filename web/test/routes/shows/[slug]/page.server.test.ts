@@ -20,7 +20,7 @@ describe('shows detail page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { load } = await import('./+page.server');
+			const { load } = await import('../../../../src/routes/shows/[slug]/+page.server');
 
 			apiFetchMock
 				.mockResolvedValueOnce({
@@ -50,7 +50,7 @@ describe('shows detail page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: { PIRATE_CLAW_API_WRITE_TOKEN: 'write-token' }
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../../src/routes/shows/[slug]/+page.server');
 			apiRequestMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
 			const result = await actions.refreshTmdb({ params: { slug: 'the show' } } as never);
@@ -69,7 +69,7 @@ describe('shows detail page server', () => {
 			vi.doMock('$env/dynamic/private', () => ({
 				env: {}
 			}));
-			const { actions } = await import('./+page.server');
+			const { actions } = await import('../../../../src/routes/shows/[slug]/+page.server');
 
 			const result = await actions.refreshTmdb({ params: { slug: 'the show' } } as never);
 

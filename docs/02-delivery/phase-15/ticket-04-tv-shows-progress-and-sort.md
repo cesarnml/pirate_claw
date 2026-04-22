@@ -102,8 +102,8 @@ Same pattern: load `/api/shows` and `/api/transmission/torrents` in parallel. Pa
 
 ### Tests
 
-- `web/src/routes/shows/shows.test.ts`: add test that progress bar renders for active episodes; sort control changes card order
-- `web/src/routes/shows/[slug]/shows.test.ts`: add test that speed/eta row appears for active episodes; hidden for completed episodes
+- `web/test/routes/shows/shows.test.ts`: add test that progress bar renders for active episodes; sort control changes card order
+- `web/test/routes/shows/[slug]/shows.test.ts`: add test that speed/eta row appears for active episodes; hidden for completed episodes
 - `src/api.test.ts` or equivalent: `buildShowBreakdowns` passes through `transmissionPercentDone` and `transmissionTorrentHash`
 
 ## Out of Scope
