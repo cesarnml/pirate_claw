@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomUUID } from 'node:crypto';
 
 import type { Database } from 'bun:sqlite';
 
@@ -18,6 +18,17 @@ export type PlexAuthIdentity = {
   clientIdentifier: string;
   clientName: string;
   platformName: string;
+  keyId: string;
+  keyAlgorithm: 'EdDSA';
+  publicJwk: {
+    kty: 'OKP';
+    crv: 'Ed25519';
+    x: string;
+    kid: string;
+    alg: 'EdDSA';
+    use: 'sig';
+  };
+  privateKeyPem: string;
   refreshToken: string | null;
   tokenExpiresAt: string | null;
   lastAuthenticatedAt: string | null;
@@ -77,6 +88,7 @@ export class PlexAuthStore {
       clientIdentifier: buildClientIdentifier(),
       clientName: PLEX_CLIENT_NAME,
       platformName: PLEX_PLATFORM_NAME,
+      ...createDeviceKeyMaterial(),
       refreshToken: null,
       tokenExpiresAt: null,
       lastAuthenticatedAt: null,
@@ -93,6 +105,10 @@ export class PlexAuthStore {
           client_identifier,
           client_name,
           platform_name,
+          key_id,
+          key_algorithm,
+          public_jwk_json,
+          private_key_pem,
           refresh_token,
           token_expires_at,
           last_authenticated_at,
@@ -100,12 +116,19 @@ export class PlexAuthStore {
           reconnect_required_at,
           created_at,
           updated_at
-        ) VALUES (1, ?1, ?2, ?3, NULL, NULL, NULL, NULL, NULL, ?4, ?4)`,
+        ) VALUES (
+          1, ?1, ?2, ?3, ?4, ?5, ?6, ?7,
+          NULL, NULL, NULL, NULL, NULL, ?8, ?8
+        )`,
       )
       .run(
         created.clientIdentifier,
         created.clientName,
         created.platformName,
+        created.keyId,
+        created.keyAlgorithm,
+        JSON.stringify(created.publicJwk),
+        created.privateKeyPem,
         now,
       );
 
@@ -119,6 +142,10 @@ export class PlexAuthStore {
           client_identifier AS clientIdentifier,
           client_name AS clientName,
           platform_name AS platformName,
+          key_id AS keyId,
+          key_algorithm AS keyAlgorithm,
+          public_jwk_json AS publicJwkJson,
+          private_key_pem AS privateKeyPem,
           refresh_token AS refreshToken,
           token_expires_at AS tokenExpiresAt,
           last_authenticated_at AS lastAuthenticatedAt,
@@ -129,9 +156,20 @@ export class PlexAuthStore {
         FROM plex_auth_identity
         WHERE singleton = 1`,
       )
-      .get() as PlexAuthIdentity | null;
+      .get() as
+      | (Omit<PlexAuthIdentity, 'publicJwk'> & {
+          publicJwkJson: string;
+        })
+      | null;
 
-    return row ?? null;
+    if (!row) {
+      return null;
+    }
+
+    return {
+      ...row,
+      publicJwk: JSON.parse(row.publicJwkJson) as PlexAuthIdentity['publicJwk'],
+    };
   }
 
   createSession(input: CreatePlexAuthSessionInput): {
@@ -327,4 +365,34 @@ function resolveAuthState(
 
 function buildClientIdentifier(): string {
   return `pirate-claw-${randomUUID()}`;
+}
+
+function createDeviceKeyMaterial(): Pick<
+  PlexAuthIdentity,
+  'keyId' | 'keyAlgorithm' | 'publicJwk' | 'privateKeyPem'
+> {
+  const keyId = randomUUID();
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const publicJwk = publicKey.export({
+    format: 'jwk',
+  }) as {
+    kty: 'OKP';
+    crv: 'Ed25519';
+    x: string;
+  };
+
+  return {
+    keyId,
+    keyAlgorithm: 'EdDSA',
+    publicJwk: {
+      ...publicJwk,
+      kid: keyId,
+      alg: 'EdDSA',
+      use: 'sig',
+    },
+    privateKeyPem: privateKey.export({
+      format: 'pem',
+      type: 'pkcs8',
+    }) as string,
+  };
 }

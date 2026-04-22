@@ -32,6 +32,16 @@ describe('PlexAuthStore', () => {
 
     const first = store.ensureIdentity('2026-04-22T08:00:00.000Z');
     expect(first.clientIdentifier).toStartWith('pirate-claw-');
+    expect(first.keyId).toBeTruthy();
+    expect(first.keyAlgorithm).toBe('EdDSA');
+    expect(first.publicJwk).toMatchObject({
+      kty: 'OKP',
+      crv: 'Ed25519',
+      kid: first.keyId,
+      alg: 'EdDSA',
+      use: 'sig',
+    });
+    expect(first.privateKeyPem).toContain('BEGIN PRIVATE KEY');
 
     database.close();
     openDatabases.pop();
@@ -43,6 +53,9 @@ describe('PlexAuthStore', () => {
 
     expect(reloaded.clientIdentifier).toBe(first.clientIdentifier);
     expect(reloaded.createdAt).toBe('2026-04-22T08:00:00.000Z');
+    expect(reloaded.keyId).toBe(first.keyId);
+    expect(reloaded.publicJwk).toEqual(first.publicJwk);
+    expect(reloaded.privateKeyPem).toBe(first.privateKeyPem);
   });
 
   it('creates pending sessions and expires them once the window closes', async () => {
