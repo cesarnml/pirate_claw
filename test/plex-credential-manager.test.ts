@@ -124,12 +124,12 @@ describe('Plex credential renewal', () => {
       authenticatedAt: '2026-04-22T09:00:00.000Z',
     });
 
-    let callCount = 0;
+    const requestUrls: string[] = [];
     const fetchMock = spyOn(globalThis, 'fetch').mockImplementation((async (
       input: RequestInfo | URL,
     ) => {
-      callCount += 1;
       const url = String(input);
+      requestUrls.push(url);
       if (url.endsWith('/api/v2/auth/nonce')) {
         return new Response(JSON.stringify({ error: 'unavailable' }), {
           status: 503,
@@ -167,21 +167,31 @@ describe('Plex credential renewal', () => {
       lastWatchedAt: null,
     };
 
-    await refreshMovieLibraryCache([movie], {
-      cache: cache as never,
-      client,
-      refreshIntervalMinutes: 30,
-      log: (message) => logMessages.push(message),
-    });
+    try {
+      await refreshMovieLibraryCache([movie], {
+        cache: cache as never,
+        client,
+        refreshIntervalMinutes: 30,
+        log: (message) => logMessages.push(message),
+      });
 
-    expect(callCount).toBeGreaterThanOrEqual(5);
-    expect(cache.rows).toEqual([
-      expect.objectContaining({ title: 'Severance', inLibrary: false }),
-    ]);
-    expect(store.getSnapshot('2026-04-22T09:05:00.000Z').state).toBe(
-      'expired_reconnect_required',
-    );
-    fetchMock.mockRestore();
+      expect(
+        requestUrls.filter((url) => url.includes('/api/v2/auth/nonce')).length,
+      ).toBeGreaterThanOrEqual(2);
+      expect(
+        requestUrls.some((url) =>
+          url.includes('http://localhost:32400/library'),
+        ),
+      ).toBe(true);
+      expect(cache.rows).toEqual([
+        expect.objectContaining({ title: 'Severance', inLibrary: false }),
+      ]);
+      expect(store.getSnapshot('2026-04-22T09:05:00.000Z').state).toBe(
+        'expired_reconnect_required',
+      );
+    } finally {
+      fetchMock.mockRestore();
+    }
   });
 });
 
