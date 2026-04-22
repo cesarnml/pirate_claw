@@ -2,7 +2,7 @@
 
 Pirate Claw is a local CLI for pulling media candidates from RSS feeds, matching them against your rules, and queueing approved downloads in Transmission.
 
-Phases **01–19** shipped the core operator stack and Obsidian Tide dashboard. **Phase 20** ships the dashboard Transmission layer (Torrent Manager pause/resume/remove/remove-with-delete, missing-torrent disposition, Feed Event Log with failed-enqueue **Queue** retries, and matching daemon routes). **Phase 25** is the v1.0.0 / schema-versioning release ceremony (`schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, tagged release); see `docs/01-product/`.
+Phases **01–22** shipped the current core product: the CLI/runtime stack, Obsidian Tide dashboard, zero-file-edit bootstrap, browser-only setup flow, and the dashboard Transmission layer (Torrent Manager pause/resume/remove/remove-with-delete, missing-torrent disposition, Feed Event Log with failed-enqueue **Queue** retries, and matching daemon routes). The current follow-on planning sequence is **Phase 23**, **Phase 24**, and **Phase 25**; **Phase 26** remains the v1.0.0 / schema-versioning release ceremony (`schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, tagged release). See `docs/01-product/`.
 
 It currently supports:
 
@@ -19,7 +19,7 @@ It currently supports:
 - daemon HTTP API with read endpoints and bounded config writes when `runtime.apiPort` is set
 - optional TMDB-backed posters, ratings, and metadata when a `tmdb` API key is configured
 - optional Plex-backed library status, watch counts, and last-watched timestamps when a `plex` server is configured
-- browser dashboard (`web/`) with Obsidian Tide styling, sidebar navigation, unified config editing, in-context daemon controls, poster-forward TV/movie views, live Transmission stats, dashboard panels for active downlinks and feed outcomes, Torrent Manager context actions (pause/resume/remove/remove-with-delete), missing-torrent disposition, and the failed-enqueue event log with **Queue** retries (deduped matched candidates whose Transmission enqueue failed and are still retryable)
+- browser dashboard (`web/`) with Obsidian Tide styling, starter-mode bootstrap, browser-only onboarding/setup, sidebar navigation, unified config editing, in-context daemon controls, poster-forward TV/movie views, live Transmission stats, dashboard panels for active downlinks and feed outcomes, Torrent Manager context actions (pause/resume/remove/remove-with-delete), missing-torrent disposition, and the failed-enqueue event log with **Queue** retries (deduped matched candidates whose Transmission enqueue failed and are still retryable)
 
 ## Commands
 
@@ -33,7 +33,7 @@ It currently supports:
 
 ## First Boot (Zero File Editing)
 
-Pirate Claw creates its own starter config on first boot. No SSH, no vim, no hand-edited files required to reach the browser.
+Pirate Claw creates its own starter config on first boot. No SSH, no vim, no hand-edited files are required to reach the browser or complete initial setup.
 
 ### Mac (local dev / test)
 
@@ -56,9 +56,9 @@ bun install --cwd web
 bun run --cwd web dev
 ```
 
-5. Open **http://localhost:5173** — you will see the starter-mode state: _Pirate Claw is not yet configured._ No config file was needed.
+5. Open **http://localhost:5173** — Pirate Claw will guide you through the browser-only setup flow from starter mode to an ingestion-ready config. No config file was needed.
 
-> **Note:** Mac launchd supervisor / auto-restart setup is covered in P23.
+> **Note:** Mac launchd supervisor / auto-restart setup is covered in P24.
 
 ### Synology NAS (production)
 
@@ -68,11 +68,11 @@ bun run --cwd web dev
 
 1. Start the Pirate Claw container or process on the NAS
 2. Open a browser at `http://<nas-ip>:<api-port>` (default port configured in `runtime.apiPort`)
-3. You will see the starter-mode state: _Pirate Claw is not yet configured._ No config editing was required.
+3. Pirate Claw will open in starter mode and guide setup through the browser. No config editing was required.
 
 ### Operator promise
 
-A fresh install reaches browser-visible starter mode without the operator touching any config file. The starter config is written automatically on first boot. Editing `pirate-claw.config.json` is an optional next step once you are in the browser.
+A fresh install reaches browser-visible starter mode and can be completed through the browser without the operator touching any config file. The starter config is written automatically on first boot. Editing `pirate-claw.config.json` remains an optional parallel path.
 
 ## Quick Start (Manual Config)
 
@@ -252,7 +252,7 @@ Pirate Claw is a local operator tool for a personal NAS. The roadmap targets **P
 
 **Implemented (Phase 20):** Dashboard Torrent Manager actions (pause, resume, remove, remove-with-delete), missing-torrent disposition, Transmission failures / requeue, related daemon JSON endpoints, and the `pirateClawDisposition` + derived display-state model (see `docs/01-product/phase-20-dashboard-torrent-actions.md`).
 
-**Planned (Phase 25):** v1.0.0 release ceremony — config `schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, and tagged release (see `docs/01-product/phase-25-v1-release-and-schema-versioning.md`).
+**Planned (Phase 26):** v1.0.0 release ceremony — config `schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, and tagged release (see `docs/01-product/phase-26-v1-release-and-schema-versioning.md`).
 
 Not in scope through v1:
 

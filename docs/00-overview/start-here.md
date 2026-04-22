@@ -10,7 +10,7 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through **Phase 19** in the current delivery stack (product phases 01–19; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–19 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec is the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI. **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) is the dashboard-as-Transmission-proxy product contract; that scope is **shipped on `main`**. **Phases 21–24** now define the product-completion path after that shipped dashboard slice: bootstrap contract, browser-only setup, Synology restart-backed completion, then UX/UI polish. **Phase 25** ([`phase-25-v1-release-and-schema-versioning.md`](../01-product/phase-25-v1-release-and-schema-versioning.md)) is the v1.0.0 / schema-versioning release ceremony after those product-completion phases land.
+Pirate Claw is implemented through **Phase 19** in the current delivery stack (product phases 01–19; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–19 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec is the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI. **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) is the dashboard-as-Transmission-proxy product contract; that scope is **shipped on `main`**. **Phases 21–25** now define the product-completion path after that shipped dashboard slice: bootstrap contract, browser-only setup, Plex browser auth + credential lifecycle, Synology restart-backed completion, then UX/UI polish. **Phase 26** ([`phase-26-v1-release-and-schema-versioning.md`](../01-product/phase-26-v1-release-and-schema-versioning.md)) is the v1.0.0 / schema-versioning release ceremony after those product-completion phases land.
 
 Current delivered surface:
 
@@ -65,8 +65,9 @@ Current planning focus:
 - see [`roadmap.md`](./roadmap.md) for numbered phases and what is implemented on `main`
 - use the roadmap to confirm whether the request is a bounded standalone change or needs a new approved phase/epic planning pass
 - treat the current Phase 07 config surface and the current extracted delivery-orchestrator module boundaries as the baseline for future work
-- the next product-completion planning buckets are Phase 21 (bootstrap contract), Phase 22 (browser-only setup), Phase 23 (Synology supervision/restart completion), and Phase 24 (post-functional UX/UI polish)
-- Phase 25 (`schemaVersion`, tagged v1, `VERSIONING.md`, changelog) is the release/versioning ceremony after those product-completion phases; keep Phase 20 dashboard torrent work in [`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md), not under the Phase 19 contract
+- the next product-completion planning buckets are Phase 21 (bootstrap contract), Phase 22 (browser-only setup), Phase 23 (Plex browser auth + credential lifecycle), Phase 24 (Synology supervision/restart completion), and Phase 25 (post-functional UX/UI polish)
+- treat Phase 23 as a focused follow-on to the shipped Phase 22 setup flow, not as a rewrite of the Phase 22 contract
+- Phase 26 (`schemaVersion`, tagged v1, `VERSIONING.md`, changelog) is the release/versioning ceremony after those product-completion phases; keep Phase 20 dashboard torrent work in [`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md), not under the Phase 19 contract
 
 ## Read These Docs By Task Type
 

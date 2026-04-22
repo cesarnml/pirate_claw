@@ -24,7 +24,7 @@ Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.m
 - `GET /api/setup/state` is a new dedicated endpoint (not piggybacked onto `GET /api/config`)
 - `starter` = `_starter: true` present in config; any operator write removes sentinel → `partially_configured`
 - Corrupt config recovery deferred to P22
-- Platform target: Mac (local dev/test) and Synology NAS (production); supervisor/auto-restart for Mac covered in P23 (launchd)
+- Platform target: Mac (local dev/test) and Synology NAS (production); supervisor/auto-restart for Mac covered in P24 (launchd)
 
 ## Stack
 
@@ -68,8 +68,8 @@ Do not start the next ticket until:
 
 - Corrupt/malformed config recovery (deferred past P22; not yet addressed)
 - Browser-only onboarding flow (**resolved in P22**)
-- Synology and Mac supervisor/auto-restart wiring (P23)
-- Plex connectivity version check surfaced in the browser (deferred to P22.5; Transmission compatibility status delivered in P22.05)
+- Synology and Mac supervisor/auto-restart wiring (P24)
+- Plex connectivity version check surfaced in the browser (deferred to P23; Transmission compatibility status delivered in P22.05)
 
 ## Stop Conditions
 

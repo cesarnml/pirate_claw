@@ -23,7 +23,7 @@ Follow the shared guidance in [`docs/02-delivery/phase-implementation-guidance.m
 - Two-layer readiness model: config completeness (`getSetupState`) vs. runtime readiness (`not_ready | ready_pending_restart | ready`)
 - Transmission compatibility status display: `compatible | compatible_custom | recommended | not_reachable` (reachability probe only, no provisioning)
 - Bundled Transmission + VPN container provisioning is **out of scope** (post-v1)
-- Plex browser-based JWT auth is **out of scope** (P22.5); manual token field stays, labeled legacy
+- Plex browser-based JWT auth is **out of scope** (P23); manual token field stays, labeled legacy
 - Plex PMS version advisory (>= 1.43.0 for API 1.2.0) is surfaced as an advisory, not a blocking readiness condition
 
 ## Stack
@@ -60,7 +60,7 @@ A fresh Pirate Claw install can be opened in the browser, configured end-to-end 
 
 - Retrospective: `required`
 - Artifact: `notes/public/phase-22-retrospective.md`
-- Trigger: `product-impact` — this is the phase that earns the browser-only setup claim; learning from delivery shapes P22.5 and post-v1 bundling scope
+- Trigger: `product-impact` — this is the phase that earns the browser-only setup claim; learning from delivery shapes P23 and post-v1 bundling scope
 - Final ticket P22.06 must include retrospective writing in scope
 
 ## Review Rules
@@ -75,7 +75,7 @@ Do not start the next ticket until:
 
 ## Explicit Deferrals
 
-- Plex browser-based JWT authentication (P22.5)
+- Plex browser-based JWT authentication (P23)
 - Bundled Transmission + VPN container provisioning (post-v1)
 - Advanced feed/rule bulk management
 - Search-to-add flows powered by TMDB or Plex

@@ -16,7 +16,7 @@ Document the complete zero-file-editing first-boot path for both Mac (local dev/
   - How to install/upgrade Plex Media Server on Mac (direct download from plex.tv, not Package Center)
   - Minimum version requirement (same floor as Synology)
   - Expected first-boot sequence: `bun run dev` (or equivalent) → open browser → see starter mode
-  - Note: Mac launchd supervisor setup for auto-restart is covered in P23
+  - Note: Mac launchd supervisor setup for auto-restart is covered in P24
 - **Shared:**
   - Operator promise: zero SSH, zero vim, zero hand-edited files required to reach starter mode
   - What starter mode looks like in the browser (one sentence or screenshot reference)
@@ -24,8 +24,8 @@ Document the complete zero-file-editing first-boot path for both Mac (local dev/
 
 ## Out Of Scope
 
-- Mac launchd / auto-restart setup (P23)
-- Synology supervisor contract beyond what is needed to start once (P23)
+- Mac launchd / auto-restart setup (P24)
+- Synology supervisor contract beyond what is needed to start once (P24)
 - Onboarding flow documentation (P22)
 
 ## Exit Condition

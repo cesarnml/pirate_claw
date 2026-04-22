@@ -10,7 +10,7 @@ Phase 22 turns the Phase 21 bootstrap contract into a complete browser-only setu
 
 **Ships:** onboarding and config flow rewritten around the new starter-state contract; dependency-ordered setup sequence; shared setup primitives between onboarding and `/config`; explicit readiness and restart-needed state; compatibility-vs-recommended-baseline setup language for Transmission; `movies` made optional in schema (absence = movies matching disabled); starter config cleaned up to omit phantom defaults.
 
-**Defers:** Plex browser auth (P22.5), advanced target authoring, collector-shelf polish on Movies/Shows, broader UX refinement beyond the minimum working setup, bundled Transmission + VPN container provisioning (post-v1).
+**Defers:** Plex browser auth and best-effort credential renewal (P23), advanced target authoring, collector-shelf polish on Movies/Shows, broader UX refinement beyond the minimum working setup, bundled Transmission + VPN container provisioning (post-v1).
 
 ## Phase Goal
 
@@ -31,7 +31,7 @@ The starter config written by `ensureStarterConfig` must carry honest empty/abse
 - `movies` — **omitted entirely** (absence = movies matching disabled; operator adds the block explicitly)
 - `tmdb` — **omitted entirely** (already optional, no change)
 - `transmission` — placeholder credentials + default localhost URL (not a readiness signal)
-- `plex` — placeholder URL + empty token, labeled legacy until P22.5 delivers browser auth
+- `plex` — placeholder URL + empty token, labeled legacy until P23 delivers browser auth + persisted auth-state handling
 
 This aligns all target-type fields on a single principle: empty arrays and absent objects both mean "not yet configured." No field uses pre-filled defaults to simulate operator intent.
 
@@ -120,7 +120,7 @@ These two layers map cleanly: setup wizard drives config completeness; runtime r
 - Plex integration remains optional; manual token field stays in UI for now, clearly labeled as legacy
 - setup UX validates PMS reachability separately from PMS version compatibility
 - setup UX surfaces a clear advisory when Plex is installed but too old for the documented API contract (PMS `>= 1.43.0` for API `1.2.0`)
-- browser-based Plex JWT auth (replacing manual token extraction) is **deferred to P22.5**
+- browser-based Plex JWT auth plus persisted device identity and best-effort renewal (replacing manual token extraction) is **deferred to P23**
 
 ## Exit Condition
 
@@ -128,7 +128,7 @@ A fresh Pirate Claw install can be opened in the browser, configured end-to-end 
 
 ## Explicit Deferrals
 
-- Plex browser-based JWT authentication flow (P22.5)
+- Plex browser-based JWT authentication flow plus best-effort credential renewal (P23)
 - bundled Transmission + VPN container provisioning (post-v1)
 - advanced feed/rule bulk management
 - search-to-add flows powered by TMDB or Plex
@@ -146,4 +146,4 @@ The `movies` schema change and starter config cleanup are prerequisites, not pol
 
 The readiness model split (config completeness vs. runtime readiness) is intentional. `getSetupState` stays a pure file check — cheap, synchronous, no network calls. Runtime reachability probes live in a separate layer owned by the setup wizard. The `transmissionCustom` URL-comparison heuristic is removed because it was always wrong: a bundled deployment at the default URL would permanently report `partially_configured` even if fully working.
 
-Plex browser auth is real scope but large enough to deserve its own phase. P22 delivers the browser-only setup claim for everything that does not require OAuth/PIN browser flows. P22.5 closes the Plex auth gap.
+Plex browser auth is real scope but large enough to deserve its own phase. P22 delivers the browser-only setup claim for everything that does not require OAuth/PIN browser flows. P23 closes the Plex auth gap and adds the minimum credential-lifecycle handling needed to avoid a high-friction reconnect story.

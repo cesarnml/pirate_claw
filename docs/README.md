@@ -52,9 +52,10 @@ Phase-level product definitions.
 - `phase-20-dashboard-torrent-actions.md`: dashboard as Transmission proxy — torrent lifecycle actions, requeue, data model clean break (implemented)
 - `phase-21-bootstrap-contract.md`: zero hand-edited files and starter-state bootstrap contract
 - `phase-22-browser-only-setup.md`: browser-only onboarding and installer flow to working daemon setup
-- `phase-23-synology-supervision-and-restart.md`: Synology restart-backed setup completion and supervision contract
-- `phase-24-ux-ui-polish-after-functional-completion.md`: UX/UI polish after functional product completion
-- `phase-25-v1-release-and-schema-versioning.md`: v1.0.0 release, config `schemaVersion`, SQLite `PRAGMA user_version` (product definition; renumbered from the former “Phase 20 v1-only” slot)
+- `phase-23-plex-browser-auth-and-credential-lifecycle.md`: browser-managed Plex auth, persisted device identity, and best-effort credential renewal
+- `phase-24-synology-supervision-and-restart.md`: Synology restart-backed setup completion and supervision contract
+- `phase-25-ux-ui-polish-after-functional-completion.md`: UX/UI polish after functional product completion
+- `phase-26-v1-release-and-schema-versioning.md`: v1.0.0 release, config `schemaVersion`, SQLite `PRAGMA user_version` (product definition; renumbered from the former “Phase 20 v1-only” slot)
 
 ### `02-delivery`
 
@@ -89,6 +90,7 @@ Execution plans, issue conventions, and ticket breakdowns.
 - `phase-17/implementation-plan.md`: onboarding and empty-state delivery plan (tickets P17.01–P17.07; delivered on `main`)
 - `phase-18/implementation-plan.md`: Plex Media Server enrichment delivery plan (tickets P18.01–P18.04; delivered on `main`)
 - `phase-19/implementation-plan.md`: UI/UX redesign delivery plan (tickets P19.01–P19.08; delivered in the current stacked phase)
+- `phase-23/implementation-plan.md`: Plex browser auth and credential lifecycle delivery plan
 
 ### `03-engineering`
 

@@ -45,7 +45,7 @@ Logic:
 
 ## Out Of Scope
 
-- Automatic daemon restart (P23)
+- Automatic daemon restart (P24)
 - Transmission provisioning
 
 ## Exit Condition

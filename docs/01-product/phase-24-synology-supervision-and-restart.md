@@ -1,8 +1,8 @@
-# Phase 23: Synology Supervision and Restart Completion
+# Phase 24: Synology Supervision and Restart Completion
 
-**Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-23/` implementation plan until tickets are approved.
+**Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-24/` implementation plan until tickets are approved.
 
-Phase 23 closes the deployment loop on Synology, which is Pirate Claw's reference home. Browser-driven setup and config changes are not complete product behavior until restart-backed changes can be applied reliably under Synology supervision.
+Phase 24 closes the deployment loop on Synology, which is Pirate Claw's reference home. Browser-driven setup and config changes are not complete product behavior until restart-backed changes can be applied reliably under Synology supervision.
 
 ## TL;DR
 
@@ -14,7 +14,7 @@ Phase 23 closes the deployment loop on Synology, which is Pirate Claw's referenc
 
 ## Phase Goal
 
-Phase 23 should leave Pirate Claw in a state where:
+Phase 24 should leave Pirate Claw in a state where:
 
 - the Synology deployment story is a first-class product contract, not just a runbook habit
 - restart-required setup/config changes can be applied from the UI without SSH
@@ -54,7 +54,7 @@ Phase 23 should leave Pirate Claw in a state where:
 - on the observed `DS918+ / DSM 7.1.1-42962 Update 9` baseline (captured 2026-04-21), Synology Package Center surfaced Plex Media Server `1.41.5.9626` as the newest online version, while Plex's own Synology DSM 7 download path offered PMS `1.43.1.10611`
 - because the official Plex PMS API `1.2.0` contract is documented as supported in PMS `>= 1.43.0`, the out-of-the-box Synology package-center version on that baseline is below Pirate Claw's documented Plex compatibility floor
 - manual PMS install through Synology's Package Center GUI remains a supported operator path and should be documented as the expected remediation when the vendor-packaged Plex build lags behind the required API version
-- if Pirate Claw adopts Plex's recommended JWT authentication flow in Phase 22, Phase 23 must ensure the Synology-facing product story preserves that browser-managed auth state across the restart/supervision path
+- if Pirate Claw adopts Plex's recommended JWT authentication flow in Phase 23, Phase 24 must ensure the Synology-facing product story preserves that browser-managed auth state across the restart/supervision path
 
 ## Exit Condition
 
@@ -72,8 +72,8 @@ If the operator enables Plex, the Synology-facing product story also tells them 
 
 ## Rationale
 
-Phase 16 introduced restart offers and Phase 06 documented Synology operation, but the system still relies on an operator mentally bridging those pieces. Phase 23 turns that bridge into product behavior. If setup/config changes can only be applied reliably by an operator who understands Synology task supervision and SSH fallback, Pirate Claw is still acting like an advanced tool rather than a finished local product.
+Phase 16 introduced restart offers and Phase 06 documented Synology operation, but the system still relies on an operator mentally bridging those pieces. Phase 24 turns that bridge into product behavior. If setup/config changes can only be applied reliably by an operator who understands Synology task supervision and SSH fallback, Pirate Claw is still acting like an advanced tool rather than a finished local product.
 
-The same standard applies to adjacent services. If Pirate Claw claims a Synology-friendly story while omitting the fact that a stock Package Center Plex build may lag below the documented PMS API floor, then the product contract is incomplete. Phase 23 should make that reality explicit and route the operator toward supported remediation rather than leaving them to infer it from broken integration.
+The same standard applies to adjacent services. If Pirate Claw claims a Synology-friendly story while omitting the fact that a stock Package Center Plex build may lag below the documented PMS API floor, then the product contract is incomplete. Phase 24 should make that reality explicit and route the operator toward supported remediation rather than leaving them to infer it from broken integration.
 
 The same is true for the last restart-backed edges of setup. If browser-only onboarding says it can configure bundled Transmission + VPN or connect Plex without manual token spelunking, then the supervised Synology flow must carry those choices through restart cleanly. Otherwise the browser-only claim still leaks hidden operator work.

@@ -59,7 +59,7 @@ Phase 21 achieved its goal. A fresh Pirate Claw install now creates a valid star
 - **Phase 22 onboarding flow:** reuse `data.setupState === 'starter'` as the entry condition for the browser setup experience.
 - **Handle `partially_configured` as a real transition state:** once `_starter` is removed by the first operator write, the browser flow should guide the operator from partially configured to ready without assuming a fresh start.
 - **Keep Plex compatibility as a browser concern only when it becomes actionable:** the README note is enough for P21; UI/runtime validation belongs in Phase 22 when the app can surface a useful recovery path.
-- **Do not revisit P21 deferrals without a clear scope trigger:** corrupt config recovery and onboarding wizard belong to P22; launchd/Synology supervision belongs to P23.
+- **Do not revisit P21 deferrals without a clear scope trigger:** corrupt config recovery and onboarding wizard belong to P22; launchd/Synology supervision belongs to P24.
 
 ---
 

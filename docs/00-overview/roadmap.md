@@ -548,7 +548,19 @@ Current status:
 
 - product definition only; see [`docs/01-product/phase-22-browser-only-setup.md`](../01-product/phase-22-browser-only-setup.md)
 
-## Phase 23: Synology Supervision and Restart Completion
+## Phase 23: Plex Browser Auth and Credential Lifecycle
+
+Goal:
+
+- replace manual Plex token entry with browser-managed Plex auth
+- persist device identity needed for renewal
+- reduce operator reconnect friction with best-effort silent renewal
+
+Current status:
+
+- product definition and implementation plan drafted; see [`docs/01-product/phase-23-plex-browser-auth-and-credential-lifecycle.md`](../01-product/phase-23-plex-browser-auth-and-credential-lifecycle.md) and [`docs/02-delivery/phase-23/implementation-plan.md`](../02-delivery/phase-23/implementation-plan.md)
+
+## Phase 24: Synology Supervision and Restart Completion
 
 Goal:
 
@@ -557,9 +569,9 @@ Goal:
 
 Current status:
 
-- product definition only; see [`docs/01-product/phase-23-synology-supervision-and-restart.md`](../01-product/phase-23-synology-supervision-and-restart.md)
+- product definition only; see [`docs/01-product/phase-24-synology-supervision-and-restart.md`](../01-product/phase-24-synology-supervision-and-restart.md)
 
-## Phase 24: UX/UI Polish After Functional Completion
+## Phase 25: UX/UI Polish After Functional Completion
 
 Goal:
 
@@ -568,9 +580,9 @@ Goal:
 
 Current status:
 
-- product definition only; see [`docs/01-product/phase-24-ux-ui-polish-after-functional-completion.md`](../01-product/phase-24-ux-ui-polish-after-functional-completion.md)
+- product definition only; see [`docs/01-product/phase-25-ux-ui-polish-after-functional-completion.md`](../01-product/phase-25-ux-ui-polish-after-functional-completion.md)
 
-## Phase 25: v1.0.0 Release and Schema Versioning
+## Phase 26: v1.0.0 Release and Schema Versioning
 
 Goal:
 
@@ -581,7 +593,7 @@ Goal:
 
 Current status:
 
-- product definition only; see [`docs/01-product/phase-25-v1-release-and-schema-versioning.md`](../01-product/phase-25-v1-release-and-schema-versioning.md)
+- product definition only; see [`docs/01-product/phase-26-v1-release-and-schema-versioning.md`](../01-product/phase-26-v1-release-and-schema-versioning.md)
 
 ## Future Deferrals
 
@@ -598,17 +610,18 @@ The following items are **mapped** to numbered phases (no longer “unbounded”
 - **Plex Media Server enrichment** — Phase 18
 - **Zero hand-edited bootstrap** — Phase 21
 - **Browser-only first-run setup** — Phase 22
-- **Synology restart-backed completion** — Phase 23
-- **v1.0.0 release / schema versioning** — Phase 25
+- **Plex browser auth + credential lifecycle** — Phase 23
+- **Synology restart-backed completion** — Phase 24
+- **v1.0.0 release / schema versioning** — Phase 26
 - **Dashboard Transmission proxy** — Phase 20
 
 ## Current Planning Posture
 
 - product phases `01`–`19` are implemented in the current delivery stack; **Phase 19** is delivered via `P19.01`–`P19.08`
 - **Phase 20** (dashboard torrent proxy) is **shipped** on `main`
-- **Phases 21–23** are the current product-completion planning buckets: bootstrap contract, browser-only setup, and Synology restart-backed operation
-- **Phase 24** is explicitly sequenced after Phases 21–23 as UX/UI polish after functional completion
-- **Phase 25** (v1.0.0 / schema versioning) remains the release/versioning ceremony after product-completion phases are done
+- **Phases 21–24** are the current product-completion planning buckets: bootstrap contract, browser-only setup, Plex auth lifecycle completion, and Synology restart-backed operation
+- **Phase 25** is explicitly sequenced after Phases 21–24 as UX/UI polish after functional completion
+- **Phase 26** (v1.0.0 / schema versioning) remains the release/versioning ceremony after product-completion phases are done
 - engineering epic write-ups **`EE01`–`EE09`** live under `docs/03-engineering/` (orchestrator, PR hygiene, and delivery workflow tooling)
 - each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
 - smaller bounded changes can still proceed as standalone PR work without inventing a new phase
@@ -627,4 +640,4 @@ Working notes:
 - promote durable technical choices into ADRs
 - numbered phases are planning buckets, not a promise of strict implementation sequence when dependencies allow independent work
 
-Last verified against `README.md` and active delivery plans: 2026-04-21 (Phase 20 delivered on `main`; Phases 21–24 are the next product-planning buckets; Phase 25 remains the release/versioning phase).
+Last verified against `README.md` and active delivery plans: 2026-04-22 (Phase 20 delivered on `main`; Phases 21, 22, 23, 24, and 25 are the current product-planning buckets; Phase 26 remains the release/versioning phase).

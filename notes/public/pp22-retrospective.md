@@ -32,7 +32,7 @@ Delivered scope:
 
 ---
 
-## What P22.5 (Plex browser auth) and post-v1 bundling need to know
+## What P23 (Plex browser auth) and post-v1 bundling need to know
 
 **The `readinessState` field is already plumbed through the layout.** `+layout.server.ts` fetches `/api/setup/readiness` and returns both `setupState` (from `configState`) and `readinessState`. Any new page or banner can consume `data.readinessState` without additional layout changes.
 
@@ -66,7 +66,7 @@ The two `Body is unusable` incidents were avoidable with earlier awareness of th
 
 ## Follow-up
 
-- **P22.5 — Plex browser auth**: Add a Plex configuration step to the onboarding wizard. The step system is ready; the Plex auth flow needs a dedicated ticket.
+- **P23 — Plex browser auth**: Add a Plex configuration step to the onboarding wizard. The step system is ready; the Plex auth flow needs a dedicated ticket.
 - **Bundling phase**: The `_starter: true` flag and `ensureStarterConfig` are the integration points for the bundled installer. The starter config must not include a `movies` block.
 - **Daemon restart signal**: The `ready_pending_restart` banner instructs the operator to restart the daemon manually. Automated restart (e.g., via `POST /api/daemon/restart`) is already wired but not triggered from the UI — a follow-up UX decision.
 
