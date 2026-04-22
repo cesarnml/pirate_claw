@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { sanitizePlexReturnTo } from '$lib/plex-auth';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -23,5 +22,5 @@
 		<p class="text-muted-foreground text-sm">{data.message}</p>
 	</div>
 
-	<Button href={sanitizePlexReturnTo(data.returnTo)}>Return to settings</Button>
+	<Button href={data.returnTo ?? '/config'}>Return to settings</Button>
 </div>
