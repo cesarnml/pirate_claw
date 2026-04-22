@@ -1891,6 +1891,15 @@ describe('delivery orchestrator', () => {
         await readFile(
           join(
             targetDir,
+            '.agents/delivery/phase-03/reviews/P3.02-ai-review.triage.json',
+          ),
+          'utf8',
+        ),
+      ).toBe('{"triage":true}\n');
+      expect(
+        await readFile(
+          join(
+            targetDir,
             '.agents/delivery/phase-03/reviews/P3.03-ai-review.fetch.json',
           ),
           'utf8',
@@ -4518,7 +4527,7 @@ describe('delivery orchestrator', () => {
       expect(output).toContain('GATED BOUNDARY before starting EE7.02.');
       expect(output).toContain('Prefer /clear for minimum token use');
       expect(output).toContain(
-        'resume_prompt=Immediately execute `bun run deliver --plan docs/02-delivery/engineering-epic-07/implementation-plan.md start`, read the generated handoff artifact as the source of truth for context, and implement EE7.02.',
+        'resume_prompt=Immediately execute `bun run deliver --plan docs/02-delivery/engineering-epic-07/implementation-plan.md start`, read the locally materialized handoff artifact in the started worktree as the source of truth for context, and implement EE7.02.',
       );
     });
 

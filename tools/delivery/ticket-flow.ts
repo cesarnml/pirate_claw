@@ -237,7 +237,7 @@ export async function startTicket(
     (ticket) => ticket.status === 'in_progress',
   );
 
-  if (active && active.id !== ticketId) {
+  if (active && ticketId && active.id !== ticketId) {
     throw new Error(`Ticket ${active.id} is already in progress.`);
   }
 

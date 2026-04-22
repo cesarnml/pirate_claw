@@ -1200,8 +1200,10 @@ export async function materializeTicketContext(
     ...(previous ? [ticketHandoffFileName(previous.id)] : []),
   ]);
   const reviewNames = new Set<string>();
-  for (const scopedTicket of [target, previous].filter(Boolean)) {
-    const ticket = scopedTicket!;
+  const scopedTickets = [target, previous].filter(
+    (ticket): ticket is TicketState => ticket !== undefined,
+  );
+  for (const ticket of scopedTickets) {
     for (const fileName of [
       `${ticket.id}-ai-review.fetch.json`,
       `${ticket.id}-ai-review.triage.json`,
@@ -1878,7 +1880,7 @@ export function formatAdvanceBoundaryGuidance(
     _config.ticketBoundaryMode,
   );
   const invocation = `${generateRunDeliverInvocation(_config.packageManager)} --plan ${state.planPath} start`;
-  const resumePrompt = `Immediately execute \`${invocation}\`, read the generated handoff artifact as the source of truth for context, and implement ${nextPending.id}.`;
+  const resumePrompt = `Immediately execute \`${invocation}\`, read the locally materialized handoff artifact in the started worktree as the source of truth for context, and implement ${nextPending.id}.`;
 
   if (effectiveMode === 'cook') {
     const startedTicket = nextState.tickets.find(
@@ -1901,7 +1903,7 @@ export function formatAdvanceBoundaryGuidance(
       nextHandoffAbsolutePath
         ? `next_handoff_absolute=${nextHandoffAbsolutePath}`
         : undefined,
-      'Read the generated handoff artifact from `next_handoff_absolute` and continue implementation in the started ticket worktree.',
+      'Read the locally materialized handoff artifact from `next_handoff_absolute` and continue implementation in the started ticket worktree.',
     ]
       .filter((line): line is string => line !== undefined)
       .join('\n');
