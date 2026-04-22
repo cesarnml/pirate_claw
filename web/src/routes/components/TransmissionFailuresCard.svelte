@@ -14,9 +14,9 @@
 		TableHeader,
 		TableRow
 	} from '$lib/components/ui/table';
-	import type { SkippedOutcomeRecord } from '$lib/types';
+	import type { ReviewOutcomeRecord } from '$lib/types';
 
-	const { outcomes }: { outcomes: SkippedOutcomeRecord[] | null } = $props();
+	const { outcomes }: { outcomes: ReviewOutcomeRecord[] | null } = $props();
 
 	let page = $state(0);
 	const PAGE_SIZE = 6;

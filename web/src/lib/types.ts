@@ -115,7 +115,7 @@ export type MovieBreakdown = {
 	tmdb?: TmdbMoviePublic;
 };
 
-export type SkippedOutcomeRecord = {
+export type ReviewOutcomeRecord = {
 	id: number;
 	runId: number;
 	status: 'failed';

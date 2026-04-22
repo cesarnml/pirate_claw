@@ -43,7 +43,7 @@ function stubRepository(overrides: Partial<Repository> = {}): Repository {
     listCandidateStates: () => [],
     listReconcilableCandidates: () => [],
     listRetryableCandidates: () => [],
-    listSkippedNoMatchOutcomes: () => [],
+    listRecentFeedItemOutcomesForReview: () => [],
     listDistinctUnmatchedAndFailedOutcomes: () => [],
     setPirateClawDisposition: () => {},
     trySetPirateClawDispositionIfUnset: () => true,
@@ -2514,7 +2514,7 @@ describe('GET /api/outcomes', () => {
     ];
 
     const deps = createDeps({
-      listSkippedNoMatchOutcomes: () => mockOutcomes,
+      listRecentFeedItemOutcomesForReview: () => mockOutcomes,
     });
     const handler = createApiFetch(deps);
     const response = await handler(
@@ -2540,7 +2540,7 @@ describe('GET /api/outcomes', () => {
     ];
 
     const deps = createDeps({
-      listSkippedNoMatchOutcomes: () => mockOutcomes,
+      listRecentFeedItemOutcomesForReview: () => mockOutcomes,
     });
     const handler = createApiFetch(deps);
     const response = await handler(
@@ -2553,7 +2553,7 @@ describe('GET /api/outcomes', () => {
 
   it('returns empty outcomes array when repository returns none', async () => {
     const deps = createDeps({
-      listSkippedNoMatchOutcomes: () => [],
+      listRecentFeedItemOutcomesForReview: () => [],
     });
     const handler = createApiFetch(deps);
     const response = await handler(

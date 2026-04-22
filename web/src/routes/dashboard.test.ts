@@ -6,7 +6,7 @@ import type {
 	DaemonHealth,
 	OnboardingStatus,
 	RunSummaryRecord,
-	SkippedOutcomeRecord,
+	ReviewOutcomeRecord,
 	TorrentStatSnapshot
 } from '$lib/types';
 import Page from './+page.svelte';
@@ -31,7 +31,7 @@ const mockRunSummary = (overrides: Partial<RunSummaryRecord> = {}): RunSummaryRe
 	...overrides
 });
 
-const mockOutcome = (overrides: Partial<SkippedOutcomeRecord> = {}): SkippedOutcomeRecord => ({
+const mockOutcome = (overrides: Partial<ReviewOutcomeRecord> = {}): ReviewOutcomeRecord => ({
 	id: 1,
 	runId: 42,
 	status: 'failed',

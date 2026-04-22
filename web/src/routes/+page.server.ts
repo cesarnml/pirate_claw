@@ -7,7 +7,7 @@ import type {
 	DaemonHealth,
 	OnboardingStatus,
 	RunSummaryRecord,
-	SkippedOutcomeRecord,
+	ReviewOutcomeRecord,
 	TorrentStatSnapshot
 } from '$lib/types';
 import { fail } from '@sveltejs/kit';
@@ -27,7 +27,7 @@ export const load: PageServerLoad = async () => {
 		apiFetch<{ torrents: TorrentStatSnapshot[] }>('/api/transmission/torrents'),
 		apiFetch<{ candidates: CandidateStateRecord[] }>('/api/candidates'),
 		apiFetch<{ runs: RunSummaryRecord[] }>('/api/status'),
-		apiFetch<{ outcomes: SkippedOutcomeRecord[] }>('/api/outcomes?status=failed_enqueue'),
+		apiFetch<{ outcomes: ReviewOutcomeRecord[] }>('/api/outcomes?status=failed_enqueue'),
 		apiFetch<AppConfig>('/api/config')
 	]);
 

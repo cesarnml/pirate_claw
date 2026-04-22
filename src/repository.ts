@@ -115,7 +115,7 @@ export type RecordFeedItemOutcomeInput = {
   createdAt?: string;
 };
 
-export type SkippedOutcomeRecord = {
+export type ReviewOutcomeRecord = {
   id: number;
   runId: number;
   status: 'failed';
@@ -183,7 +183,7 @@ export type Repository = {
    * `candidate_state` is still failed (Transmission enqueue failure), within the
    * day window.
    */
-  listSkippedNoMatchOutcomes(days: number): SkippedOutcomeRecord[];
+  listRecentFeedItemOutcomesForReview(days: number): ReviewOutcomeRecord[];
   requeueCandidate(
     identityKey: string,
     params: {
@@ -689,7 +689,7 @@ export function createRepository(database: Database): Repository {
     LIMIT ?1`,
   );
   /** Latest failed enqueue outcome per matched candidate for the dashboard. */
-  const listSkippedNoMatchOutcomesStatement = database.prepare(
+  const listRecentFeedItemOutcomesForReviewStatement = database.prepare(
     `SELECT
       id,
       runId,
@@ -1023,7 +1023,7 @@ export function createRepository(database: Database): Repository {
       return (result as { changes: number }).changes === 1;
     },
 
-    listSkippedNoMatchOutcomes(days: number): SkippedOutcomeRecord[] {
+    listRecentFeedItemOutcomesForReview(days: number): ReviewOutcomeRecord[] {
       type Row = {
         id: number;
         runId: number;
@@ -1033,17 +1033,17 @@ export function createRepository(database: Database): Repository {
         feedName: string | null;
         identityKey: string;
       };
-      return (listSkippedNoMatchOutcomesStatement.all(days) as Row[]).map(
-        (row) => ({
-          id: Number(row.id),
-          runId: Number(row.runId),
-          status: row.status,
-          recordedAt: row.recordedAt,
-          title: row.title,
-          feedName: row.feedName,
-          identityKey: row.identityKey,
-        }),
-      );
+      return (
+        listRecentFeedItemOutcomesForReviewStatement.all(days) as Row[]
+      ).map((row) => ({
+        id: Number(row.id),
+        runId: Number(row.runId),
+        status: row.status,
+        recordedAt: row.recordedAt,
+        title: row.title,
+        feedName: row.feedName,
+        identityKey: row.identityKey,
+      }));
     },
 
     requeueCandidate(

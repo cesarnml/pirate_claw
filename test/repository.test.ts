@@ -591,7 +591,7 @@ describe('SQLite repository', () => {
     ]);
   });
 
-  describe('listSkippedNoMatchOutcomes', () => {
+  describe('listRecentFeedItemOutcomesForReview', () => {
     it('returns one row per identity_key for latest failed enqueue while candidate is still failed', async () => {
       const repository = createTestRepository(await createDatabasePath());
       const run = repository.startRun('2026-04-01T00:00:00.000Z');
@@ -659,7 +659,7 @@ describe('SQLite repository', () => {
         createdAt: '2026-04-01T00:05:30.000Z',
       });
 
-      const results = repository.listSkippedNoMatchOutcomes(30);
+      const results = repository.listRecentFeedItemOutcomesForReview(30);
 
       expect(results).toHaveLength(1);
       expect(results[0].status).toBe('failed');
@@ -667,7 +667,7 @@ describe('SQLite repository', () => {
       expect(results[0].recordedAt).toBe('2026-04-01T00:04:00.000Z');
 
       repository.requeueCandidate(failedMatch.identityKey, {});
-      const afterRequeue = repository.listSkippedNoMatchOutcomes(30);
+      const afterRequeue = repository.listRecentFeedItemOutcomesForReview(30);
       expect(afterRequeue).toEqual([]);
     });
 
@@ -705,7 +705,7 @@ describe('SQLite repository', () => {
         createdAt: '2026-04-01T00:04:00.000Z',
       });
 
-      const results = repository.listSkippedNoMatchOutcomes(30);
+      const results = repository.listRecentFeedItemOutcomesForReview(30);
 
       expect(results).toHaveLength(1);
       expect(results[0].title).toBeNull();
@@ -769,7 +769,7 @@ describe('SQLite repository', () => {
         ).toISOString(),
       });
 
-      const results = repository.listSkippedNoMatchOutcomes(30);
+      const results = repository.listRecentFeedItemOutcomesForReview(30);
 
       expect(results).toHaveLength(1);
       expect(results[0].identityKey).toBe(recentMatch.identityKey);
@@ -795,7 +795,7 @@ describe('SQLite repository', () => {
         createdAt: '2026-04-01T00:03:00.000Z',
       });
 
-      expect(repository.listSkippedNoMatchOutcomes(30)).toEqual([]);
+      expect(repository.listRecentFeedItemOutcomesForReview(30)).toEqual([]);
     });
   });
 });

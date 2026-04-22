@@ -1093,7 +1093,7 @@ export function createApiFetch(
           { status: 400 },
         );
       }
-      const outcomes = repository.listSkippedNoMatchOutcomes(30);
+      const outcomes = repository.listRecentFeedItemOutcomesForReview(30);
       return safeJson(() => ({ outcomes }));
     }
 
