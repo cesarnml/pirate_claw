@@ -229,6 +229,14 @@ export async function bootstrapWorktreeIfNeeded(
   if (packageJson.scripts?.['hooks:install']) {
     runProcess(worktreePath, [packageManager, 'run', 'hooks:install'], runtime);
   }
+
+  const webPath = resolve(worktreePath, 'web');
+  if (
+    existsSync(resolve(webPath, 'package.json')) &&
+    !existsSync(resolve(webPath, 'node_modules'))
+  ) {
+    runProcess(webPath, [packageManager, 'install'], runtime);
+  }
 }
 
 export function listOpenPullRequests(
