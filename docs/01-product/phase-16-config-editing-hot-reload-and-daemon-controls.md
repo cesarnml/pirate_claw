@@ -30,7 +30,7 @@ Phase 16 should leave Pirate Claw in a state where:
 
 **`POST /api/daemon/restart`**
 
-- calls `process.kill(process.pid, 'SIGTERM')` and trusts the NAS supervisor (Synology Task Scheduler or systemd) to restart the process
+- calls `process.kill(process.pid, 'SIGTERM')` and trusts the documented deployment supervisor to restart the process; the current reviewed Synology path is Docker restart supervision, and browser return proof remains Phase 25 work
 - only offered as a follow-on action immediately after a successful config save in the SvelteKit Settings flow — not a standalone endpoint callable from the UI at any time
 - documented requirement: the daemon must be run under a supervisor that auto-restarts on exit; the runbook (`docs/synology-runbook.md`) documents the current deployment contract and restart requirement
 
