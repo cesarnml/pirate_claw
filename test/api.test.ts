@@ -440,7 +440,17 @@ describe('GET /api/setup/transmission/status', () => {
   });
 
   it('requires no auth', async () => {
-    const deps = createDeps();
+    const deps = {
+      ...createDeps(),
+      config: {
+        ...createDeps().config,
+        transmission: {
+          url: 'http://127.0.0.1:1/transmission/rpc',
+          username: 'u',
+          password: 'p',
+        },
+      },
+    };
     const handler = createApiFetch(deps);
     const response = await handler(
       new Request('http://localhost/api/setup/transmission/status'),
