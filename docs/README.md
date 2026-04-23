@@ -94,6 +94,8 @@ Execution plans, issue conventions, and ticket breakdowns.
 - `phase-18/implementation-plan.md`: Plex Media Server enrichment delivery plan (tickets P18.01–P18.04; delivered on `main`)
 - `phase-19/implementation-plan.md`: UI/UX redesign delivery plan (tickets P19.01–P19.08; delivered in the current stacked phase)
 - `phase-23/implementation-plan.md`: Plex browser auth and credential lifecycle delivery plan
+- `phase-24/implementation-plan.md`: Synology supervision and restart completion delivery plan
+- `phase-25/implementation-plan.md`: in-browser restart round-trip proof delivery plan
 
 ### `03-engineering`
 
