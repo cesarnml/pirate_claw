@@ -602,7 +602,13 @@ Goal:
 
 Current status:
 
-- product definition only; see [`docs/01-product/phase-26-mac-first-class-always-on-deployment.md`](../01-product/phase-26-mac-first-class-always-on-deployment.md)
+- implemented in the active Phase 26 delivery stack
+- the repo now carries a reviewed per-user `launchd` reference artifact and a dedicated Mac runbook instead of folding Mac procedures into the Synology runbook
+- real-machine validation on Apple Silicon proved `launchd` handoff, daemon return, config/SQLite/Plex-auth durability, and browser-facing restart-status proxy truthfulness on the same restart-proof artifact
+- Mac support is now explicit for the bounded Phase 26 contract: Apple Silicon, per-user `launchd`, one durable install boundary, and no system-daemon or native app packaging claims
+- see [`docs/01-product/phase-26-mac-first-class-always-on-deployment.md`](../01-product/phase-26-mac-first-class-always-on-deployment.md)
+- see [`docs/mac-runbook.md`](../mac-runbook.md)
+- see [`docs/mac-launchd-reference.md`](../mac-launchd-reference.md)
 
 ## Phase 27: UX/UI Polish After Functional Completion
 
