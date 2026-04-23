@@ -233,7 +233,13 @@ That inference is intentionally conservative. It reconstructs enough state to re
 
 ## Post-verify self-audit (ticket stacks)
 
-After **build mode** (implementation and automated verification, for example `bun run format:quiet`, `bun run format:web:quiet` when `web/` changed, `bun run verify:quiet`, and any scoped tests the ticket implies), the agent switches to **self-audit mode**: a deliberate pass over the diff and ticket acceptance before publishing the branch for external AI code review. Stay in the same implementation session—this is a mode switch, not a handoff.
+After **build mode** (implementation and automated verification), the agent switches to **self-audit mode**: a deliberate pass over the diff and ticket acceptance before publishing the branch for external AI code review. Stay in the same implementation session—this is a mode switch, not a handoff.
+
+Use the verification commands with two distinct purposes:
+
+- `bun run verify:quiet` is the fast inner loop while implementing.
+- `bun run ci:quiet` is the pre-`open-pr` gate for code tickets because it matches the pre-push hook / CI shape (`verify` + root tests + web tests).
+- Keep `bun run format:quiet`, `bun run format:web:quiet` when `web/` changed, and any scoped tests the ticket implies in the inner loop as needed.
 
 The `post-verify-self-audit` command **records** that self-audit mode completed (ticket status, outcome, and timestamp in local delivery state). It does **not** run checks or read the diff; the agent performs verification in build mode and the diff review in self-audit mode, then invokes this command.
 
@@ -252,7 +258,7 @@ When omitted, outcome defaults to `clean`. The `status` command renders the outc
 **Before `post-verify-self-audit`, confirm at least:**
 
 - The diff matches the ticket and handoff; no unrelated scope crept in.
-- Automated verification for this change is green.
+- Automated verification for this change is green, with `bun run ci:quiet` completed for code tickets before publishing.
 - Higher-risk areas changed in the diff (data shape, migrations, auth, API contracts) got a second read in self-audit mode.
 - The delivery ticket doc has an updated **Rationale** when behavior or trade-offs changed (repo policy).
 
@@ -373,7 +379,8 @@ bun run deliver ai-review
 For standalone PRs, the internal review contract is behavior-first, not state-recorded:
 
 - implement
-- verify
+- use `verify:quiet` for the fast inner loop
+- run `ci:quiet` before publication for non-doc code changes so the final local gate matches the pre-push hook
 - self-audit the diff and risky areas
 - for non-trivial code changes, run `codex:codex-rescue` informally before `ai-review`
 - run standalone `ai-review` as the orchestrator-visible external review gate

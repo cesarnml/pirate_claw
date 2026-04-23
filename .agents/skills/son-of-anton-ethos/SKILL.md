@@ -15,7 +15,7 @@ Son of Anton drives approved work to completion. How ticket boundaries are handl
 
 1. **Entrypoint.** Use `bun run deliver`.
 2. **When to use.** Smaller bounded changes ship as standalone PRs without a new phase/epic. Use `bun run deliver ai-review [--pr <number>]` — not the ticketed stacked flow (`--plan …`, `poll-review`, `advance`, etc.).
-3. **Review discipline.** Complete implement → verify (`bun run verify` + scoped tests) → named self-audit (re-read diff, second-pass risky areas). Standalone PRs do not use the ticket-only `post-verify-self-audit` or `codex-preflight` recorders because the flow is stateless, so these remain expected preflight behaviors rather than orchestrator-enforced gates.
+3. **Review discipline.** Complete implement → fast verification (`bun run verify:quiet` + scoped tests as needed) → final publication gate (`bun run ci:quiet` for non-doc code changes) → named self-audit (re-read diff, second-pass risky areas). Standalone PRs do not use the ticket-only `post-verify-self-audit` or `codex-preflight` recorders because the flow is stateless, so these remain expected preflight behaviors rather than orchestrator-enforced gates.
    - Self-audit is required for every standalone PR.
    - For non-trivial code changes, invoke `codex:codex-rescue` via the Agent tool (subagent_type: "codex:codex-rescue") before `ai-review`; doc-only or genuinely trivial changes may skip it.
    - Standalone `ai-review` is the only orchestrator-visible review gate on this path.
@@ -49,7 +49,7 @@ Commit the delivery plan and all ticket docs to the default branch before creati
 3. Move one ticket at a time in order.
 4. For each ticket:
    1. Implement
-   2. Verify — `bun run verify` + scoped tests
+   2. Build / verify — use `bun run verify:quiet` for the fast inner loop, then `bun run ci:quiet` before `open-pr` on code tickets
    3. Update ticket rationale for behavior or tradeoff changes
    4. Self-audit — `post-verify-self-audit [clean|patched]`
       - Under `selfAudit: "skip_doc_only"`: doc-only tickets auto-record `skipped`

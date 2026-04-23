@@ -21,7 +21,7 @@ erDiagram
     TEXT media_type
     TEXT status
     TEXT queued_at
-    TEXT lifecycle_status
+    TEXT pirate_claw_disposition
     TEXT reconciled_at
     INTEGER transmission_torrent_id
     TEXT transmission_torrent_name
@@ -85,6 +85,7 @@ erDiagram
     TEXT overview
     TEXT poster_path
     TEXT backdrop_path
+    TEXT network_name
     REAL vote_average
     INTEGER vote_count
     TEXT genre_ids_json
@@ -119,9 +120,45 @@ erDiagram
     TEXT cached_at
   }
 
+  PLEX_AUTH_IDENTITY {
+    INTEGER singleton PK
+    TEXT client_identifier
+    TEXT client_name
+    TEXT platform_name
+    TEXT key_id
+    TEXT key_algorithm
+    TEXT public_jwk_json
+    TEXT private_key_pem
+    TEXT refresh_token
+    TEXT token_expires_at
+    TEXT last_authenticated_at
+    TEXT last_error
+    TEXT reconnect_required_at
+    TEXT reconnect_required_reason
+    TEXT renewal_started_at
+    TEXT created_at
+    TEXT updated_at
+  }
+
+  PLEX_AUTH_SESSIONS {
+    TEXT id PK
+    TEXT oauth_state
+    TEXT code_verifier
+    INTEGER pin_id
+    TEXT pin_code
+    TEXT redirect_uri
+    TEXT return_to
+    TEXT opened_at
+    TEXT expires_at
+    TEXT status
+    TEXT completed_at
+    TEXT cancelled_at
+  }
+
   RUNS ||--o{ FEED_ITEMS : records
   RUNS ||--o{ FEED_ITEM_OUTCOMES : records
   RUNS ||--o{ CANDIDATE_STATE : first_seen_in
   RUNS ||--o{ CANDIDATE_STATE : last_seen_in
   FEED_ITEMS ||--o| CANDIDATE_STATE : last_seen_item
   FEED_ITEMS ||--o{ FEED_ITEM_OUTCOMES : produces
+  TMDB_TV_CACHE ||--o{ TMDB_TV_SEASON_CACHE : seasons

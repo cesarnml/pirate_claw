@@ -279,6 +279,8 @@ bun run ci:quiet        # same as ci; quiet on success (pre-push hook uses this)
 bun run hooks:install   # once per clone: use .githooks so pre-push runs ci:quiet
 ```
 
+Use `bun run verify:quiet` for the fast local inner loop. Before `open-pr` or any push for a non-doc code change, run `bun run ci:quiet` so the final local gate matches the pre-push hook and CI.
+
 Delivery commands (for contributors working the stacked PR workflow):
 
 ```
