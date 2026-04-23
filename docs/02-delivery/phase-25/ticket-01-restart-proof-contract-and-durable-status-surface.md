@@ -31,3 +31,5 @@ Pirate Claw has a durable restart-proof contract plus a read surface that a brow
 ## Rationale
 
 If the proof contract is vague, every later UI state is theater. This ticket makes restart truth observable before the browser starts narrating it.
+
+Phase 25 chooses a repo-owned runtime artifact under `.pirate-claw/runtime` as the restart proof boundary so the browser can verify return without adding a second restart-specific database contract beside the already-shipped durable surfaces.

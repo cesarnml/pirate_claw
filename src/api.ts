@@ -61,6 +61,7 @@ import {
   exchangePlexPinForAuthToken,
   startPlexPinAuth,
 } from './plex/auth-client';
+import { readRestartStatus, recordRestartRequested } from './restart-proof';
 
 export type CycleSnapshot = {
   status: CycleResult['status'];
@@ -400,6 +401,18 @@ export function createApiFetch(
           transmissionReachable,
           daemonLive,
         });
+      } catch {
+        return json500();
+      }
+    }
+
+    if (path === '/api/daemon/restart-status' && request.method === 'GET') {
+      try {
+        const status = await readRestartStatus(
+          activeConfig.runtime.artifactDir,
+          health.startedAt,
+        );
+        return Response.json(status);
       } catch {
         return json500();
       }
@@ -1573,10 +1586,20 @@ export function createApiFetch(
       const authError = checkWriteAuth(request, activeConfig);
       if (authError) return authError;
 
+      let restartStatus;
+      try {
+        restartStatus = await recordRestartRequested(
+          activeConfig.runtime.artifactDir,
+          health.startedAt,
+        );
+      } catch {
+        return json500();
+      }
+
       // This endpoint only requests a SIGTERM exit. The reviewed Synology
       // Docker restart policy is responsible for bringing the daemon back.
       queueMicrotask(() => process.kill(process.pid, 'SIGTERM'));
-      return Response.json({ ok: true });
+      return Response.json({ ok: true, restartStatus });
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });

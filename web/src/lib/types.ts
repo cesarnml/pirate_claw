@@ -256,6 +256,27 @@ export type DaemonHealth = {
 
 export type SetupState = 'starter' | 'partially_configured' | 'ready';
 export type ReadinessState = 'not_ready' | 'ready_pending_restart' | 'ready';
+export type RestartStatus =
+	| {
+			state: 'idle';
+			currentDaemonStartedAt: string;
+	  }
+	| {
+			state: 'requested';
+			requestId: string;
+			requestedAt: string;
+			requestedByStartedAt: string;
+			currentDaemonStartedAt: string;
+	  }
+	| {
+			state: 'back_online';
+			requestId: string;
+			requestedAt: string;
+			requestedByStartedAt: string;
+			returnedAt: string;
+			returnedStartedAt: string;
+			currentDaemonStartedAt: string;
+	  };
 
 export type ReadinessResponse = {
 	state: ReadinessState;
