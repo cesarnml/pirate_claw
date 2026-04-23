@@ -588,7 +588,9 @@ Goal:
 
 Current status:
 
-- product definition only; Phase 24 intentionally stopped before browser-visible daemon return proof
+- implemented in the current Phase 25 delivery stack
+- `/config` now carries a real browser-visible restart round trip with truthful `requested -> restarting -> back_online` proof backed by the daemon's durable restart artifact
+- shared restart vocabulary now covers `/config`, the app-shell restart banner, and onboarding-adjacent copy, with a bounded 45-second `failed_to_return` state when the daemon never comes back
 - see [`docs/01-product/phase-25-in-browser-restart-round-trip-proof.md`](../01-product/phase-25-in-browser-restart-round-trip-proof.md)
 
 ## Phase 26: Mac First-Class Always-On Deployment
@@ -652,7 +654,7 @@ The following items are **mapped** to numbered phases (no longer “unbounded”
 
 - product phases `01`–`19` are implemented in the current delivery stack; **Phase 19** is delivered via `P19.01`–`P19.08`
 - **Phase 20** (dashboard torrent proxy) is **shipped** on `main`
-- **Phases 21–27** are the current product-completion planning buckets: bootstrap contract, browser-only setup, Plex auth lifecycle completion, Synology supervision durability, browser restart round-trip proof, Mac first-class always-on deployment, and UX/UI polish
+- **Phases 21–25** are shipped on `main`; **Phases 26–27** remain the current product-completion planning buckets: Mac first-class always-on deployment and UX/UI polish
 - **Phase 28** (v1.0.0 / schema versioning) remains the release/versioning ceremony after product-completion phases are done
 - engineering epic write-ups **`EE01`–`EE09`** live under `docs/03-engineering/` (orchestrator, PR hygiene, and delivery workflow tooling)
 - each new phase requires an explicit planning pass, approved ticket decomposition, and developer sign-off before implementation starts
@@ -672,4 +674,4 @@ Working notes:
 - promote durable technical choices into ADRs
 - numbered phases are planning buckets, not a promise of strict implementation sequence when dependencies allow independent work
 
-Last verified against `README.md` and active delivery plans: 2026-04-23 (Phase 20 delivered on `main`; Phases 21, 22, 23, 24, 25, 26, and 27 are the current product-planning buckets; Phase 28 remains the release/versioning phase).
+Last verified against `README.md` and active delivery plans: 2026-04-23 (Phases 20, 21, 22, 23, 24, and 25 are delivered on `main`; Phases 26 and 27 remain the current product-planning buckets; Phase 28 remains the release/versioning phase).

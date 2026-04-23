@@ -1,6 +1,6 @@
 # Phase 25 Implementation Plan
 
-**Status:** Draft — awaiting developer approval before implementation.
+**Status:** Delivered on stacked PRs #219, #220, #221, and #222.
 
 Phase 25 turns the shipped Phase 24 restart contract into a truthful browser round-trip. Pirate Claw should stop treating restart as "request sent, good luck" and instead give the operator an inspectable restart journey backed by durable proof that the daemon instance actually came back.
 
