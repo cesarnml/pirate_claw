@@ -36,9 +36,15 @@ It currently supports:
 
 Pirate Claw creates its own starter config on first boot. No SSH, no vim, no hand-edited files are required to reach the browser or complete initial setup.
 
-### Mac (local dev / test)
+### Mac (supported `launchd` daemon path)
 
 **Plex prerequisite:** Plex Media Server **1.43.0 or later**. Download the current release from [plex.tv/media-server-downloads](https://www.plex.tv/media-server-downloads/). Install as a normal Mac app and confirm it is running before starting Pirate Claw.
+
+Supported always-on Mac deployment now uses a per-user `launchd` agent under a
+dedicated always-logged-in operator account. The operator-facing guide is
+[`docs/mac-runbook.md`](./docs/mac-runbook.md). The narrower supervisor
+contract and reference artifact remain in
+[`docs/mac-launchd-reference.md`](./docs/mac-launchd-reference.md).
 
 **First-boot sequence:**
 
@@ -59,8 +65,15 @@ bun run --cwd web dev
 
 5. Open **http://localhost:5173** — Pirate Claw will guide you through the browser-only setup flow from starter mode to an ingestion-ready config. No config file was needed.
 
-> **Note:** Mac `launchd` first-class auto-restart is Phase 26 work. Phase 24
-> covers the reviewed Synology restart/supervision contract.
+For the supported always-on daemon path after first boot:
+
+```bash
+sh docs/mac-reference-pirate-claw-launch-agent.sh install \
+  --install-dir "$(pwd)"
+```
+
+Browser-triggered restart on Mac now follows the same truthful restart-proof
+vocabulary as Synology, but the supervisor is `launchd` instead of Docker.
 
 ### Synology NAS (production)
 

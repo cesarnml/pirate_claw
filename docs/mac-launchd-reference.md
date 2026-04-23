@@ -1,8 +1,11 @@
 # macOS Launchd Reference Contract
 
 This document is the narrow Phase 26 reference contract for always-on Pirate
-Claw on macOS. It is not the full operator runbook. The runbook lands later in
-Phase 26 once the runtime truthfulness slice is complete.
+Claw on macOS. It is not the full operator runbook.
+
+The canonical operator workflow now lives at
+[`docs/mac-runbook.md`](./mac-runbook.md). Keep this document focused on the
+supported `launchd` boundary and reviewed reference artifact.
 
 The repo-owned reference artifact for this contract lives at
 [`docs/mac-reference-pirate-claw-launch-agent.sh`](./mac-reference-pirate-claw-launch-agent.sh).
