@@ -19,7 +19,10 @@
 	import { page } from '$app/stores';
 	import { toast } from '$lib/toast';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	import { loadRestartRoundTripPhase } from '$lib/restart-roundtrip';
+	import {
+		loadRestartRoundTripPhase,
+		RESTART_RETURN_TIMEOUT_SECONDS
+	} from '$lib/restart-roundtrip';
 
 	interface Props {
 		children: Snippet;
@@ -60,6 +63,12 @@
 	let restartBannerRequestId = $state<string | null>(null);
 	let restartBannerRequestedAt = $state<string | null>(null);
 	let restartBannerPollTimer = $state<number | null>(null);
+	const restartBannerActionDisabled = $derived(
+		restartingFromBanner ||
+			restartBannerPhase === 'requested' ||
+			restartBannerPhase === 'restarting' ||
+			restartBannerPhase === 'back_online'
+	);
 
 	function clearRestartBannerPolling() {
 		if (restartBannerPollTimer !== null) {
@@ -260,10 +269,10 @@
 								{:else if restartBannerPhase === 'restarting'}
 									Daemon restarting. This page will confirm when it comes back.
 								{:else if restartBannerPhase === 'back_online'}
-									Daemon back_online. Return proof is recorded.
+									Daemon back online. Return proof is recorded.
 								{:else if restartBannerPhase === 'failed_to_return'}
-									Daemon failed_to_return within 45 seconds. Check the host, then retry or restart
-									manually.
+									Daemon failed to return within {RESTART_RETURN_TIMEOUT_SECONDS} seconds. Check the host,
+									then retry or restart manually.
 								{:else}
 									Restart daemon to apply config changes. The browser will confirm whether it comes
 									back.
@@ -272,7 +281,7 @@
 							<button
 								type="submit"
 								class="border-warning/40 text-warning hover:bg-warning/10 shrink-0 rounded-md border px-3 py-1.5 font-medium transition-colors"
-								disabled={restartingFromBanner}
+								disabled={restartBannerActionDisabled}
 							>
 								{#if restartingFromBanner}
 									Restarting…
