@@ -2,7 +2,7 @@
 
 Pirate Claw is a local CLI for pulling media candidates from RSS feeds, matching them against your rules, and queueing approved downloads in Transmission.
 
-Phases **01–23** shipped the current core product: the CLI/runtime stack, Obsidian Tide dashboard, zero-file-edit bootstrap, browser-only setup flow, the dashboard Transmission layer (Torrent Manager pause/resume/remove/remove-with-delete, missing-torrent disposition, Feed Event Log with failed-enqueue **Queue** retries, and matching daemon routes), and browser-managed Plex auth with durable device identity plus best-effort silent renewal. The current follow-on planning sequence is **Phases 24–28**: Synology supervision durability, in-browser restart round-trip proof, Mac first-class always-on deployment, UX/UI polish, then the v1.0.0 / schema-versioning release ceremony (`schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, tagged release). See `docs/01-product/`.
+Phases **01–25** shipped the current core product: the CLI/runtime stack, Obsidian Tide dashboard, zero-file-edit bootstrap, browser-only setup flow, the dashboard Transmission layer (Torrent Manager pause/resume/remove/remove-with-delete, missing-torrent disposition, Feed Event Log with failed-enqueue **Queue** retries, and matching daemon routes), browser-managed Plex auth with durable device identity plus best-effort silent renewal, Synology restart durability, and browser-visible restart round-trip proof. The current follow-on planning sequence is **Phases 26–28**: Mac first-class always-on deployment, UX/UI polish, then the v1.0.0 / schema-versioning release ceremony (`schemaVersion`, SQLite `PRAGMA user_version`, `VERSIONING.md`, CHANGELOG, tagged release). See `docs/01-product/`.
 
 It currently supports:
 
@@ -70,7 +70,9 @@ Reviewed reference daemon supervision path:
 Synology restart-backed operation is supported through Docker restart
 supervision on the `pirate-claw` daemon container. The browser restart control
 requests a daemon `SIGTERM`; Docker `--restart always` is what brings the
-daemon back. Browser-visible return proof is deferred to Phase 25.
+daemon back. Pirate Claw now persists restart proof under its existing durable
+runtime boundary so the browser can show a truthful `requested -> restarting ->
+back_online | failed_to_return` journey instead of stopping at "request sent."
 
 The writable `/volume1/pirate-claw/config` directory and
 `/volume1/pirate-claw/data` mounts (`pirate-claw.db` plus
@@ -216,6 +218,7 @@ Set `runtime.apiPort` to start an HTTP JSON API alongside the daemon:
 | Endpoint                                           | Description                                                                                                                                              |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/health`                                  | Uptime, start time, last run/reconcile snapshots                                                                                                         |
+| `GET /api/daemon/restart-status`                   | Durable restart-proof status for the current browser-visible round trip (`idle`, `requested`, `back_online`)                                             |
 | `GET /api/status`                                  | Recent run summaries                                                                                                                                     |
 | `GET /api/candidates`                              | All tracked candidate state records                                                                                                                      |
 | `GET /api/shows`                                   | TV candidates grouped by show → season → episode, with Plex status/watch fields                                                                          |
@@ -271,9 +274,9 @@ cd web && PIRATE_CLAW_API_URL=http://localhost:5555 PORT=5174 node build/index.j
 
 ## Current Scope
 
-Pirate Claw is a local operator tool for a personal NAS. The roadmap now targets **Phases 25–27** for browser restart proof, Mac first-class deployment, and UX polish before the **Phase 28** release/versioning ceremony.
+Pirate Claw is a local operator tool for a personal NAS. The roadmap now targets **Phases 26–27** for Mac first-class deployment and UX polish before the **Phase 28** release/versioning ceremony.
 
-**Implemented (Phases 01–24):** RSS ingestion, policy matching, Transmission queuing, lifecycle reconciliation, TMDB enrichment, read dashboard, unified config editing from the UI, post-save daemon restart and Transmission ping controls, full feed and target management, onboarding/resume flow, explicit empty states across the dashboard and key routes, optional Plex Media Server enrichment, the Phase 19 Obsidian Tide redesign with sidebar navigation, dashboard consolidation, poster-forward layouts, movie backdrops, Plex chips, a TMDB refresh control on TV detail, **Phase 20** dashboard Transmission controls, **Phase 23** browser-managed Plex connect / reconnect with durable device identity and best-effort silent renewal, and **Phase 24** Synology restart supervision truthfulness with restart durability proof plus truthful Plex-on-Synology guidance.
+**Implemented (Phases 01–25):** RSS ingestion, policy matching, Transmission queuing, lifecycle reconciliation, TMDB enrichment, read dashboard, unified config editing from the UI, post-save daemon restart and Transmission ping controls, full feed and target management, onboarding/resume flow, explicit empty states across the dashboard and key routes, optional Plex Media Server enrichment, the Phase 19 Obsidian Tide redesign with sidebar navigation, dashboard consolidation, poster-forward layouts, movie backdrops, Plex chips, a TMDB refresh control on TV detail, **Phase 20** dashboard Transmission controls, **Phase 23** browser-managed Plex connect / reconnect with durable device identity and best-effort silent renewal, **Phase 24** Synology restart supervision truthfulness with restart durability proof plus truthful Plex-on-Synology guidance, and **Phase 25** in-browser restart round-trip proof with bounded `failed_to_return` UX.
 
 **Implemented (Phase 20):** Dashboard Torrent Manager actions (pause, resume, remove, remove-with-delete), missing-torrent disposition, Transmission failures / requeue, related daemon JSON endpoints, and the `pirateClawDisposition` + derived display-state model (see `docs/01-product/phase-20-dashboard-torrent-actions.md`).
 
