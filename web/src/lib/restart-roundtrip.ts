@@ -1,6 +1,7 @@
 import type { RestartStatus } from '$lib/types';
 
 export const RESTART_RETURN_TIMEOUT_MS = 45_000;
+export const RESTART_RETURN_TIMEOUT_SECONDS = RESTART_RETURN_TIMEOUT_MS / 1000;
 
 export type RestartRoundTripPhase = 'requested' | 'restarting' | 'back_online' | 'failed_to_return';
 
@@ -11,7 +12,7 @@ export function hasRestartTimedOut(
 ): boolean {
 	const requestedAtMs = Date.parse(requestedAt);
 	if (Number.isNaN(requestedAtMs)) {
-		return false;
+		return true;
 	}
 	return nowMs - requestedAtMs >= timeoutMs;
 }
@@ -35,7 +36,10 @@ export async function loadRestartRoundTripPhase(
 
 		const status = (await response.json()) as RestartStatus;
 		if ('requestId' in status && status.requestId === requestId) {
-			return status.state === 'back_online' ? 'back_online' : 'requested';
+			if (status.state === 'back_online') {
+				return 'back_online';
+			}
+			return timedOut ? 'failed_to_return' : 'requested';
 		}
 
 		return timedOut ? 'failed_to_return' : 'restarting';

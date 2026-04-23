@@ -387,7 +387,7 @@ describe('/onboarding', () => {
 		expect(dashboardLink).toHaveClass('pointer-events-none');
 		expect(
 			screen.getByText(
-				'Your minimum setup is complete, but the daemon is restarting. The dashboard unlocks once it is back_online.'
+				'Your minimum setup is complete, but the daemon is restarting. The dashboard unlocks once it is back online.'
 			)
 		).toBeInTheDocument();
 	});

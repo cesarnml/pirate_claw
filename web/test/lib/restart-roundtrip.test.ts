@@ -24,6 +24,30 @@ describe('loadRestartRoundTripPhase', () => {
 		).resolves.toBe('requested');
 	});
 
+	it('returns failed_to_return when the same request id is still pending after the timeout', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					state: 'requested',
+					requestId: 'restart-123',
+					requestedAt: '2026-04-23T10:00:00.000Z',
+					requestedByStartedAt: '2026-04-23T10:00:00.000Z',
+					currentDaemonStartedAt: '2026-04-23T10:00:00.000Z'
+				}),
+				{ status: 200 }
+			)
+		);
+
+		await expect(
+			loadRestartRoundTripPhase(
+				'restart-123',
+				'2026-04-23T10:00:00.000Z',
+				fetchMock,
+				Date.parse('2026-04-23T10:00:00.000Z') + RESTART_RETURN_TIMEOUT_MS
+			)
+		).resolves.toBe('failed_to_return');
+	});
+
 	it('treats API downtime as restarting after the request was accepted', async () => {
 		const fetchMock = vi.fn().mockRejectedValue(new Error('connection refused'));
 
@@ -63,6 +87,27 @@ describe('loadRestartRoundTripPhase', () => {
 				fetchMock,
 				Date.parse('2026-04-23T10:00:00.000Z') + RESTART_RETURN_TIMEOUT_MS
 			)
+		).resolves.toBe('failed_to_return');
+	});
+
+	it('stays restarting just below the timeout threshold', async () => {
+		const fetchMock = vi.fn().mockRejectedValue(new Error('connection refused'));
+
+		await expect(
+			loadRestartRoundTripPhase(
+				'restart-123',
+				'2026-04-23T10:00:00.000Z',
+				fetchMock,
+				Date.parse('2026-04-23T10:00:00.000Z') + RESTART_RETURN_TIMEOUT_MS - 1
+			)
+		).resolves.toBe('restarting');
+	});
+
+	it('treats an invalid requestedAt timestamp as timed out', async () => {
+		const fetchMock = vi.fn().mockRejectedValue(new Error('connection refused'));
+
+		await expect(
+			loadRestartRoundTripPhase('restart-123', 'not-a-timestamp', fetchMock)
 		).resolves.toBe('failed_to_return');
 	});
 });

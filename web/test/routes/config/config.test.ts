@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import { RESTART_RETURN_TIMEOUT_SECONDS } from '../../../src/lib/restart-roundtrip';
 import Page from '../../../src/routes/config/+page.svelte';
 import TransmissionCard from '../../../src/routes/config/components/TransmissionCard.svelte';
 import type { AppConfig } from '$lib/types';
@@ -378,8 +379,59 @@ describe('/config', () => {
 
 		expect(
 			screen.getByText(
-				'Daemon failed_to_return within 45 seconds. Check the host, then retry or restart manually.'
+				`Daemon failed to return within ${RESTART_RETURN_TIMEOUT_SECONDS} seconds. Check the host, then retry or restart manually.`
 			)
+		).toBeInTheDocument();
+	});
+
+	it('renders requested, restarting, and back online guidance with human-readable copy', async () => {
+		const baseProps = {
+			canWrite: true,
+			currentEtag: '"rev-1"',
+			writeDisabledTooltip: '',
+			connected: true,
+			host: 'localhost',
+			port: '9091',
+			version: '3.00',
+			totalDownloadedBytes: 0,
+			totalUploadedBytes: 0,
+			sessionDownloadedBytes: 0,
+			sessionUploadedBytes: 0,
+			authToken: '[redacted]',
+			url: 'http://localhost:9091',
+			downloadTargets: [{ label: 'Download', value: '/tmp' }],
+			runtime: mockConfig.runtime,
+			showRows: ['The Show'],
+			testingConnection: false,
+			restarting: false,
+			runtimeChangesPending: false,
+			enhanceTestConnection: vi.fn(),
+			enhanceSaveRuntime: vi.fn(),
+			enhanceRestartDaemon: vi.fn()
+		};
+
+		const rendered = render(TransmissionCard, {
+			...baseProps,
+			restartPhase: 'requested'
+		});
+		expect(
+			screen.getByText('Restart requested. Waiting for the daemon to go away.')
+		).toBeInTheDocument();
+
+		await rendered.rerender({
+			...baseProps,
+			restartPhase: 'restarting'
+		});
+		expect(
+			screen.getByText('Daemon restarting. This page will confirm when it comes back.')
+		).toBeInTheDocument();
+
+		await rendered.rerender({
+			...baseProps,
+			restartPhase: 'back_online'
+		});
+		expect(
+			screen.getByText('Daemon back online. Return proof is recorded and runtime changes are live.')
 		).toBeInTheDocument();
 	});
 });
