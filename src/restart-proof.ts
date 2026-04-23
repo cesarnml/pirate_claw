@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { renameSync, writeFileSync } from 'node:fs';
+import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 type RestartProofRecord =
@@ -49,51 +50,59 @@ function restartProofPath(artifactDir: string): string {
 async function readRestartProofRecord(
   artifactDir: string,
 ): Promise<RestartProofRecord | null> {
+  let raw: string;
   try {
-    const raw = await readFile(restartProofPath(artifactDir), 'utf8');
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (
-      parsed.version !== 1 ||
-      (parsed.state !== 'requested' && parsed.state !== 'back_online') ||
-      typeof parsed.requestId !== 'string' ||
-      typeof parsed.requestedAt !== 'string' ||
-      typeof parsed.requestedByStartedAt !== 'string'
-    ) {
-      return null;
-    }
-
-    if (parsed.state === 'requested') {
-      return {
-        version: 1,
-        state: 'requested',
-        requestId: parsed.requestId,
-        requestedAt: parsed.requestedAt,
-        requestedByStartedAt: parsed.requestedByStartedAt,
-      };
-    }
-
-    if (
-      typeof parsed.returnedAt !== 'string' ||
-      typeof parsed.returnedStartedAt !== 'string'
-    ) {
-      return null;
-    }
-
-    return {
-      version: 1,
-      state: 'back_online',
-      requestId: parsed.requestId,
-      requestedAt: parsed.requestedAt,
-      requestedByStartedAt: parsed.requestedByStartedAt,
-      returnedAt: parsed.returnedAt,
-      returnedStartedAt: parsed.returnedStartedAt,
-    };
+    raw = await readFile(restartProofPath(artifactDir), 'utf8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return null;
     }
     throw error;
   }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  if (
+    parsed.version !== 1 ||
+    (parsed.state !== 'requested' && parsed.state !== 'back_online') ||
+    typeof parsed.requestId !== 'string' ||
+    typeof parsed.requestedAt !== 'string' ||
+    typeof parsed.requestedByStartedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  if (parsed.state === 'requested') {
+    return {
+      version: 1,
+      state: 'requested',
+      requestId: parsed.requestId,
+      requestedAt: parsed.requestedAt,
+      requestedByStartedAt: parsed.requestedByStartedAt,
+    };
+  }
+
+  if (
+    typeof parsed.returnedAt !== 'string' ||
+    typeof parsed.returnedStartedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    version: 1,
+    state: 'back_online',
+    requestId: parsed.requestId,
+    requestedAt: parsed.requestedAt,
+    requestedByStartedAt: parsed.requestedByStartedAt,
+    returnedAt: parsed.returnedAt,
+    returnedStartedAt: parsed.returnedStartedAt,
+  };
 }
 
 async function writeRestartProofRecord(
@@ -101,11 +110,13 @@ async function writeRestartProofRecord(
   record: RestartProofRecord,
 ): Promise<void> {
   await mkdir(artifactDir, { recursive: true });
-  await writeFile(
-    restartProofPath(artifactDir),
-    `${JSON.stringify(record, null, 2)}\n`,
-    'utf8',
-  );
+  const finalPath = restartProofPath(artifactDir);
+  const tempPath = `${finalPath}.${process.pid}.${randomUUID()}.tmp`;
+  writeFileSync(tempPath, `${JSON.stringify(record, null, 2)}\n`, {
+    encoding: 'utf8',
+    flag: 'wx',
+  });
+  renameSync(tempPath, finalPath);
 }
 
 export async function recordRestartRequested(

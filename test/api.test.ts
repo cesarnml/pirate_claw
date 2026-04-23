@@ -3448,6 +3448,33 @@ describe('GET /api/daemon/restart-status', () => {
     });
   });
 
+  it('treats a corrupt restart-proof artifact as idle instead of returning 500', async () => {
+    const artifactDir = await mkdtemp(
+      join(tmpdir(), 'pirate-claw-restart-proof-corrupt-'),
+    );
+    await writeFile(join(artifactDir, 'restart-proof.json'), '{"state":');
+
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: {
+        ...deps.config.runtime,
+        artifactDir,
+      },
+    };
+
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/daemon/restart-status'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      state: 'idle',
+      currentDaemonStartedAt: deps.health.startedAt,
+    });
+  });
+
   it('returns requested before exit and back_online after the next daemon starts', async () => {
     const artifactDir = await mkdtemp(
       join(tmpdir(), 'pirate-claw-restart-proof-roundtrip-'),
