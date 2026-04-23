@@ -3201,9 +3201,16 @@ describe('POST /api/daemon/restart', () => {
     );
     try {
       const deps = createDeps();
+      const artifactDir = await mkdtemp(
+        join(tmpdir(), 'pirate-claw-restart-proof-'),
+      );
       deps.config = {
         ...deps.config,
-        runtime: { ...deps.config.runtime, apiWriteToken: 'tok' },
+        runtime: {
+          ...deps.config.runtime,
+          apiWriteToken: 'tok',
+          artifactDir,
+        },
       };
       const handler = createApiFetch(deps);
       const res = await handler(
@@ -3213,7 +3220,14 @@ describe('POST /api/daemon/restart', () => {
         }),
       );
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true });
+      expect(await res.json()).toMatchObject({
+        ok: true,
+        restartStatus: {
+          state: 'requested',
+          requestedByStartedAt: deps.health.startedAt,
+          currentDaemonStartedAt: deps.health.startedAt,
+        },
+      });
       // Flush the microtask queue so queueMicrotask fires before we assert.
       await Promise.resolve();
       expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
@@ -3366,7 +3380,12 @@ describe('POST /api/daemon/restart', () => {
         }),
       );
       expect(restart.status).toBe(200);
-      expect(await restart.json()).toEqual({ ok: true });
+      expect(await restart.json()).toMatchObject({
+        ok: true,
+        restartStatus: {
+          state: 'requested',
+        },
+      });
       await Promise.resolve();
       expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
 
@@ -3399,6 +3418,109 @@ describe('POST /api/daemon/restart', () => {
       } else {
         delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
       }
+    }
+  });
+});
+
+describe('GET /api/daemon/restart-status', () => {
+  it('returns idle when no restart proof exists', async () => {
+    const artifactDir = await mkdtemp(
+      join(tmpdir(), 'pirate-claw-restart-proof-status-'),
+    );
+    const deps = createDeps();
+    deps.config = {
+      ...deps.config,
+      runtime: {
+        ...deps.config.runtime,
+        artifactDir,
+      },
+    };
+
+    const handler = createApiFetch(deps);
+    const response = await handler(
+      new Request('http://localhost/api/daemon/restart-status'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      state: 'idle',
+      currentDaemonStartedAt: deps.health.startedAt,
+    });
+  });
+
+  it('returns requested before exit and back_online after the next daemon starts', async () => {
+    const artifactDir = await mkdtemp(
+      join(tmpdir(), 'pirate-claw-restart-proof-roundtrip-'),
+    );
+    const killSpy = spyOn(process, 'kill').mockImplementation(
+      () => undefined as never,
+    );
+
+    try {
+      const firstDeps = createDeps();
+      firstDeps.health.startedAt = '2026-04-23T10:00:00.000Z';
+      firstDeps.config = {
+        ...firstDeps.config,
+        runtime: {
+          ...firstDeps.config.runtime,
+          apiWriteToken: 'tok',
+          artifactDir,
+        },
+      };
+      const firstHandler = createApiFetch(firstDeps);
+
+      const restart = await firstHandler(
+        new Request('http://localhost/api/daemon/restart', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer tok' },
+        }),
+      );
+      expect(restart.status).toBe(200);
+      const restartBody = (await restart.json()) as {
+        restartStatus: { requestId: string };
+      };
+
+      const requested = await firstHandler(
+        new Request('http://localhost/api/daemon/restart-status'),
+      );
+      expect(requested.status).toBe(200);
+      expect(await requested.json()).toEqual({
+        state: 'requested',
+        requestId: restartBody.restartStatus.requestId,
+        requestedAt: expect.any(String),
+        requestedByStartedAt: '2026-04-23T10:00:00.000Z',
+        currentDaemonStartedAt: '2026-04-23T10:00:00.000Z',
+      });
+
+      await Promise.resolve();
+      expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+
+      const secondDeps = createDeps();
+      secondDeps.health.startedAt = '2026-04-23T10:00:05.000Z';
+      secondDeps.config = {
+        ...secondDeps.config,
+        runtime: {
+          ...secondDeps.config.runtime,
+          artifactDir,
+        },
+      };
+      const secondHandler = createApiFetch(secondDeps);
+
+      const backOnline = await secondHandler(
+        new Request('http://localhost/api/daemon/restart-status'),
+      );
+      expect(backOnline.status).toBe(200);
+      expect(await backOnline.json()).toEqual({
+        state: 'back_online',
+        requestId: restartBody.restartStatus.requestId,
+        requestedAt: expect.any(String),
+        requestedByStartedAt: '2026-04-23T10:00:00.000Z',
+        returnedAt: expect.any(String),
+        returnedStartedAt: '2026-04-23T10:00:05.000Z',
+        currentDaemonStartedAt: '2026-04-23T10:00:05.000Z',
+      });
+    } finally {
+      killSpy.mockRestore();
     }
   });
 });
