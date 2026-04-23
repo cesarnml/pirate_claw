@@ -13,7 +13,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { loadConfig } from '../src/config';
 import { PlexAuthStore } from '../src/plex/auth';
-import { openDatabase } from '../src/repository';
+import { ensureSchema, openDatabase } from '../src/repository';
 import type { RestartStatus } from '../src/restart-proof';
 
 type ValidationSummary = {
@@ -33,7 +33,7 @@ type ValidationSummary = {
 };
 
 type RunningProcess = {
-  process: Bun.Subprocess<'ignore', 'pipe', 'pipe'>;
+  process: Bun.Subprocess<'ignore', 'ignore', 'ignore'>;
   stop: () => Promise<void>;
 };
 
@@ -225,8 +225,8 @@ async function startWebProxy(
       String(webPort),
     ],
     cwd: repoRoot,
-    stdout: 'pipe',
-    stderr: 'pipe',
+    stdout: 'ignore',
+    stderr: 'ignore',
     env: {
       ...process.env,
       PIRATE_CLAW_API_URL: `http://127.0.0.1:${apiPort}`,
@@ -284,6 +284,18 @@ async function main(): Promise<void> {
       `${JSON.stringify(buildValidationConfig(apiPort), null, 2)}\n`,
     );
 
+    const seededDatabase = openDatabase(databasePath);
+    try {
+      ensureSchema(seededDatabase);
+      const store = new PlexAuthStore(seededDatabase);
+      store.completeRenewal(PLEX_REFRESH_TOKEN, {
+        authenticatedAt: '2026-04-23T10:00:00.000Z',
+        tokenExpiresAt: '2026-05-23T10:00:00.000Z',
+      });
+    } finally {
+      seededDatabase.close();
+    }
+
     await installLaunchAgent(repoRoot, installDir, label);
 
     const healthBeforeRestart = await waitForJson<{ startedAt: string }>(
@@ -294,17 +306,6 @@ async function main(): Promise<void> {
 
     if (webPort != null) {
       webProcess = await startWebProxy(repoRoot, apiPort, webPort);
-    }
-
-    const database = openDatabase(databasePath);
-    try {
-      const store = new PlexAuthStore(database);
-      store.completeRenewal(PLEX_REFRESH_TOKEN, {
-        authenticatedAt: '2026-04-23T10:00:00.000Z',
-        tokenExpiresAt: '2026-05-23T10:00:00.000Z',
-      });
-    } finally {
-      database.close();
     }
 
     const restart = await fetchJson<{ restartStatus: RestartStatus }>(
