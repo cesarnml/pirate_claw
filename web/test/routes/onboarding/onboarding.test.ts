@@ -6,7 +6,7 @@ import emptyConfig from '../../../../fixtures/api/config-empty.json';
 import feedOnlyConfig from '../../../../fixtures/api/config-feed-only.json';
 import configWithMovies from '../../../../fixtures/api/config-with-movies.json';
 import configWithTvDefaults from '../../../../fixtures/api/config-with-tv-defaults.json';
-import type { AppConfig } from '$lib/types';
+import type { AppConfig, InstallHealthResponse } from '$lib/types';
 import Page from '../../../src/routes/onboarding/+page.svelte';
 
 const emptyConfigFixture = emptyConfig as AppConfig;
@@ -20,11 +20,39 @@ const sharedLayoutData = {
 	plexConfigured: false,
 	setupState: 'ready' as const,
 	readinessState: 'ready' as const,
+	installHealthState: null,
 	plexAuth: {
 		state: 'not_connected' as const,
 		plexUrl: 'http://localhost:32400',
 		hasToken: false,
 		returnTo: null
+	}
+};
+
+const failingInstallHealth: InstallHealthResponse = {
+	healthy: false,
+	installRoot: '/volume1/pirate-claw',
+	checks: {
+		installRoot: {
+			status: 'pass',
+			remediation: 'No action needed.'
+		},
+		mediaShowsWritable: {
+			status: 'fail',
+			remediation:
+				'Open File Station and create the pirate-claw media shows folder, then map it in Docker.'
+		}
+	}
+};
+
+const passingInstallHealth: InstallHealthResponse = {
+	healthy: true,
+	installRoot: '/volume1/pirate-claw',
+	checks: {
+		installRoot: {
+			status: 'pass',
+			remediation: 'No action needed.'
+		}
 	}
 };
 
@@ -36,6 +64,82 @@ function renderPage(data: Record<string, unknown>) {
 }
 
 describe('/onboarding', () => {
+	it('blocks config onboarding behind failing Synology install health', () => {
+		renderPage({
+			config: {
+				...emptyConfigFixture,
+				runtime: { ...emptyConfigFixture.runtime, installRoot: '/volume1/pirate-claw' }
+			},
+			etag: '"rev-1"',
+			canWrite: true,
+			installHealthState: failingInstallHealth,
+			onboarding: {
+				state: 'initial_empty',
+				hasFeeds: false,
+				hasTvTargets: false,
+				hasMovieTargets: false,
+				minimumComplete: false
+			},
+			error: null
+		});
+
+		expect(screen.getByText('Synology install health')).toBeInTheDocument();
+		expect(screen.getByText('Media Shows Writable')).toBeInTheDocument();
+		expect(screen.getByText(/Open File Station and create/)).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Re-check' })).toHaveAttribute('href', '/onboarding');
+		expect(screen.queryByText('Step 1 — Verify Transmission')).not.toBeInTheDocument();
+		expect(screen.queryByText('Step 5 — Add your first feed')).not.toBeInTheDocument();
+	});
+
+	it('shows passing Synology install health before config onboarding', () => {
+		renderPage({
+			config: {
+				...emptyConfigFixture,
+				runtime: { ...emptyConfigFixture.runtime, installRoot: '/volume1/pirate-claw' }
+			},
+			etag: '"rev-1"',
+			canWrite: true,
+			installHealthState: passingInstallHealth,
+			onboarding: {
+				state: 'initial_empty',
+				hasFeeds: false,
+				hasTvTargets: false,
+				hasMovieTargets: false,
+				minimumComplete: false
+			},
+			error: null
+		});
+
+		expect(
+			screen.getByText('Synology storage is ready. Continue with Pirate Claw setup.')
+		).toBeInTheDocument();
+		expect(screen.getByText(/All required Synology folders/)).toBeInTheDocument();
+		expect(screen.getByText('Step 5 — Feed type')).toBeInTheDocument();
+	});
+
+	it('does not block non-Synology onboarding when install health is unhealthy', () => {
+		renderPage({
+			config: {
+				...emptyConfigFixture,
+				runtime: { ...emptyConfigFixture.runtime, installRoot: undefined }
+			},
+			etag: '"rev-1"',
+			canWrite: true,
+			installHealthState: failingInstallHealth,
+			onboarding: {
+				state: 'initial_empty',
+				hasFeeds: false,
+				hasTvTargets: false,
+				hasMovieTargets: false,
+				minimumComplete: false
+			},
+			error: null
+		});
+
+		expect(screen.queryByText('Synology install health')).not.toBeInTheDocument();
+		expect(screen.getByText('Step 5 — Feed type')).toBeInTheDocument();
+	});
+
 	it('suppresses the intro alert once the done summary is active', () => {
 		renderPage({
 			config: {
