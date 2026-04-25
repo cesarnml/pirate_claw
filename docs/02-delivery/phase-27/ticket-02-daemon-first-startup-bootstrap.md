@@ -41,4 +41,8 @@ Daemon startup on a clean install root creates the full directory tree and write
 
 ## Rationale
 
-_To be completed after implementation._
+Implemented the first-startup bootstrap as daemon-owned runtime behavior gated by a configured install root. `PIRATE_CLAW_INSTALL_ROOT` or `runtime.installRoot` enables the Synology install tree creation; leaving both unset preserves existing local/Mac daemon behavior and avoids unexpectedly creating `/volume1/pirate-claw` on non-Synology hosts.
+
+Generated app secrets are written under the config directory at `config/generated/daemon-api-write-token` and loaded as the daemon API write token when no stronger environment override is present. This keeps `pirate-claw.config.json` non-secret while giving the web container a stable shared-file path that P27.03 can mount/read without requiring the owner to hand-enter `PIRATE_CLAW_API_WRITE_TOKEN`.
+
+Bootstrap is create-if-absent only: missing directories are created recursively, existing directories are left alone, and an existing generated token file is never overwritten.

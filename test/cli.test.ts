@@ -561,14 +561,18 @@ describe('pirate-claw config show', () => {
             username: 'user',
             password: 'pass',
           },
+          runtime: {
+            apiWriteToken: '',
+          },
         },
         null,
         2,
       ),
     );
 
-    const result = await runSimpleCommand(
+    const result = await runSimpleCommandWithEnv(
       directory,
+      { PIRATE_CLAW_API_WRITE_TOKEN: '' },
       'config',
       'show',
       '--config',
@@ -1070,9 +1074,17 @@ async function runSimpleCommand(
   commandCwd: string,
   ...args: string[]
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  return runSimpleCommandWithEnv(commandCwd, {}, ...args);
+}
+
+async function runSimpleCommandWithEnv(
+  commandCwd: string,
+  commandEnv: Record<string, string>,
+  ...args: string[]
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const child = Bun.spawn([cliExecutable, ...args], {
     cwd: commandCwd,
-    env,
+    env: { ...env, ...commandEnv },
     stderr: 'pipe',
     stdout: 'pipe',
   });

@@ -92,6 +92,11 @@ The writable `/volume1/pirate-claw/config` directory and
 `.pirate-claw/runtime/`, which contains `poll-state.json`) are one durability
 boundary for that contract.
 
+When `PIRATE_CLAW_INSTALL_ROOT` or `runtime.installRoot` is configured, daemon
+startup creates the Synology install tree if it is missing and writes generated
+app secrets under `config/generated/`. Existing directories and generated
+secret files are left untouched on later starts.
+
 **Plex prerequisite:** Plex Media Server **1.43.0 or later**. Check your
 installed version in **Package Center → Installed → Plex Media Server →
 Details**. On the reviewed `DS918+ / DSM 7.1.1-42962 Update 9` baseline,
@@ -132,7 +137,7 @@ Config file: `pirate-claw.config.json` (see [`pirate-claw.config.example.json`](
 - `tv` — compact `defaults + shows` object or legacy per-show array
 - `movies` — global year, resolution, codec, and `codecPolicy` (`"prefer"` or `"require"`)
 - `transmission` — RPC URL, credentials, optional `downloadDirs` per media type
-- `runtime` — daemon scheduling and artifacts; `apiPort` enables HTTP API; `apiWriteToken` enables config writes; `tmdbRefreshIntervalMinutes` controls background TMDB refresh (default 360, `0` disables)
+- `runtime` — daemon scheduling and artifacts; `apiPort` enables HTTP API; `apiWriteToken` enables config writes; `installRoot` or `PIRATE_CLAW_INSTALL_ROOT` enables Synology first-startup directory and secret bootstrap; `tmdbRefreshIntervalMinutes` controls background TMDB refresh (default 360, `0` disables)
 - `tmdb` — optional `apiKey` (or env `PIRATE_CLAW_TMDB_API_KEY`) and cache TTL overrides
 - `plex` — optional operator-managed `url`, the current usable `token` (normally browser-managed after Connect Plex; env override via `PIRATE_CLAW_PLEX_TOKEN` still works), and `refreshIntervalMinutes` for library/watch refresh cadence
 
