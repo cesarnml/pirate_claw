@@ -31,4 +31,20 @@ P27.04 scope must be reviewed against this finding before that ticket starts.
 
 ## Rationale
 
-_To be completed after spike execution._
+**Finding: Fail.** A minimal lower-privilege `.spk` was built with `INFO`, `conf/privilege`, `scripts/start-stop-status`, and `scripts/postuninst`. DSM 7.1 rejected the initial root-privileged package shape, so the spike used Synology's lower-privilege package execution model (`run-as: package`) before validation.
+
+The package installed through Package Center after the third-party package warning, but DSM immediately left `Pirate Claw SPK Spike` stopped and reported `System failed to start [Pirate Claw SPK Spike]`. The Package Center **Repair** CTA retried the same failing start path and also failed. Docker GUI validation showed no `pirate-claw-spk-spike` container and no `busybox:latest` image after install/repair, so the hook did not produce any GUI-observable Docker orchestration result.
+
+Available hook surface from the spike:
+
+- `scripts/start-stop-status start|stop|status` is the lifecycle entrypoint Package Center uses for a startable package.
+- `scripts/postuninst` runs after uninstall and is suitable for best-effort cleanup.
+- DSM 7.1 root-privileged third-party packages are rejected by Package Center unless privilege settings are changed; `conf/privilege` is required for an owner-safe install path.
+- Under the lower-privilege package context, Docker orchestration did not succeed from the owner-visible Package Center path. The GUI-only validation cannot distinguish whether the failure was Docker CLI path, package-user permission, network/image pull, or script-shape related without using SSH or NAS-side CLI diagnostics, which are outside the Phase 27 owner contract.
+
+Fallback feasibility:
+
+- DSM Docker's **Container > Settings > Import** flow opens a DSM file picker rooted in shared folders and includes an **Upload** entry. The dialog did not advertise supported file extensions, but it is GUI-accessible and can select files from DSM shares.
+- File Station can create folders and upload files through the GUI.
+
+P27.04 must not assume Package Center hooks can create/start Docker containers on DSM 7.1. It should either use the confirmed GUI-accessible File Station + Docker import path or explicitly revise scope before implementation if the required import artifact format is not compatible with legacy DSM Docker.
