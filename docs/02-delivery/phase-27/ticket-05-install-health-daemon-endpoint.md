@@ -41,4 +41,8 @@ Add a daemon endpoint that checks and reports install health for the Synology ap
 
 ## Rationale
 
-_To be completed after implementation._
+Added unauthenticated `GET /api/setup/install-health` to the daemon API for the Phase 27 first-run surface. The response is a structured record of named checks plus top-level `healthy` and `installRoot`.
+
+The endpoint is diagnostic rather than mutating. P27.02 owns create-if-absent bootstrapping; this endpoint reports missing or not-writable paths with DSM-language remediation so the browser can block first-run setup without silently changing filesystem state during a health read.
+
+Transmission checks use the existing RPC session negotiation path for reachability/authentication and a new `free-space` RPC helper for the bundled container path checks. That proves Transmission can inspect the mounted downloads/media paths from inside its own container boundary without exposing the daemon or Transmission ports to the LAN and without shelling into DSM.

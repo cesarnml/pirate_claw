@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { getSetupState } from './bootstrap';
 import { renameSync, writeFileSync } from 'node:fs';
+import { getInstallHealth } from './install-health';
 import {
   fetchSessionInfo,
   fetchTorrentStats,
@@ -401,6 +402,14 @@ export function createApiFetch(
           transmissionReachable,
           daemonLive,
         });
+      } catch {
+        return json500();
+      }
+    }
+
+    if (path === '/api/setup/install-health' && request.method === 'GET') {
+      try {
+        return Response.json(await getInstallHealth(activeConfig));
       } catch {
         return json500();
       }
