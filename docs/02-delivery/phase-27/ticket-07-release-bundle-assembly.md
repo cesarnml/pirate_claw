@@ -37,4 +37,6 @@ The release bundle zip can be assembled from a single script invocation. Bundle 
 
 ## Rationale
 
-_To be completed after implementation._
+The release bundle is assembled from `tools/synology-release/build-release-bundle.sh` into `.pirate-claw/synology-release/pirate-claw-synology-vX.Y.Z.zip`, using the root package version for the bundle name. The bundle includes the built `pirate-claw.spk`, the DSM 7.2+ Container Manager compose artifact, bundle-local install guides, and screenshot placeholder directories for P27.08.
+
+The DSM 7.1 guide keeps the owner path GUI-only while being explicit that Docker images must already be available through Docker's Image view or another DSM GUI image import source. This preserves the Phase 27 deferral of offline image tarball install instead of adding unapproved tarball artifacts to the release zip.
