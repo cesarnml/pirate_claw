@@ -28,4 +28,6 @@ A fresh install that fails one or more health checks shows the install health pa
 
 ## Rationale
 
-_To be completed after implementation._
+The onboarding health panel treats install health as a Synology-runtime gate only when the loaded config declares `runtime.installRoot`. That preserves the existing local and non-Synology onboarding flow while the Phase 27 Synology compose stack can require Docker image import, folder mounts, write access, generated token, and Transmission path checks to pass before the owner reaches feed and target configuration.
+
+The "Re-check" action reloads `/onboarding`, which re-runs the shared layout health fetch without adding a new route or action. Remediation text comes from the daemon health response so DSM-facing operator guidance stays centralized with the health checks.

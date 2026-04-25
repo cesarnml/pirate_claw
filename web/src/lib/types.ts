@@ -288,6 +288,20 @@ export type ReadinessResponse = {
 	daemonLive: boolean;
 };
 
+export type InstallHealthStatus = 'pass' | 'fail' | 'skip';
+
+export type InstallHealthCheck = {
+	status: InstallHealthStatus;
+	remediation: string;
+	detail?: string;
+};
+
+export type InstallHealthResponse = {
+	healthy: boolean;
+	installRoot: string;
+	checks: Record<string, InstallHealthCheck>;
+};
+
 export type TransmissionCompatibility =
 	| 'recommended'
 	| 'compatible'

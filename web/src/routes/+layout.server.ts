@@ -2,6 +2,7 @@ import { apiFetch } from '$lib/server/api';
 import type {
 	AppConfig,
 	DaemonHealth,
+	InstallHealthResponse,
 	ReadinessResponse,
 	ReadinessState,
 	SessionInfo,
@@ -22,12 +23,14 @@ function normalizeReadinessState(state: unknown): ReadinessState {
 }
 
 export const load: LayoutServerLoad = async () => {
-	const [healthResult, sessionResult, configResult, readinessResult] = await Promise.allSettled([
-		apiFetch<DaemonHealth>('/api/health'),
-		apiFetch<SessionInfo>('/api/transmission/session'),
-		apiFetch<AppConfig>('/api/config'),
-		apiFetch<ReadinessResponse>('/api/setup/readiness')
-	]);
+	const [healthResult, sessionResult, configResult, readinessResult, installHealthResult] =
+		await Promise.allSettled([
+			apiFetch<DaemonHealth>('/api/health'),
+			apiFetch<SessionInfo>('/api/transmission/session'),
+			apiFetch<AppConfig>('/api/config'),
+			apiFetch<ReadinessResponse>('/api/setup/readiness'),
+			apiFetch<InstallHealthResponse>('/api/setup/install-health')
+		]);
 
 	if (healthResult.status === 'rejected') {
 		console.error('[layout] failed to load /api/health:', healthResult.reason);
@@ -45,6 +48,10 @@ export const load: LayoutServerLoad = async () => {
 		console.error('[layout] failed to load /api/setup/readiness:', readinessResult.reason);
 	}
 
+	if (installHealthResult.status === 'rejected') {
+		console.error('[layout] failed to load /api/setup/install-health:', installHealthResult.reason);
+	}
+
 	const readiness = readinessResult.status === 'fulfilled' ? readinessResult.value : null;
 
 	return {
@@ -52,6 +59,8 @@ export const load: LayoutServerLoad = async () => {
 		transmissionSession: sessionResult.status === 'fulfilled' ? sessionResult.value : null,
 		plexConfigured: configResult.status === 'fulfilled' && configResult.value.plex !== undefined,
 		setupState: normalizeSetupState(readiness?.configState),
-		readinessState: normalizeReadinessState(readiness?.state)
+		readinessState: normalizeReadinessState(readiness?.state),
+		installHealthState:
+			installHealthResult.status === 'fulfilled' ? installHealthResult.value : null
 	};
 };
