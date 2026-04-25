@@ -1,5 +1,7 @@
 import { dirname, join } from 'node:path';
 
+import { generatedDaemonApiWriteTokenPath } from './install-bootstrap';
+
 export type FeedConfig = {
   name: string;
   url: string;
@@ -49,6 +51,7 @@ export type RuntimeConfig = {
   artifactRetentionDays: number;
   apiPort?: number;
   apiWriteToken?: string;
+  installRoot?: string;
   /**
    * How often to run TMDB cache refresh in the daemon (independent of RSS polling).
    * Zero disables the background pass; omitted uses the default (see `DEFAULT_RUNTIME_CONFIG` and `validateRuntime`).
@@ -98,6 +101,7 @@ const DEFAULT_CONFIG_PATH = 'pirate-claw.config.json';
 const TRANSMISSION_USERNAME_ENV = 'PIRATE_CLAW_TRANSMISSION_USERNAME';
 const TRANSMISSION_PASSWORD_ENV = 'PIRATE_CLAW_TRANSMISSION_PASSWORD';
 const API_WRITE_TOKEN_ENV = 'PIRATE_CLAW_API_WRITE_TOKEN';
+const INSTALL_ROOT_ENV = 'PIRATE_CLAW_INSTALL_ROOT';
 const PLEX_TOKEN_ENV = 'PIRATE_CLAW_PLEX_TOKEN';
 const DEFAULT_PLEX_REFRESH_INTERVAL_MINUTES = 30;
 
@@ -739,10 +743,35 @@ function validateRuntime(
   env: Record<string, string | undefined>,
 ): RuntimeConfig {
   if (input === undefined) {
-    return { ...DEFAULT_RUNTIME_CONFIG };
+    const apiWriteToken = resolveApiWriteToken(
+      undefined,
+      env[API_WRITE_TOKEN_ENV],
+      `${path} runtime apiWriteToken`,
+    );
+    const installRoot = resolveOptionalString(
+      undefined,
+      env[INSTALL_ROOT_ENV],
+      `${path} runtime installRoot`,
+    );
+
+    return {
+      ...DEFAULT_RUNTIME_CONFIG,
+      ...(apiWriteToken ? { apiWriteToken } : {}),
+      ...(installRoot ? { installRoot } : {}),
+    };
   }
 
   const runtime = expectRecord(input, `${path} runtime`);
+  const apiWriteToken = resolveApiWriteToken(
+    runtime.apiWriteToken,
+    env[API_WRITE_TOKEN_ENV],
+    `${path} runtime apiWriteToken`,
+  );
+  const installRoot = resolveOptionalString(
+    runtime.installRoot,
+    env[INSTALL_ROOT_ENV],
+    `${path} runtime installRoot`,
+  );
 
   return {
     runIntervalMinutes:
@@ -767,11 +796,8 @@ function validateRuntime(
       runtime.apiPort,
       `${path} runtime apiPort`,
     ),
-    apiWriteToken: resolveApiWriteToken(
-      runtime.apiWriteToken,
-      env[API_WRITE_TOKEN_ENV],
-      `${path} runtime apiWriteToken`,
-    ),
+    ...(apiWriteToken ? { apiWriteToken } : {}),
+    ...(installRoot ? { installRoot } : {}),
     tmdbRefreshIntervalMinutes:
       validateOptionalTmdbRefreshInterval(
         runtime.tmdbRefreshIntervalMinutes,
@@ -902,15 +928,69 @@ export async function loadConfigEnv(
 ): Promise<Record<string, string | undefined>> {
   const envPath = join(dirname(configPath), '.env');
   const envFile = Bun.file(envPath);
+  const generatedEnv = await loadGeneratedConfigEnv(configPath);
 
   if (!(await envFile.exists())) {
-    return process.env;
+    return {
+      ...generatedEnv,
+      ...definedEnv(process.env),
+    };
   }
 
   return {
+    ...generatedEnv,
     ...parseDotEnv(await envFile.text()),
-    ...process.env,
+    ...definedEnv(process.env),
   };
+}
+
+async function loadGeneratedConfigEnv(
+  configPath: string,
+): Promise<Record<string, string | undefined>> {
+  const tokenPath = generatedDaemonApiWriteTokenPath(configPath);
+  const tokenFile = Bun.file(tokenPath);
+
+  if (!(await tokenFile.exists())) {
+    return {};
+  }
+
+  const token = (await tokenFile.text()).trim();
+
+  return token.length > 0 ? { [API_WRITE_TOKEN_ENV]: token } : {};
+}
+
+function resolveOptionalString(
+  inlineValue: unknown,
+  envValue: string | undefined,
+  path: string,
+): string | undefined {
+  if (typeof envValue === 'string' && envValue.length > 0) {
+    return envValue;
+  }
+
+  if (inlineValue === undefined) {
+    return undefined;
+  }
+
+  if (typeof inlineValue !== 'string') {
+    throw new ConfigError(`Config file "${path}" must be a string.`);
+  }
+
+  return inlineValue.length > 0 ? inlineValue : undefined;
+}
+
+function definedEnv(
+  env: Record<string, string | undefined>,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === 'string') {
+      result[key] = value;
+    }
+  }
+
+  return result;
 }
 
 function parseDotEnv(input: string): Record<string, string> {
