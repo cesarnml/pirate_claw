@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -9,6 +9,10 @@ import {
   loadConfig,
   validateConfig,
 } from '../src/config';
+import {
+  DAEMON_API_WRITE_TOKEN_FILE,
+  GENERATED_CONFIG_DIRECTORY,
+} from '../src/install-bootstrap';
 
 const RUN_INTERVAL_MINUTES_DEFAULT = 15;
 const RECONCILE_INTERVAL_SECONDS_DEFAULT = 30;
@@ -286,7 +290,11 @@ describe('validateConfig', () => {
   });
 
   it('applies default runtime config when runtime section is absent', () => {
-    const config = validateConfig(createMinimalConfig());
+    const config = validateConfig(
+      createMinimalConfig(),
+      'config',
+      envWithoutProcessWriteToken(),
+    );
 
     expect(config.runtime).toEqual(DEFAULT_RUNTIME_CONFIG);
     expect(config.runtime.runIntervalMinutes).toBe(
@@ -479,6 +487,39 @@ describe('validateConfig', () => {
         envWithoutProcessWriteToken(),
       ),
     ).toThrow(/runtime apiWriteToken.*must be a string/);
+  });
+
+  it('accepts runtime.installRoot from config', () => {
+    const config = validateConfig({
+      ...createMinimalConfig(),
+      runtime: { installRoot: '/volume1/pirate-claw' },
+    });
+
+    expect(config.runtime.installRoot).toBe('/volume1/pirate-claw');
+  });
+
+  it('prefers PIRATE_CLAW_INSTALL_ROOT env override over config install root', () => {
+    const config = validateConfig(
+      {
+        ...createMinimalConfig(),
+        runtime: { installRoot: '/volume1/pirate-claw' },
+      },
+      'config',
+      {
+        PIRATE_CLAW_INSTALL_ROOT: '/tmp/pirate-claw',
+      },
+    );
+
+    expect(config.runtime.installRoot).toBe('/tmp/pirate-claw');
+  });
+
+  it('fails when runtime.installRoot is not a string', () => {
+    expect(() =>
+      validateConfig({
+        ...createMinimalConfig(),
+        runtime: { installRoot: 12345 },
+      }),
+    ).toThrow(/runtime installRoot.*must be a string/);
   });
 
   it('fails when runtime.apiPort is zero', () => {
@@ -733,6 +774,39 @@ describe('validateConfig', () => {
       } else {
         delete process.env.PIRATE_CLAW_TRANSMISSION_PASSWORD;
       }
+      if (prevWrite !== undefined) {
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      } else {
+        delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+      }
+    }
+  });
+
+  it('loads generated daemon write token from the config directory when env is absent', async () => {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+
+    const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-config-'));
+    try {
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await mkdir(join(directory, GENERATED_CONFIG_DIRECTORY), {
+        recursive: true,
+      });
+      await Bun.write(
+        join(
+          directory,
+          GENERATED_CONFIG_DIRECTORY,
+          DAEMON_API_WRITE_TOKEN_FILE,
+        ),
+        'generated-write-token\n',
+      );
+      await Bun.write(configPath, JSON.stringify(createMinimalConfig()));
+
+      const config = await loadConfig(configPath);
+
+      expect(config.runtime.apiWriteToken).toBe('generated-write-token');
+    } finally {
+      await Bun.$`rm -rf ${directory}`;
       if (prevWrite !== undefined) {
         process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
       } else {

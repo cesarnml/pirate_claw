@@ -13,6 +13,7 @@ import {
   resolveConfigPath,
 } from './config';
 import { daemonOptionsFromConfig, runDaemonLoop } from './daemon';
+import { ensureFirstStartupBootstrap } from './install-bootstrap';
 import {
   reconcileCandidates,
   retryFailedCandidates,
@@ -369,8 +370,25 @@ export async function runCli(argv: string[]): Promise<number> {
     if (command === 'daemon') {
       const configPath = parseConfigPath(rest);
       const resolvedConfigPath = resolveConfigPath(configPath);
+      await ensureFirstStartupBootstrap({
+        installRoot: process.env.PIRATE_CLAW_INSTALL_ROOT,
+        configPath: resolvedConfigPath,
+      });
       await ensureStarterConfig(resolvedConfigPath);
-      const config = await loadConfig(resolvedConfigPath);
+      let config = await loadConfig(resolvedConfigPath);
+      const configuredInstallRoot = config.runtime.installRoot;
+
+      if (
+        configuredInstallRoot &&
+        configuredInstallRoot !== process.env.PIRATE_CLAW_INSTALL_ROOT
+      ) {
+        await ensureFirstStartupBootstrap({
+          installRoot: configuredInstallRoot,
+          configPath: resolvedConfigPath,
+        });
+        config = await loadConfig(resolvedConfigPath);
+      }
+
       const database = openDatabase();
       const log = console.log;
 
