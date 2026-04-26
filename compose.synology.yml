@@ -69,6 +69,7 @@ services:
     image: lscr.io/linuxserver/transmission:latest
     restart: unless-stopped
     environment:
+      # Common Synology admin defaults; update PUID/PGID to match your DSM user IDs if volumes show permission errors
       PUID: '1026'
       PGID: '100'
       TZ: UTC

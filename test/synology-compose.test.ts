@@ -25,7 +25,9 @@ describe('Synology compose artifacts', () => {
     it(`${name} exposes only the Pirate Claw web port`, () => {
       expect(content).toContain("'8888:8888'");
       expect(content).not.toContain('"5555:5555"');
+      expect(content).not.toContain("'5555:5555'");
       expect(content).not.toContain('"9091:9091"');
+      expect(content).not.toContain("'9091:9091'");
     });
 
     it(`${name} sources the write token from the generated config file`, () => {
