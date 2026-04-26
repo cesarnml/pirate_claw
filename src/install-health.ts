@@ -39,13 +39,13 @@ export async function getInstallHealth(
 
   checks.installRoot = await checkDirectoryExists(
     installRoot,
-    'Open File Station and create the shared folder path /volume1/pirate-claw, then rerun the package or restart the Pirate Claw containers.',
+    `Open File Station and create the shared folder path ${installRoot}, then rerun the package or restart the Pirate Claw containers.`,
   );
 
   for (const relativePath of INSTALL_ROOT_DIRECTORIES) {
     checks[directoryCheckName(relativePath)] = await checkDirectoryExists(
       join(installRoot, relativePath),
-      `Open File Station and create /volume1/pirate-claw/${relativePath} through the DSM interface.`,
+      `Open File Station and create ${installRoot}/${relativePath} through the DSM interface.`,
     );
   }
 
@@ -59,7 +59,7 @@ export async function getInstallHealth(
   ] as const) {
     checks[name] = await checkWritableDirectory(
       join(installRoot, relativePath),
-      `In DSM File Station, give the Pirate Claw and Docker package users read/write access to /volume1/pirate-claw/${relativePath}.`,
+      `In DSM File Station, give the Pirate Claw and Docker package users read/write access to ${installRoot}/${relativePath}.`,
     );
   }
 
