@@ -164,7 +164,7 @@ function normalizeRepoPath(value: string): string {
   return value.replace(/^\.?\//, '');
 }
 
-function relativeToRepo(cwd: string, absolutePath: string): string {
+export function relativeToRepo(cwd: string, absolutePath: string): string {
   return resolve(absolutePath).replace(`${resolve(cwd)}/`, '');
 }
 
@@ -173,4 +173,63 @@ function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+export type BranchMatch = {
+  branch: string;
+  source: 'ticket-id' | 'derived';
+};
+
+export function deriveBranchName(
+  definition: Pick<TicketDefinition, 'id' | 'slug'>,
+): string {
+  return `agents/${definition.id.toLowerCase().replace('.', '-')}-${definition.slug}`;
+}
+
+export function deriveWorktreePath(cwd: string, ticketId: string): string {
+  const parent = dirname(resolve(cwd));
+  const repoBaseName = basename(resolve(cwd)).replace(/_p\d+(_\d+)?$/, '');
+  return join(
+    parent,
+    `${repoBaseName}_${ticketId.toLowerCase().replace('.', '_')}`,
+  );
+}
+
+function preferDeliveryBranch(branches: string[]): string {
+  return (
+    branches.find((branch) => branch.startsWith('agents/')) ?? branches[0]!
+  );
+}
+
+export function findExistingBranch(
+  branches: string[],
+  definition: Pick<TicketDefinition, 'id' | 'slug'>,
+): BranchMatch | undefined {
+  const ticketIdToken = definition.id.toLowerCase().replace('.', '-');
+  const ticketIdMatches = branches.filter((branch) => {
+    const normalized = branch.toLowerCase();
+    return (
+      normalized.includes(`/${ticketIdToken}`) ||
+      normalized.includes(`-${ticketIdToken}`) ||
+      normalized.endsWith(ticketIdToken)
+    );
+  });
+
+  if (ticketIdMatches.length > 0) {
+    return {
+      branch: preferDeliveryBranch(ticketIdMatches),
+      source: 'ticket-id',
+    };
+  }
+
+  const derived = deriveBranchName(definition);
+
+  if (branches.includes(derived)) {
+    return {
+      branch: derived,
+      source: 'derived',
+    };
+  }
+
+  return undefined;
 }

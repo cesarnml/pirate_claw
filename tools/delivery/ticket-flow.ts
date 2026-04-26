@@ -1,9 +1,16 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdir,
+  readFile,
+  readdir,
+  writeFile,
+} from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 import type { PullRequestSummary } from './platform';
 import type { ReviewActionCommit } from './pr-metadata';
+import { saveState as saveStateImpl } from './state';
 import type { ReviewPolicyStageValue } from './config';
 import type {
   CodexPreflightOutcome,
@@ -598,6 +605,93 @@ export async function advanceToNextTicket(
       ticket.id === current.id ? { ...ticket, status: 'done' } : ticket,
     ),
   };
+}
+
+function ticketHandoffFileName(ticketId: string): string {
+  return `${ticketId.toLowerCase().replace('.', '-')}-handoff.md`;
+}
+
+async function copyFileIntoWorktree(
+  sourcePath: string,
+  targetPath: string,
+): Promise<void> {
+  if (!existsSync(sourcePath) || resolve(sourcePath) === resolve(targetPath)) {
+    return;
+  }
+
+  await mkdir(dirname(targetPath), { recursive: true });
+  await copyFile(sourcePath, targetPath);
+}
+
+async function copyTicketScopedArtifacts(input: {
+  artifactDirPath: string;
+  artifactNames: Set<string>;
+  sourceWorktreePath: string;
+  targetWorktreePath: string;
+}): Promise<void> {
+  const sourceDir = resolve(input.sourceWorktreePath, input.artifactDirPath);
+  if (!existsSync(sourceDir) || input.artifactNames.size === 0) {
+    return;
+  }
+
+  for (const fileName of await readdir(sourceDir)) {
+    if (!input.artifactNames.has(fileName)) {
+      continue;
+    }
+
+    await copyFileIntoWorktree(
+      resolve(sourceDir, fileName),
+      resolve(input.targetWorktreePath, input.artifactDirPath, fileName),
+    );
+  }
+}
+
+export async function materializeTicketContext(
+  state: DeliveryState,
+  sourceWorktreePath: string,
+  ticketId: string,
+): Promise<void> {
+  const targetIndex = state.tickets.findIndex(
+    (ticket) => ticket.id === ticketId,
+  );
+  const target = targetIndex >= 0 ? state.tickets[targetIndex] : undefined;
+
+  if (!target) {
+    throw new Error(`Unknown ticket ${ticketId}.`);
+  }
+
+  const previous = targetIndex > 0 ? state.tickets[targetIndex - 1] : undefined;
+  await saveStateImpl(target.worktreePath, state);
+
+  const handoffNames = new Set<string>([
+    ticketHandoffFileName(target.id),
+    ...(previous ? [ticketHandoffFileName(previous.id)] : []),
+  ]);
+  const reviewNames = new Set<string>();
+  const scopedTickets = [target, previous].filter(
+    (ticket): ticket is TicketState => ticket !== undefined,
+  );
+  for (const ticket of scopedTickets) {
+    for (const fileName of [
+      `${ticket.id}-ai-review.fetch.json`,
+      `${ticket.id}-ai-review.triage.json`,
+    ]) {
+      reviewNames.add(fileName);
+    }
+  }
+
+  await copyTicketScopedArtifacts({
+    artifactDirPath: state.handoffsDirPath,
+    artifactNames: handoffNames,
+    sourceWorktreePath,
+    targetWorktreePath: target.worktreePath,
+  });
+  await copyTicketScopedArtifacts({
+    artifactDirPath: state.reviewsDirPath,
+    artifactNames: reviewNames,
+    sourceWorktreePath,
+    targetWorktreePath: target.worktreePath,
+  });
 }
 
 export function restackTicket(
