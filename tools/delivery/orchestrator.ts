@@ -1,7 +1,3 @@
-import { existsSync } from 'node:fs';
-import { copyFile, mkdir, readdir } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
-
 import { getUsage, parseCliArgs, resolveOptionsForCommand } from './cli';
 import { ensureEnvReady as ensureEnvReadyImpl } from './env';
 import {
@@ -19,46 +15,50 @@ import type {
   ReviewOutcome,
   ReviewResult,
   StandaloneAiReviewResult,
-  StandalonePullRequest,
   TicketDefinition,
   TicketState,
 } from './types';
 import {
-  addWorktree as addPlatformWorktree,
-  bootstrapWorktreeIfNeeded as bootstrapPlatformWorktreeIfNeeded,
   copyLocalBootstrapFilesIfPresent as copyPlatformBootstrapFilesIfPresent,
   copyLocalEnvIfPresent as copyPlatformEnvIfPresent,
-  createPullRequest as createPlatformPullRequest,
-  editPullRequest as editPlatformPullRequest,
-  ensureBranchPushed as ensurePlatformBranchPushed,
-  ensureCleanWorktree as ensurePlatformCleanWorktree,
-  fetchOrigin as fetchPlatformOrigin,
-  findOpenPullRequest as findPlatformOpenPullRequest,
   findPrimaryWorktreePath as findPlatformPrimaryWorktreePath,
-  hasMergedPullRequestForBranch as hasPlatformMergedPullRequestForBranch,
   isLocalBranchDocOnly as isPlatformLocalBranchDocOnly,
-  listCommitSubjectsBetween as listPlatformCommitSubjectsBetween,
-  readCommitSubject as readPlatformCommitSubject,
-  readCurrentBranch as readPlatformCurrentBranch,
-  readHeadSha as readPlatformHeadSha,
-  readLatestCommitSubject as readPlatformLatestCommitSubject,
-  readMergeBase as readPlatformMergeBase,
-  rebaseOnto as rebasePlatformOnto,
-  rebaseOntoDefaultBranch as rebasePlatformOntoDefaultBranch,
-  replyToReviewComment as replyPlatformToReviewComment,
-  resolveGitHubRepo as resolvePlatformGitHubRepo,
-  resolveReviewThread as resolvePlatformReviewThread,
-  resolveStandalonePullRequest as resolvePlatformStandalonePullRequest,
-  runProcess as runPlatformProcess,
-  runProcessResult as runPlatformProcessResult,
-  type PullRequestSummary,
   type Runtime,
 } from './platform';
 import {
+  addWorktree,
+  bootstrapWorktreeIfNeeded,
+  createPullRequest,
+  editPullRequest,
+  ensureBranchPushed,
+  ensureCleanWorktree,
+  fetchOrigin,
+  findOpenPullRequest,
+  hasMergedPullRequestForBranch,
+  parsePullRequestNumber,
+  readCommitSubject,
+  readCurrentBranch,
+  readLatestCommitSubject,
+  readMergeBase,
+  rebaseOnto,
+  rebaseOntoDefaultBranch,
+  replyToReviewThreadForOrchestrator,
+  resolveGitHubRepoForOrchestrator,
+  resolveReviewThread,
+  resolveStandalonePullRequest,
+  runProcess,
+  updatePullRequestBody,
+  updateStandalonePullRequestBody,
+} from './platform-adapters';
+import {
   createOptions as createOptionsImpl,
+  deriveBranchName,
   derivePlanKey as derivePlanKeyImpl,
+  deriveWorktreePath,
+  findExistingBranch,
   inferPlanPathFromBranch as inferPlanPathFromBranchImpl,
   parsePlan as parsePlanImpl,
+  relativeToRepo,
   resolvePlanPathForBranch as resolvePlanPathForBranchImpl,
 } from './planning';
 import {
@@ -94,8 +94,6 @@ import {
   buildStandaloneAiReviewSection,
   buildStandaloneReviewStartedEvent,
   mergeStandaloneAiReviewSection,
-  updatePullRequestBody as updatePrMetadataPullRequestBody,
-  updateStandalonePullRequestBody as updateStandalonePrMetadataPullRequestBody,
 } from './pr-metadata';
 import {
   formatAdvanceBoundaryGuidance,
@@ -125,6 +123,7 @@ import {
   canAdvanceTicket,
   findNextPendingTicket,
   findTicketByBranch,
+  materializeTicketContext,
   openPullRequest as openPullRequestImpl,
   recordCodexPreflight as recordCodexPreflightImpl,
   recordPostVerifySelfAudit as recordPostVerifySelfAuditImpl,
@@ -200,11 +199,6 @@ export type {
   TicketStatus,
 } from './types';
 
-type BranchMatch = {
-  branch: string;
-  source: 'ticket-id' | 'derived';
-};
-
 export {
   generateRunDeliverInvocation,
   getOrchestratorConfig,
@@ -227,6 +221,13 @@ export {
   formatStatus,
   resolveEffectiveAdvanceBoundaryMode,
 } from './format';
+export {
+  deriveBranchName,
+  deriveWorktreePath,
+  findExistingBranch,
+} from './planning';
+export { materializeTicketContext } from './ticket-flow';
+export { runProcessResult } from './platform-adapters';
 
 export async function runDeliveryOrchestrator(
   argv: string[],
@@ -645,21 +646,6 @@ export function syncStateFromExisting(
   );
 }
 
-export function deriveBranchName(
-  definition: Pick<TicketDefinition, 'id' | 'slug'>,
-): string {
-  return `agents/${definition.id.toLowerCase().replace('.', '-')}-${definition.slug}`;
-}
-
-export function deriveWorktreePath(cwd: string, ticketId: string): string {
-  const parent = dirname(resolve(cwd));
-  const repoBaseName = basename(resolve(cwd)).replace(/_p\d+(_\d+)?$/, '');
-  return join(
-    parent,
-    `${repoBaseName}_${ticketId.toLowerCase().replace('.', '_')}`,
-  );
-}
-
 export function resolveReviewFetcher(): string {
   if (process.env.AI_CODE_REVIEW_FETCHER) {
     return process.env.AI_CODE_REVIEW_FETCHER;
@@ -743,46 +729,6 @@ export function summarizeStateDifferences(
   return summarizeStateDifferencesImpl(existing, repaired);
 }
 
-export function findExistingBranch(
-  branches: string[],
-  definition: Pick<TicketDefinition, 'id' | 'slug'>,
-): BranchMatch | undefined {
-  const ticketIdToken = definition.id.toLowerCase().replace('.', '-');
-  const ticketIdMatches = branches.filter((branch) => {
-    const normalized = branch.toLowerCase();
-    return (
-      normalized.includes(`/${ticketIdToken}`) ||
-      normalized.includes(`-${ticketIdToken}`) ||
-      normalized.endsWith(ticketIdToken)
-    );
-  });
-
-  if (ticketIdMatches.length > 0) {
-    return {
-      branch: preferDeliveryBranch(ticketIdMatches),
-      source: 'ticket-id',
-    };
-  }
-
-  const derived = deriveBranchName(definition);
-
-  if (branches.includes(derived)) {
-    return {
-      branch: derived,
-      source: 'derived',
-    };
-  }
-
-  return undefined;
-}
-
-function resolveStandalonePullRequest(
-  cwd: string,
-  prNumber?: number,
-): StandalonePullRequest {
-  return resolvePlatformStandalonePullRequest(cwd, _config.runtime, prNumber);
-}
-
 async function startTicket(
   state: DeliveryState,
   cwd: string,
@@ -812,93 +758,6 @@ export async function copyLocalEnvIfPresent(
   targetWorktreePath: string,
 ): Promise<void> {
   await copyPlatformEnvIfPresent(sourceWorktreePath, targetWorktreePath);
-}
-
-function ticketHandoffFileName(ticketId: string): string {
-  return `${ticketId.toLowerCase().replace('.', '-')}-handoff.md`;
-}
-
-async function copyFileIntoWorktree(
-  sourcePath: string,
-  targetPath: string,
-): Promise<void> {
-  if (!existsSync(sourcePath) || resolve(sourcePath) === resolve(targetPath)) {
-    return;
-  }
-
-  await mkdir(dirname(targetPath), { recursive: true });
-  await copyFile(sourcePath, targetPath);
-}
-
-async function copyTicketScopedArtifacts(input: {
-  artifactDirPath: string;
-  artifactNames: Set<string>;
-  sourceWorktreePath: string;
-  targetWorktreePath: string;
-}): Promise<void> {
-  const sourceDir = resolve(input.sourceWorktreePath, input.artifactDirPath);
-  if (!existsSync(sourceDir) || input.artifactNames.size === 0) {
-    return;
-  }
-
-  for (const fileName of await readdir(sourceDir)) {
-    if (!input.artifactNames.has(fileName)) {
-      continue;
-    }
-
-    await copyFileIntoWorktree(
-      resolve(sourceDir, fileName),
-      resolve(input.targetWorktreePath, input.artifactDirPath, fileName),
-    );
-  }
-}
-
-export async function materializeTicketContext(
-  state: DeliveryState,
-  sourceWorktreePath: string,
-  ticketId: string,
-): Promise<void> {
-  const targetIndex = state.tickets.findIndex(
-    (ticket) => ticket.id === ticketId,
-  );
-  const target = targetIndex >= 0 ? state.tickets[targetIndex] : undefined;
-
-  if (!target) {
-    throw new Error(`Unknown ticket ${ticketId}.`);
-  }
-
-  const previous = targetIndex > 0 ? state.tickets[targetIndex - 1] : undefined;
-  await saveStateImpl(target.worktreePath, state);
-
-  const handoffNames = new Set<string>([
-    ticketHandoffFileName(target.id),
-    ...(previous ? [ticketHandoffFileName(previous.id)] : []),
-  ]);
-  const reviewNames = new Set<string>();
-  const scopedTickets = [target, previous].filter(
-    (ticket): ticket is TicketState => ticket !== undefined,
-  );
-  for (const ticket of scopedTickets) {
-    for (const fileName of [
-      `${ticket.id}-ai-review.fetch.json`,
-      `${ticket.id}-ai-review.triage.json`,
-    ]) {
-      reviewNames.add(fileName);
-    }
-  }
-
-  await copyTicketScopedArtifacts({
-    artifactDirPath: state.handoffsDirPath,
-    artifactNames: handoffNames,
-    sourceWorktreePath,
-    targetWorktreePath: target.worktreePath,
-  });
-  await copyTicketScopedArtifacts({
-    artifactDirPath: state.reviewsDirPath,
-    artifactNames: reviewNames,
-    sourceWorktreePath,
-    targetWorktreePath: target.worktreePath,
-  });
 }
 
 export async function recordPostVerifySelfAudit(
@@ -1227,220 +1086,8 @@ async function restackTicket(
   });
 }
 
-function preferDeliveryBranch(branches: string[]): string {
-  return (
-    branches.find((branch) => branch.startsWith('agents/')) ?? branches[0]!
-  );
-}
-
-function updatePullRequestBody(
-  state: DeliveryState,
-  ticket: TicketState,
-): void {
-  return updatePrMetadataPullRequestBody(state, ticket, {
-    editPullRequest,
-    listCommitSubjectsBetween,
-    readHeadSha,
-    resolveGitHubRepo: resolveGitHubRepoForOrchestrator,
-  });
-}
-
-function updateStandalonePullRequestBody(
-  cwd: string,
-  pullRequest: StandalonePullRequest,
-  result: StandaloneAiReviewResult,
-): void {
-  return updateStandalonePrMetadataPullRequestBody(cwd, pullRequest, result, {
-    editPullRequest,
-    listCommitSubjectsBetween,
-    resolveGitHubRepo: resolveGitHubRepoForOrchestrator,
-  });
-}
-
-function resolveGitHubRepoForOrchestrator(cwd: string) {
-  return resolvePlatformGitHubRepo(cwd, _config.runtime);
-}
-
-const REPO_CACHE_BY_WORKTREE = new Map<
-  string,
-  ReturnType<typeof resolveGitHubRepoForOrchestrator>
->();
-
-function replyToReviewThreadForOrchestrator(
-  worktreePath: string,
-  databaseId: number,
-  body: string,
-): void {
-  const cached = REPO_CACHE_BY_WORKTREE.get(worktreePath);
-  const repo =
-    cached ?? resolvePlatformGitHubRepo(worktreePath, _config.runtime);
-  if (!cached) {
-    REPO_CACHE_BY_WORKTREE.set(worktreePath, repo);
-  }
-  if (!repo) {
-    return;
-  }
-
-  try {
-    replyPlatformToReviewComment(
-      worktreePath,
-      repo.owner,
-      repo.name,
-      databaseId,
-      body,
-      _config.runtime,
-    );
-  } catch {
-    // Best-effort; thread resolution still proceeds.
-  }
-}
-
-function findOpenPullRequest(
-  cwd: string,
-  branch: string,
-): PullRequestSummary | undefined {
-  return findPlatformOpenPullRequest(cwd, branch, _config.runtime);
-}
-
-function hasMergedPullRequestForBranch(cwd: string, branch: string): boolean {
-  return hasPlatformMergedPullRequestForBranch(cwd, branch, _config.runtime);
-}
-
-function readLatestCommitSubject(cwd: string): string {
-  return readPlatformLatestCommitSubject(cwd, _config.runtime);
-}
-
-function readCommitSubject(cwd: string, sha: string): string {
-  return readPlatformCommitSubject(cwd, sha, _config.runtime);
-}
-
-function readHeadSha(cwd: string): string {
-  return readPlatformHeadSha(cwd, _config.runtime);
-}
-
-function readCurrentBranch(cwd: string): string {
-  return readPlatformCurrentBranch(cwd, _config.runtime);
-}
-
-function ensureCleanWorktree(cwd: string): void {
-  ensurePlatformCleanWorktree(cwd, _config.runtime);
-}
-
-function ensureBranchPushed(cwd: string, branch: string): void {
-  ensurePlatformBranchPushed(cwd, branch, _config.runtime);
-}
-
-function addWorktree(
-  cwd: string,
-  worktreePath: string,
-  branch: string,
-  baseBranch: string,
-): void {
-  addPlatformWorktree(cwd, worktreePath, branch, baseBranch, _config.runtime);
-}
-
-function createPullRequest(
-  cwd: string,
-  options: {
-    base: string;
-    body: string;
-    head: string;
-    title: string;
-  },
-): string {
-  return createPlatformPullRequest(cwd, options, _config.runtime);
-}
-
-function editPullRequest(
-  cwd: string,
-  prNumber: number,
-  options: {
-    base?: string;
-    body?: string;
-    title?: string;
-  },
-): void {
-  editPlatformPullRequest(cwd, prNumber, options, _config.runtime);
-}
-
-function resolveReviewThread(worktreePath: string, threadId: string): string {
-  return resolvePlatformReviewThread(worktreePath, threadId, _config.runtime);
-}
-
-function fetchOrigin(cwd: string): void {
-  fetchPlatformOrigin(cwd, _config.runtime);
-}
-
-function readMergeBase(
-  cwd: string,
-  branch: string,
-  previousBranch: string,
-): string {
-  return readPlatformMergeBase(cwd, branch, previousBranch, _config.runtime);
-}
-
-function rebaseOnto(cwd: string, rebaseTarget: string, oldBase: string): void {
-  rebasePlatformOnto(cwd, rebaseTarget, oldBase, _config.runtime);
-}
-
-function rebaseOntoDefaultBranch(cwd: string, defaultBranch: string): void {
-  rebasePlatformOntoDefaultBranch(cwd, defaultBranch, _config.runtime);
-}
-
-function listCommitSubjectsBetween(
-  cwd: string,
-  reviewedHeadSha: string,
-  currentHeadSha: string,
-  maxCount: number,
-): string[] {
-  return listPlatformCommitSubjectsBetween(
-    cwd,
-    reviewedHeadSha,
-    currentHeadSha,
-    maxCount,
-    _config.runtime,
-  );
-}
-
-function parsePullRequestNumber(prUrl: string): number {
-  const match = prUrl.match(/\/pull\/(\d+)$/);
-
-  if (!match?.[1]) {
-    throw new Error(`Could not parse PR number from ${prUrl}.`);
-  }
-
-  return Number(match[1]);
-}
-
-function runProcess(cwd: string, cmd: string[]): string {
-  return runPlatformProcess(cwd, cmd, _config.runtime);
-}
-
-export function runProcessResult(
-  cwd: string,
-  cmd: string[],
-): {
-  exitCode: number;
-  stderr: string;
-  stdout: string;
-} {
-  return runPlatformProcessResult(cwd, cmd, _config.runtime);
-}
-
 export function derivePlanKey(planPath: string): string {
   return derivePlanKeyImpl(planPath);
-}
-
-function relativeToRepo(cwd: string, absolutePath: string): string {
-  return resolve(absolutePath).replace(`${resolve(cwd)}/`, '');
-}
-
-async function bootstrapWorktreeIfNeeded(worktreePath: string): Promise<void> {
-  await bootstrapPlatformWorktreeIfNeeded(
-    worktreePath,
-    _config.packageManager,
-    _config.runtime,
-  );
 }
 
 function formatError(error: unknown): string {
