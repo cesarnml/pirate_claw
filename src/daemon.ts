@@ -69,7 +69,7 @@ export async function runDaemonLoop(input: {
       const e = err as NodeJS.ErrnoException;
       if (e?.code === 'EADDRINUSE') {
         throw new Error(
-          `Cannot bind HTTP API on ${apiHost}:${options.apiPort}: address already in use (EADDRINUSE). Stop the other process or set a different runtime.apiPort in pirate-claw.config.json. To list listeners: lsof -iTCP:${options.apiPort} -sTCP:LISTEN`,
+          `Cannot bind HTTP API on ${apiHost}:${options.apiPort}: address already in use (EADDRINUSE). Stop the other process, or override the port via PIRATE_CLAW_API_PORT / PIRATE_CLAW_API_HOST env vars or runtime.apiPort / runtime.apiHost in pirate-claw.config.json. To list listeners: lsof -iTCP:${options.apiPort} -sTCP:LISTEN`,
           { cause: err },
         );
       }
