@@ -410,7 +410,8 @@ export function createApiFetch(
     if (path === '/api/setup/install-health' && request.method === 'GET') {
       try {
         return Response.json(await getInstallHealth(activeConfig));
-      } catch {
+      } catch (err) {
+        console.error('[api] /api/setup/install-health failed:', err);
         return json500();
       }
     }
