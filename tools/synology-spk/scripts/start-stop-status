@@ -22,6 +22,7 @@ prepare_install_root() {
     log "prepared install root at $INSTALL_ROOT"
   else
     log "could not prepare $INSTALL_ROOT from package hook; owner can create it with File Station"
+    # DSM treats a non-zero post-upgrade-start exit as a fatal hook failure, so return success and let the operator fix it manually
     return 0
   fi
 
