@@ -61,6 +61,10 @@ const mockSession: SessionInfo = {
 	currentUploadedBytes: 0
 };
 
+const sharedLayoutData = {
+	installHealthState: null
+};
+
 function setPathname(pathname: string) {
 	page.set({ url: new URL(`http://localhost${pathname}`) });
 }
@@ -77,6 +81,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
+					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
 					plexConfigured: true,
@@ -116,6 +121,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
+					...sharedLayoutData,
 					health: null,
 					transmissionSession: null,
 					plexConfigured: false,
@@ -141,6 +147,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: childSnippet,
 				data: {
+					...sharedLayoutData,
 					health: null,
 					transmissionSession: null,
 					plexConfigured: false,
@@ -167,6 +174,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: childSnippet,
 				data: {
+					...sharedLayoutData,
 					health: null,
 					transmissionSession: null,
 					plexConfigured: false,
@@ -188,6 +196,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
+					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
 					plexConfigured: true,
@@ -212,6 +221,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
+					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
 					plexConfigured: true,
@@ -239,6 +249,7 @@ describe('+layout.svelte', () => {
 			props: {
 				children: (() => {}) as unknown as import('svelte').Snippet,
 				data: {
+					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
 					plexConfigured: true,

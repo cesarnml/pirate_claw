@@ -6,13 +6,19 @@ import type { PageData } from '../../../src/routes/movies/$types';
 
 const sharedLayoutData: Pick<
 	PageData,
-	'health' | 'transmissionSession' | 'plexConfigured' | 'setupState' | 'readinessState'
+	| 'health'
+	| 'transmissionSession'
+	| 'plexConfigured'
+	| 'setupState'
+	| 'readinessState'
+	| 'installHealthState'
 > = {
 	health: null,
 	transmissionSession: null,
 	plexConfigured: false,
 	setupState: 'ready' as const,
-	readinessState: 'ready' as const
+	readinessState: 'ready' as const,
+	installHealthState: null
 };
 
 const mockMovie = (overrides: Partial<MovieBreakdown> = {}): MovieBreakdown => ({
