@@ -24,6 +24,7 @@ import {
   ensureSchema,
   openDatabase,
 } from '../src/repository';
+import { INSTALL_ROOT_DIRECTORIES } from '../src/install-bootstrap';
 import type { CycleResult } from '../src/runtime-artifacts';
 import { PlexAuthStore } from '../src/plex/auth';
 import { TmdbCache } from '../src/tmdb/cache';
@@ -152,6 +153,63 @@ async function writeCompactTvConfigFile(path: string): Promise<void> {
     },
   };
   await Bun.write(path, `${JSON.stringify(doc, null, 2)}\n`);
+}
+
+async function createInstallRoot(omit: string[] = []): Promise<string> {
+  const installRoot = await mkdtemp(join(tmpdir(), 'pirate-claw-install-'));
+  for (const directory of INSTALL_ROOT_DIRECTORIES) {
+    if (!omit.includes(directory)) {
+      await mkdir(join(installRoot, directory), { recursive: true });
+    }
+  }
+  return installRoot;
+}
+
+function mockHealthyTransmission() {
+  return spyOn(globalThis, 'fetch').mockImplementation((async (
+    _input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => {
+    const body = JSON.parse(String(init?.body ?? '{}')) as {
+      method?: string;
+      arguments?: { path?: string };
+    };
+
+    if (body.method === 'session-get') {
+      return Response.json({
+        result: 'success',
+        arguments: { version: '4.0.0' },
+      });
+    }
+
+    if (body.method === 'session-stats') {
+      return Response.json({
+        result: 'success',
+        arguments: {
+          'download-speed': 0,
+          'upload-speed': 0,
+          'active-torrent-count': 0,
+          'cumulative-stats': { downloadedBytes: 0, uploadedBytes: 0 },
+          'current-stats': { downloadedBytes: 0, uploadedBytes: 0 },
+        },
+      });
+    }
+
+    if (body.method === 'free-space') {
+      return Response.json({
+        result: 'success',
+        arguments: {
+          path: body.arguments?.path ?? '/downloads',
+          'size-bytes': 1024,
+        },
+      });
+    }
+
+    return Response.json(
+      { result: 'unknown method', arguments: {} },
+      { status: 500 },
+    );
+  }) as typeof fetch);
 }
 
 describe('createApiFetch', () => {
@@ -457,6 +515,120 @@ describe('GET /api/setup/transmission/status', () => {
     );
     expect(response.status).not.toBe(401);
     expect(response.status).not.toBe(403);
+  });
+});
+
+describe('GET /api/setup/install-health', () => {
+  it('returns healthy true with all checks passing for a complete install', async () => {
+    const installRoot = await createInstallRoot();
+    const fetchSpy = mockHealthyTransmission();
+
+    try {
+      const deps = {
+        ...createDeps(),
+        config: {
+          ...createDeps().config,
+          runtime: {
+            ...createDeps().config.runtime,
+            installRoot,
+            apiWriteToken: 'write-token',
+          },
+        },
+      };
+      const handler = createApiFetch(deps);
+      const response = await handler(
+        new Request('http://localhost/api/setup/install-health'),
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.healthy).toBe(true);
+      expect(body.installRoot).toBe(installRoot);
+      expect(
+        Object.values(body.checks).every(
+          (check) => (check as { status: string }).status === 'pass',
+        ),
+      ).toBe(true);
+      expect(body.checks.daemonWriteToken.status).toBe('pass');
+      expect(body.checks.transmissionDownloadsWritable.status).toBe('pass');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('reports a missing directory with DSM-language remediation', async () => {
+    const installRoot = await createInstallRoot(['media/shows']);
+    const fetchSpy = mockHealthyTransmission();
+
+    try {
+      const deps = {
+        ...createDeps(),
+        config: {
+          ...createDeps().config,
+          runtime: {
+            ...createDeps().config.runtime,
+            installRoot,
+            apiWriteToken: 'write-token',
+          },
+        },
+      };
+      const handler = createApiFetch(deps);
+      const response = await handler(
+        new Request('http://localhost/api/setup/install-health'),
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.healthy).toBe(false);
+      expect(body.checks.directoryMediaShows.status).toBe('fail');
+      expect(body.checks.directoryMediaShows.remediation).toContain(
+        'File Station',
+      );
+      expect(body.checks.directoryMediaShows.remediation).not.toMatch(
+        /ssh|terminal|chmod|chown/i,
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('reports Transmission unreachable without requiring auth', async () => {
+    const installRoot = await createInstallRoot();
+    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+      (async () => {
+        throw new Error('connection refused');
+      }) as unknown as typeof fetch,
+    );
+
+    try {
+      const deps = {
+        ...createDeps(),
+        config: {
+          ...createDeps().config,
+          runtime: {
+            ...createDeps().config.runtime,
+            installRoot,
+            apiWriteToken: 'write-token',
+          },
+        },
+      };
+      const handler = createApiFetch(deps);
+      const response = await handler(
+        new Request('http://localhost/api/setup/install-health'),
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.healthy).toBe(false);
+      expect(body.checks.transmissionRpcReachable.status).toBe('fail');
+      expect(body.checks.transmissionRpcReachable.remediation).toContain(
+        'Open Docker',
+      );
+      expect(body.checks.transmissionAuthenticated.status).toBe('skip');
+      expect(body.checks.transmissionDownloadsWritable.status).toBe('skip');
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
 

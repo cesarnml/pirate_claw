@@ -88,6 +88,10 @@ export type FetchSessionInfoResult =
   | { ok: true; session: SessionInfo }
   | SubmissionFailure;
 
+export type FetchFreeSpaceResult =
+  | { ok: true; path: string; sizeBytes: number }
+  | SubmissionFailure;
+
 export type DownloaderOptions = {
   warn?: (message: string) => void;
 };
@@ -521,6 +525,58 @@ export async function fetchSessionInfo(
   );
 }
 
+export async function fetchFreeSpace(
+  config: TransmissionConfig,
+  path: string,
+): Promise<FetchFreeSpaceResult> {
+  const body = { method: 'free-space', arguments: { path } };
+  const firstResponse = await sendRpcRequest(config, body);
+
+  if (!firstResponse.ok) {
+    return firstResponse.error;
+  }
+
+  let response = firstResponse.response;
+
+  if (response.status === 409) {
+    const sessionId = response.headers.get('x-transmission-session-id');
+    if (!sessionId) {
+      return {
+        ok: false,
+        code: 'session_error',
+        message:
+          'Transmission session negotiation failed: missing X-Transmission-Session-Id header.',
+      };
+    }
+    const retryResponse = await sendRpcRequest(config, body, sessionId);
+    if (!retryResponse.ok) {
+      return retryResponse.error;
+    }
+    response = retryResponse.response;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      code: 'http_error',
+      message: `Transmission RPC request failed with HTTP ${response.status}.`,
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = await response.json();
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission RPC response was not valid JSON.',
+    };
+  }
+
+  return parseFreeSpaceResult(parsed);
+}
+
 async function sendRpcRequest(
   config: TransmissionConfig,
   body: unknown,
@@ -912,6 +968,14 @@ type TransmissionTorrentGetResponse = {
   };
 };
 
+type TransmissionFreeSpaceResponse = {
+  result: string;
+  arguments: {
+    path?: string;
+    'size-bytes'?: number;
+  };
+};
+
 type TransmissionStatTorrent = {
   id?: number;
   name?: string;
@@ -1137,5 +1201,48 @@ function parseSessionInfoResult(
         'uploaded',
       ),
     },
+  };
+}
+
+function parseFreeSpaceResult(parsed: unknown): FetchFreeSpaceResult {
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    !('result' in parsed) ||
+    !('arguments' in parsed)
+  ) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission free-space response was malformed.',
+    };
+  }
+
+  const response = parsed as TransmissionFreeSpaceResponse;
+
+  if (response.result !== 'success') {
+    return {
+      ok: false,
+      code: 'rpc_error',
+      message: `Transmission free-space failed: ${response.result}.`,
+      rpcResult: response.result,
+    };
+  }
+
+  if (
+    typeof response.arguments.path !== 'string' ||
+    typeof response.arguments['size-bytes'] !== 'number'
+  ) {
+    return {
+      ok: false,
+      code: 'invalid_response',
+      message: 'Transmission free-space response was missing path details.',
+    };
+  }
+
+  return {
+    ok: true,
+    path: response.arguments.path,
+    sizeBytes: response.arguments['size-bytes'],
   };
 }
