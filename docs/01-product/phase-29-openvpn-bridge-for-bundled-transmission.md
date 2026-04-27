@@ -96,18 +96,19 @@ Generated Compose files should reference mounted secret/profile files where poss
 }
 ```
 
-## DSM 7.1 Package Path
+## DSM 7.1 Docker GUI Path
 
-For the validated DSM 7.1 `.spk` owner path, Docker remains hidden behind the Pirate Claw package.
+For the validated DSM 7.1 owner path, Docker remains a DSM GUI-managed stack.
 
-The intended apply path is Package Center based:
+The intended apply path is release-bundle based:
 
-- package repair/reconfigure/update if Synology tooling supports it
-- or a generated `.spk` update artifact if that is the only DSM GUI mechanism
+- update the release bundle
+- recreate or update the affected Docker GUI containers
+- verify health in the browser
 
-The owner must not be asked to manually edit Docker containers in the legacy Docker GUI.
+The owner must not be asked to use SSH, Docker CLI, or hand-edited config files.
 
-If Synology package tooling cannot update the VPN topology through DSM GUI without manual Docker edits, Phase 29 must either:
+If DSM 7.1 cannot update the VPN topology through DSM GUI without terminal steps, Phase 29 must either:
 
 - defer DSM 7.1 VPN support explicitly, or
 - delay v1 until the DSM-first VPN apply path is solved

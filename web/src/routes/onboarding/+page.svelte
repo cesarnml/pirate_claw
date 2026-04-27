@@ -283,8 +283,8 @@
 					</ul>
 				{:else}
 					<p class="text-muted-foreground text-sm">
-						Install health is not available yet. Open Package Center, start Pirate Claw, then
-						re-check from this page.
+						Install health is not available yet. Open Docker or Container Manager, start the Pirate
+						Claw containers, then re-check from this page.
 					</p>
 				{/if}
 			</div>

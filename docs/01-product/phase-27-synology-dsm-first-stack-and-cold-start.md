@@ -2,13 +2,13 @@
 
 **Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-27/` implementation plan until tickets are approved.
 
-Phase 27 turns the Synology story from a hand-built Docker runbook into a DSM-first appliance install path. A DSM-first owner is comfortable using Synology DSM, File Station, Package Center, Docker, and Container Manager, but is not expected to use SSH, Docker CLI, Linux permission commands, or hand-edited config files.
+Phase 27 turns the Synology story from a hand-built Docker runbook into a DSM-first appliance install path. A DSM-first owner is comfortable using Synology DSM, File Station, Docker, and Container Manager, but is not expected to use SSH, Docker CLI, Linux permission commands, or hand-edited config files.
 
 ## TL;DR
 
 **Goal:** a Synology owner can install Pirate Claw through DSM GUI, open one browser URL, and reach a working first-run setup surface without terminal commands or hand-edited files.
 
-**Ships:** DSM 7.1 `.spk` installer as the validated DS918+ path; DSM 7.2+ Container Manager Compose artifact as the modern path; release bundle; bundled Transmission direct-mode stack; generated app secrets; non-secret config JSON; DSM Main Menu icon; install health checks; owner install docs and screenshots.
+**Ships:** DSM 7.1 Docker GUI release bundle as the validated DS918+ path; DSM 7.2+ Container Manager Compose artifact as the modern path; bundled Transmission direct-mode stack; generated app secrets; non-secret config JSON; install health checks; owner install docs and screenshots.
 
 **Defers:** owner web login/session enforcement (Phase 28); OpenVPN bridge (Phase 29); broad UX polish (Phase 30); v1 schema/tag ceremony (Phase 31).
 
@@ -32,11 +32,9 @@ The supported Synology path targets a **DSM-first owner**.
 
 Supported owner actions:
 
-- Package Center manual install for DSM 7.1 Docker systems
 - Container Manager Project import for DSM 7.2+ systems
 - File Station actions when a fallback folder step is unavoidable
-- Docker GUI image tarball import and volume mount actions when DSM 7.1 needs a GUI-only fallback path
-- DSM Main Menu / Package Center launch
+- Docker GUI image tarball import and volume mount actions for DSM 7.1 systems
 - Pirate Claw browser setup at `http://<nas-ip>:8888`
 
 Unsupported in the owner path:
@@ -50,22 +48,20 @@ Unsupported in the owner path:
 - manual `.env` edits
 - manual Docker container assembly
 
-If the DSM 7.1 `.spk` cannot directly orchestrate Docker containers, a documented fallback may use multiple DSM GUI-only Docker image tarball import and volume mount steps. The fallback remains inside the product contract only if every step is performed through DSM UI and avoids terminal commands, hand-edited files, and owner-visible secrets.
-
 Legacy hand-built Docker deployments remain possible for developers and advanced operators, but they are outside the DSM-first owner install contract.
 
 ## Supported Synology Paths
 
-### Validated Baseline: DSM 7.1 Docker `.spk`
+### Validated Baseline: DSM 7.1 Docker GUI
 
 The release-critical path is the real NAS baseline already used by the project:
 
 - Synology DS918+
 - DSM `7.1.1-42962 Update 9`
 - legacy DSM `Docker` package
-- Package Center manual install of `pirate-claw.spk`
+- Docker GUI import of the release bundle image tarballs
 
-After the P27.01 DSM 7.1 spike, the validated `.spk` path is a Package Center launcher/artifact package plus DSM Docker GUI fallback. Package Center hooks must not be treated as the Docker orchestration boundary unless later validation proves that path. The fallback remains supported only while all Docker image tarball import and volume steps are performed through DSM GUI and do not require SSH, Docker CLI, hand-edited files, or owner-visible secrets.
+After the P27.01 DSM 7.1 spike, Package Center hooks must not be treated as the Docker orchestration boundary. The validated baseline is the File Station plus Docker GUI flow. It remains supported only while all Docker image tarball import and volume steps are performed through DSM GUI and do not require SSH, Docker CLI, hand-edited files, or owner-visible secrets.
 
 ### Modern Path: DSM 7.2+ Container Manager Project
 
@@ -98,7 +94,7 @@ pirate-claw-synology-vX.Y.Z.zip
     dsm-7.2-container-manager/
 ```
 
-The `.spk` path is the validated release baseline. The Compose path is the modern path and should be included even if external validation lands later.
+The DSM 7.1 Docker GUI path is the validated release baseline. The Compose path is the modern path and should be included even if external validation lands later.
 
 ## Install Root Contract
 
@@ -169,17 +165,6 @@ Unsupported in JSON:
 
 Secrets live in daemon-owned app-managed files or process environment. Starter config must not include secret placeholders. Inline JSON secrets may hard-fail with clear remediation; no migration path is required before v1.
 
-## DSM App Icon
-
-The `.spk` path should install a DSM Main Menu app:
-
-- title: `Pirate Claw`
-- admin-visible only
-- opens Pirate Claw web on `8888`
-- Package Center **Open** should launch the same entrypoint
-
-If DSM URL app host handling is tricky, a small package UI redirect page may be used to resolve the current DSM host and forward to port `8888`.
-
 ## Install Health Checks
 
 The first-run browser surface must verify:
@@ -213,11 +198,11 @@ Owner install docs must not include terminal commands. Advanced runbook docs may
 
 Screenshots are hard acceptance criteria for the validated DSM 7.1 path:
 
-- Package Center manual install
-- third-party package confirmation if present
-- installed Pirate Claw package
-- DSM Main Menu Pirate Claw icon
-- Docker package showing running containers
+- File Station permission setup
+- File Station install-root folder layout
+- Docker image import
+- Docker network setup
+- generated daemon token file
 - browser open at `:8888`
 - first-run health check success
 
@@ -225,7 +210,7 @@ DSM 7.2+ screenshots may be marked pending external validation until a tester ve
 
 ## Exit Condition
 
-On the DS918+ DSM 7.1 validated baseline, a DSM-first owner can install Pirate Claw through Package Center, complete any required Docker image/import/volume steps through DSM GUI, launch it from DSM or `http://<nas-ip>:8888`, and see passing install health checks without SSH, terminal commands, manual JSON edits, manual `.env` edits, or owner-visible secrets.
+On the DS918+ DSM 7.1 validated baseline, a DSM-first owner can install Pirate Claw through File Station and Docker GUI steps, open `http://<nas-ip>:8888`, and see passing install health checks without SSH, terminal commands, manual JSON edits, manual `.env` edits, or owner-visible secrets.
 
 The release bundle also contains the DSM 7.2+ Compose Project artifact with explicit validation status.
 

@@ -615,14 +615,14 @@ Current status:
 Goal:
 
 - replace the expert-built Synology Docker runbook path with a DSM-first owner install path
-- ship a DS918+ / DSM 7.1 Docker `.spk` installer as the validated baseline
+- ship a DS918+ / DSM 7.1 Docker GUI release bundle as the validated baseline
 - ship a DSM 7.2+ Container Manager Project artifact as the simpler modern path
 - make bundled Transmission part of the default appliance stack while exposing only Pirate Claw web on port `8888`
 
 Current status:
 
 - implemented via `P27.01`–`P27.10` stacked delivery; validated on DS918+ / DSM 7.1.1-42962 Update 9
-- the `.spk` spike (P27.01) found that DSM 7.1 Package Center hooks produced no GUI-observable Docker orchestration result; the fallback owner path uses Package Center only for the launcher/icon and keeps all container setup inside DSM Docker GUI
+- the `.spk` spike (P27.01) found that DSM 7.1 Package Center hooks produced no GUI-observable Docker orchestration result; the owner path now stays in File Station, Docker GUI, and the Pirate Claw browser page
 - the three-container stack (`pirate-claw-daemon`, `pirate-claw-web`, `transmission`) on a `pirate-claw` user-defined Docker network exposes only port `8888` to the host; all internal RPC stays on the private network
 - daemon first-startup bootstrap creates the install tree and generates a write token so the owner never hand-enters secrets
 - install health gate in onboarding blocks config setup until Docker images, folder mounts, write access, and Transmission path checks all pass

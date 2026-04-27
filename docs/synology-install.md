@@ -6,11 +6,11 @@ This document is the owner-facing Synology install guide. It covers only the DSM
 
 ### DSM 7.1 with the legacy Docker package — validated baseline
 
-Follow [`tools/synology-release/install-dsm-7.1-docker.md`](../tools/synology-release/install-dsm-7.1-docker.md).
+Follow [`releases/synology-release/version01/install-dsm-7.1-docker.md`](../releases/synology-release/version01/install-dsm-7.1-docker.md).
 
 **Validated on:** Synology DS918+, DSM 7.1.1-42962 Update 9, legacy Docker package (not Container Manager). This is the Phase 27 verification baseline.
 
-**Screenshot walkthrough:** Step-by-step screenshots for this path are under [`tools/synology-release/screenshots/dsm-7.1-docker/`](../tools/synology-release/screenshots/dsm-7.1-docker/). Each screenshot maps to a numbered step in the install guide:
+**Screenshot walkthrough:** Step-by-step screenshots for this path are under [`releases/synology-release/version01/screenshots/dsm-7.1-docker/`](../releases/synology-release/version01/screenshots/dsm-7.1-docker/). Each screenshot maps to a numbered step in the install guide:
 
 | Screenshot                                         | Step                                         |
 | -------------------------------------------------- | -------------------------------------------- |
@@ -25,7 +25,7 @@ Follow [`tools/synology-release/install-dsm-7.1-docker.md`](../tools/synology-re
 
 ### DSM 7.2+ with Container Manager — validation pending
 
-Follow [`tools/synology-release/install-dsm-7.2-container-manager.md`](../tools/synology-release/install-dsm-7.2-container-manager.md).
+Follow [`releases/synology-release/version01/install-dsm-7.2-container-manager.md`](../releases/synology-release/version01/install-dsm-7.2-container-manager.md).
 
 This path uses the DSM 7.2+ Container Manager Project artifact (`compose.synology.cm.yml`). The same three-service stack deploys through the Container Manager Project UI. Validation on DSM 7.2+ hardware is pending external confirmation.
 

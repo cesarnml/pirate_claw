@@ -26,7 +26,7 @@ Define and produce the Synology release bundle zip structure, containing all ins
   - `install-dsm-7.1-docker.md` — step-by-step DSM 7.1 validated install path; no terminal commands; screenshot placeholders for P27.08
   - `install-dsm-7.2-container-manager.md` — DSM 7.2+ Container Manager import path; explicitly marked "validation pending external tester"
 - `compose.synology.cm.yml` carries an explicit validation-pending notice at the top of the file.
-- Add a build script or Makefile target that assembles the zip from the built `.spk` and authored artifacts.
+- Add a build script or Makefile target that assembles the zip from the built image tarballs and authored artifacts.
 - Bundle does not contain any secret values, token placeholders, or hand-fill instructions.
 - Bundle includes GUI-importable Pirate Claw image tarballs for the DSM 7.1 Docker fallback path.
 
@@ -41,6 +41,6 @@ The release bundle zip can be assembled from a single script invocation. Bundle 
 
 ## Rationale
 
-The release bundle is assembled from `tools/synology-release/build-release-bundle.sh` into `.pirate-claw/synology-release/pirate-claw-synology-vX.Y.Z.zip`, using the root package version for the bundle name. The bundle includes the built `pirate-claw.spk`, the DSM 7.2+ Container Manager compose artifact, bundle-local install guides, and screenshot placeholder directories for P27.08.
+The release bundle is assembled from `releases/synology-release/version01/build-release-bundle.sh` into `.pirate-claw/synology-release/pirate-claw-synology-vX.Y.Z.zip`, using the root package version for the bundle name. The bundle includes the DSM 7.1 image tarballs, the DSM 7.2+ Container Manager compose artifact, bundle-local install guides, and screenshot placeholder directories for P27.08.
 
 The DSM 7.1 guide keeps the owner path GUI-only by importing Pirate Claw image tarballs through Docker's Image view. This resolves the DSM 7.1 validation blocker where old Phase 26 images could appear in Docker but were still tied to old saved containers.

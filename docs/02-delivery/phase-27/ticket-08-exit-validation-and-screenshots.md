@@ -10,11 +10,10 @@ Codex + Computer Use against `https://100.108.117.42:5001/` executes and documen
 
 **Install flow:**
 
-- Allow third-party packages in DSM security settings (if required)
-- Package Center → Manual Install → `pirate-claw.spk`
-- Third-party package confirmation dialog (if present)
-- Package installs and appears in Package Center
-- DSM Main Menu Pirate Claw icon appears
+- Prepare the install root in File Station
+- Import the three release-bundle image tarballs in Docker GUI
+- Create the private `pirate-claw` Docker network
+- Create the `transmission`, `pirate-claw-daemon`, and `pirate-claw-web` containers with auto-restart enabled
 - DSM Docker package shows `pirate-claw-web`, `pirate-claw-daemon`, `transmission` containers running
 - DSM Docker Image view imports `pirate-claw-phase27`, `pirate-claw-web-phase27`, and bundled Transmission from release bundle tarballs, not old Phase 26 saved containers or remote registry assumptions
 
@@ -26,11 +25,8 @@ Codex + Computer Use against `https://100.108.117.42:5001/` executes and documen
 
 **Required screenshots (hard acceptance criteria):**
 
-- DSM Security settings — third-party package allow step (if required)
-- Package Center manual install dialog
-- Third-party package confirmation (if present)
-- Package Center showing Pirate Claw installed
-- DSM Main Menu with Pirate Claw icon visible
+- File Station permission setup
+- File Station install-root folder layout
 - Docker Image view showing the imported Pirate Claw image tarballs
 - DSM Docker package showing all three containers running
 - Browser at `:8888` showing install health panel passing
@@ -40,7 +36,7 @@ Screenshots are committed to `docs/02-delivery/phase-27/screenshots/dsm-7.1-dock
 
 **Reinstall validation:**
 
-- Run Package Center install again on the existing install root
+- Repeat the Docker GUI setup on the existing install root
 - Confirm existing config and data are not wiped
 - Confirm stack restarts cleanly
 
@@ -55,7 +51,7 @@ All required DSM 7.1 screenshots are captured and committed. The full install fl
 
 ## Rationale
 
-Manual DSM validation found that existing `pirate-claw:latest` and `pirate-claw-web:latest` images on the DS918+ were tied to Phase 26 saved containers, so they could not prove the Phase 27 release bundle. The approved DSM 7.1 fallback now includes GUI-importable, Phase 27-named Pirate Claw image tarballs plus the bundled Transmission image tarball in the release bundle. The DSM guide now explicitly says Transmission must be imported from `transmission-phase27-image-vX.Y.Z.tar` for Phase 27 validation, even though DSM displays that imported image as `lscr.io/linuxserver/transmission:latest`. That keeps the operator contract inside DSM Package Center, File Station, and Docker GUI while removing external image availability assumptions and avoiding old image/container name conflicts.
+Manual DSM validation found that existing `pirate-claw:latest` and `pirate-claw-web:latest` images on the DS918+ were tied to Phase 26 saved containers, so they could not prove the Phase 27 release bundle. The approved DSM 7.1 fallback now includes GUI-importable, Phase 27-named Pirate Claw image tarballs plus the bundled Transmission image tarball in the release bundle. The DSM guide now explicitly says Transmission must be imported from `transmission-phase27-image-vX.Y.Z.tar` for Phase 27 validation, even though DSM displays that imported image as `lscr.io/linuxserver/transmission:latest`. That keeps the operator contract inside File Station and Docker GUI while removing external image availability assumptions and avoiding old image/container name conflicts.
 
 Manual daemon-container setup showed the DSM Docker wizard needs more precise wording for bind mounts and commands. The guide now states that DSM's `pirate-claw` shared folder maps to container path `/volume1/pirate-claw`, that EntryPoint stays `bun run dist/cli.js`, and that Command is exactly `daemon --config /volume1/pirate-claw/config/pirate-claw.config.json`.
 

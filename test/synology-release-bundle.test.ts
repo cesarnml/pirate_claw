@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'bun:test';
 
 const version = (await Bun.file('package.json').json()).version as string;
 const bundlePath = `.pirate-claw/synology-release/pirate-claw-synology-v${version}.zip`;
+const abandonedPackageName = ['pirate-claw', 'spk'].join('.');
 
 async function run(args: string[]): Promise<string> {
   const proc = Bun.spawn(args, {
@@ -48,12 +49,12 @@ describe('Synology release bundle', () => {
     await writeFixtureTarballs();
 
     const output = await run([
-      'tools/synology-release/build-release-bundle.sh',
+      'releases/synology-release/version01/build-release-bundle.sh',
     ]);
     expect(output.trim()).toEndWith(bundlePath);
 
     const contents = await run(['unzip', '-Z1', bundlePath]);
-    expect(contents).not.toContain('pirate-claw.spk');
+    expect(contents).not.toContain(abandonedPackageName);
     expect(contents).toContain(`images/pirate-claw-image-v${version}.tar`);
     expect(contents).toContain(`images/pirate-claw-web-image-v${version}.tar`);
     expect(contents).toContain(`images/transmission-image-v${version}.tar`);
@@ -70,16 +71,16 @@ describe('Synology release bundle', () => {
   it('keeps bundle install docs inside the DSM GUI-only owner contract', async () => {
     const docs = await Promise.all(
       [
-        'tools/synology-release/README-synology-install.md',
-        'tools/synology-release/install-dsm-7.1-docker.md',
-        'tools/synology-release/install-dsm-7.2-container-manager.md',
+        'releases/synology-release/version01/README-synology-install.md',
+        'releases/synology-release/version01/install-dsm-7.1-docker.md',
+        'releases/synology-release/version01/install-dsm-7.2-container-manager.md',
       ].map((path) => Bun.file(path).text()),
     );
     const combined = docs.join('\n');
 
-    expect(combined).toContain('Package Center');
     expect(combined).toContain('File Station');
     expect(combined).toContain('Add from file');
+    expect(combined).toContain('enable auto-restart');
     expect(combined).toContain(
       'Do not pull Transmission from Registry for the Phase 27 validation path',
     );
@@ -94,6 +95,7 @@ describe('Synology release bundle', () => {
     expect(combined).toContain(
       'Validation status: pending external DSM 7.2+ tester verification.',
     );
+    expect(combined).not.toContain(abandonedPackageName);
     expect(combined).not.toContain('docker run');
     expect(combined).not.toContain('docker compose');
     expect(combined).not.toContain('chmod');

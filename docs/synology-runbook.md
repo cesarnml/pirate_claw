@@ -2,7 +2,7 @@
 
 This is the advanced operator reference for Pirate Claw on Synology.
 
-**Owner install path:** For first-time installation, use [`docs/synology-install.md`](./synology-install.md) and the validated install guides in `tools/synology-release/`. The owner path stays inside DSM GUI screens and requires no terminal access.
+**Owner install path:** For first-time installation, use [`docs/synology-install.md`](./synology-install.md) and the validated install guides in `releases/synology-release/version01/`. The owner path stays inside DSM GUI screens and requires no terminal access.
 
 This runbook covers the advanced operator deployment shape — expert-built container topology, NAS-side image rebuilds, Plex diagnostics, and manual config management. It is not the default first-time path for Phase 27 and beyond.
 

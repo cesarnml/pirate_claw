@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SOURCE_DIR="$ROOT_DIR/tools/synology-release"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+SOURCE_DIR="$ROOT_DIR/releases/synology-release/version01"
 OUTPUT_DIR="$ROOT_DIR/.pirate-claw/synology-release"
 BUILD_ROOT="$OUTPUT_DIR/build"
 VERSION="$(bun -e "console.log(require('$ROOT_DIR/package.json').version)" 2>/dev/null)"
@@ -22,7 +22,7 @@ mkdir -p \
   "$OUTPUT_DIR"
 
 if [[ ! -f "$DAEMON_IMAGE_TAR" || ! -f "$WEB_IMAGE_TAR" || ! -f "$TRANSMISSION_IMAGE_TAR" ]]; then
-  "$ROOT_DIR/tools/synology-release/build-image-tarballs.sh"
+  "$ROOT_DIR/releases/synology-release/version01/build-image-tarballs.sh"
 fi
 
 cp "$DAEMON_IMAGE_TAR" "$BUNDLE_DIR/images/pirate-claw-image-v${VERSION}.tar"

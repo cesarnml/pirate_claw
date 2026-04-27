@@ -24,7 +24,7 @@ Close the Phase 27 documentation loop and write the phase retrospective after th
 
 - Write `notes/public/phase-27-retrospective.md` covering:
   - What the spike found about `.spk` Docker orchestration
-  - What worked and what was harder than expected in SPK authoring
+  - Why the final DSM 7.1 owner path is File Station plus Docker GUI
   - Whether the DSM-first owner contract held through delivery
   - Any assumptions that P28/P29 planning should revisit
 
@@ -43,7 +43,7 @@ Owner-facing docs are complete with no terminal commands. Runbook is updated. RE
 
 ## Rationale
 
-Created `docs/synology-install.md` as the owner-facing entry point for Phase 27, separate from the advanced-operator `docs/synology-runbook.md`. Keeping the two documents distinct preserves the principle that the owner path stays GUI-only while the operator runbook is allowed to include Docker CLI and shell details. The install guide links directly to the validated DSM 7.1 step-by-step guide and screenshot walkthrough in `tools/synology-release/`.
+Created `docs/synology-install.md` as the owner-facing entry point for Phase 27, separate from the advanced-operator `docs/synology-runbook.md`. Keeping the two documents distinct preserves the principle that the owner path stays GUI-only while the operator runbook is allowed to include Docker CLI and shell details. The install guide links directly to the validated DSM 7.1 step-by-step guide and screenshot walkthrough in `releases/synology-release/version01/`.
 
 Updated `README.md`, `docs/00-overview/start-here.md`, and `docs/00-overview/roadmap.md` to reflect Phase 27 implementation status and to redirect Synology install queries to the new owner doc rather than the old expert runbook.
 

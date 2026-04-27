@@ -58,7 +58,7 @@ Phase-level product definitions.
 - `phase-24-synology-supervision-and-restart.md`: Synology restart durability and supervision contract
 - `phase-25-in-browser-restart-round-trip-proof.md`: browser-visible restart request, progress, and return-proof contract
 - `phase-26-mac-first-class-always-on-deployment.md`: Mac Mini / Mac Studio / dev-server always-on deployment contract
-- `phase-27-synology-dsm-first-stack-and-cold-start.md`: DSM-first Synology `.spk` / Container Manager stack and cold-start contract
+- `phase-27-synology-dsm-first-stack-and-cold-start.md`: DSM-first Synology Docker GUI / Container Manager stack and cold-start contract
 - `phase-28-owner-web-security.md`: local owner account, sessions, CSRF, trusted origins, and destructive action gates
 - `phase-29-openvpn-bridge-for-bundled-transmission.md`: OpenVPN bridge for the bundled Transmission stack
 - `phase-30-ux-ui-polish-after-functional-completion.md`: UX/UI polish after functional product completion

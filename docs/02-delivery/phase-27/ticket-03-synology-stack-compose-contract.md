@@ -22,7 +22,7 @@ Author the Docker Compose artifacts that define the three-service Pirate Claw st
 
 ## Out Of Scope
 
-- SPK installer hooks (P27.04).
+- release bundle assembly (P27.07).
 - Release bundle zip assembly (P27.07).
 - VPN bridge topology (P29).
 
