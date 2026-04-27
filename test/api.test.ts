@@ -2556,7 +2556,7 @@ describe('PUT /api/config/tmdb', () => {
     }
   });
 
-  it('preserves the existing TMDB API key when only TTL values change', async () => {
+  it('preserves existing TMDB fields when a partial update omits them', async () => {
     const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
     delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
     try {
@@ -2594,7 +2594,6 @@ describe('PUT /api/config/tmdb', () => {
           },
           body: JSON.stringify({
             cacheTtlDays: 14,
-            negativeCacheTtlDays: 2,
           }),
         }),
       );
@@ -2604,7 +2603,7 @@ describe('PUT /api/config/tmdb', () => {
       expect(disk.tmdb).toEqual({
         apiKey: 'existing-api-key',
         cacheTtlDays: 14,
-        negativeCacheTtlDays: 2,
+        negativeCacheTtlDays: 1,
       });
     } finally {
       if (prevWrite !== undefined) {

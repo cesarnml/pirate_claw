@@ -1165,17 +1165,17 @@ export function createApiFetch(
           typeof patch.apiKey === 'string' && patch.apiKey.trim().length > 0
             ? patch.apiKey.trim()
             : currentTmdb.apiKey;
-        const tmdbPatch = validateTmdbConfig(
-          {
-            ...patch,
-            ...(apiKey === undefined ? {} : { apiKey }),
-          },
-          'request body',
-        );
+        const nextTmdbInput = {
+          ...currentTmdb,
+          ...patch,
+          ...(apiKey === undefined ? {} : { apiKey }),
+        };
+        const tmdbPatch = validateTmdbConfig(nextTmdbInput, 'request body');
 
         const merged = {
           ...baseOnDisk,
           tmdb: {
+            ...currentTmdb,
             ...(tmdbPatch.apiKey === undefined
               ? {}
               : { apiKey: tmdbPatch.apiKey }),
