@@ -17,8 +17,8 @@ The DSM 7.1 path is the Phase 27 validation baseline for DS918+ on DSM 7.1.1-429
 - `compose.synology.cm.yml`: Container Manager Project artifact for DSM 7.2+.
 - `install-dsm-7.1-docker.md`: DSM 7.1 Docker GUI install guide.
 - `install-dsm-7.2-container-manager.md`: DSM 7.2+ Container Manager guide.
-- `screenshots/`: placeholders for the validation captures added by the next delivery ticket.
+- `screenshots/`: validation captures for the DSM install paths.
 
 ## Operator Contract
 
-The owner path stays inside DSM screens: Package Center, File Station, Docker or Container Manager, Main Menu, and the Pirate Claw browser page. Do not use SSH, terminal commands, hand-edited JSON, hand-edited environment files, or owner-visible secrets for this install path.
+The owner path stays inside DSM screens: File Station, Docker or Container Manager, and the Pirate Claw browser page. Do not use SSH, terminal commands, hand-edited JSON, hand-edited environment files, or owner-visible secrets for this install path.

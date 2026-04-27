@@ -54,6 +54,7 @@ Use the Docker package GUI only.
    - Image: `lscr.io/linuxserver/transmission:latest`
    - Container name: `transmission`
    - Network: `pirate-claw`
+   - Under Advanced Settings, enable auto-restart.
    - **Remove all default port mappings.** DSM pre-fills `9091/tcp`, `51413/tcp`, and `51413/udp` — delete all three. Publishing these ports is not required and exposes Transmission to the network.
    - Set environment values through Docker's GUI fields:
      - `PUID` = `0`
@@ -71,7 +72,7 @@ Use the Docker package GUI only.
    - Container name: `pirate-claw-daemon`
    - Network: `pirate-claw`
    - Map the DSM shared folder `pirate-claw` to container mount path `/volume1/pirate-claw`.
-   - Under Advanced Settings:
+   - Under Advanced Settings, enable auto-restart.
    - In Execution Command, leave EntryPoint as `bun run dist/cli.js`.
    - Set Command to exactly `daemon --config /volume1/pirate-claw/config/pirate-claw.config.json`.
    - Set environment values through Docker's GUI fields:
@@ -87,7 +88,7 @@ Use the Docker package GUI only.
     - Network: `pirate-claw`
     - Publish host port `8888` to container port `8888`.
     - Map `/volume1/pirate-claw` to `/volume1/pirate-claw` as read-only if Docker offers a read-only option.
-    - Under Advanced Settings:
+    - Under Advanced Settings, enable auto-restart.
     - Set environment values through Docker's GUI fields:
       - `HOST` = `0.0.0.0`
       - `PORT` = `8888`
@@ -96,6 +97,10 @@ Use the Docker package GUI only.
       - `PIRATE_CLAW_DAEMON_TOKEN_FILE` = `/volume1/pirate-claw/config/generated/daemon-api-write-token`
 
 12. Start the web container.
+
+Auto-restart is required for the supported restart contract. When Pirate Claw
+requests a daemon restart from the browser, the daemon exits and Docker must
+bring the `pirate-claw-daemon` container back.
 
 ## Open Pirate Claw
 
