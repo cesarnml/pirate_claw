@@ -549,6 +549,7 @@ export function createApiFetch(
         });
 
         if (!authToken) {
+          store.cancelSession(sessionId);
           return Response.json(
             {
               error:

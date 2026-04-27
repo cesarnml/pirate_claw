@@ -335,6 +335,17 @@ export class PlexAuthStore {
     };
   }
 
+  cancelSession(sessionId: string, now = new Date().toISOString()): void {
+    this.database
+      .query(
+        `UPDATE plex_auth_sessions
+        SET status = 'cancelled',
+            cancelled_at = ?2
+        WHERE id = ?1 AND status = 'pending'`,
+      )
+      .run(sessionId, now);
+  }
+
   disconnect(now = new Date().toISOString()): PlexAuthIdentity | null {
     const identity = this.getIdentity();
     if (!identity) {

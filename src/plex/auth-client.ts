@@ -63,36 +63,51 @@ export async function startPlexPinAuth(
   };
 }
 
+const PIN_POLL_ATTEMPTS = 4;
+const PIN_POLL_DELAY_MS = 600;
+
 export async function exchangePlexPinForAuthToken(input: {
   clientIdentifier: string;
   identity: PlexAuthIdentity;
   pinId: number;
   now?: Date;
 }): Promise<string | null> {
-  const deviceJwt = createDeviceJwt({
-    clientIdentifier: input.clientIdentifier,
-    keyId: input.identity.keyId,
-    privateKeyPem: input.identity.privateKeyPem,
-    now: input.now,
-  });
+  // Plex redirects to forwardUrl before the PIN is committed server-side.
+  // Poll a few times with a short delay to give Plex time to finalize.
+  for (let attempt = 0; attempt < PIN_POLL_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, PIN_POLL_DELAY_MS));
+    }
 
-  const response = await fetch(
-    `${PLEX_CLIENTS_API}/api/v2/pins/${String(input.pinId)}?deviceJWT=${encodeURIComponent(deviceJwt)}`,
-    {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'X-Plex-Client-Identifier': input.clientIdentifier,
+    const deviceJwt = createDeviceJwt({
+      clientIdentifier: input.clientIdentifier,
+      keyId: input.identity.keyId,
+      privateKeyPem: input.identity.privateKeyPem,
+      now: input.now,
+    });
+
+    const response = await fetch(
+      `${PLEX_CLIENTS_API}/api/v2/pins/${String(input.pinId)}?deviceJWT=${encodeURIComponent(deviceJwt)}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'X-Plex-Client-Identifier': input.clientIdentifier,
+        },
       },
-    },
-  );
+    );
 
-  if (!response.ok) {
-    throw new Error(`Plex PIN exchange failed with HTTP ${response.status}.`);
+    if (!response.ok) {
+      throw new Error(`Plex PIN exchange failed with HTTP ${response.status}.`);
+    }
+
+    const body = (await response.json()) as { authToken?: string | null };
+    if (body.authToken) {
+      return body.authToken;
+    }
   }
 
-  const body = (await response.json()) as { authToken?: string | null };
-  return body.authToken ?? null;
+  return null;
 }
 
 export async function refreshPlexAuthToken(input: {
@@ -161,12 +176,15 @@ function buildPlexHostedAuthUrl(input: {
   productName: string;
   forwardUrl: string;
 }): string {
-  const params = new URLSearchParams();
-  params.set('clientID', input.clientIdentifier);
-  params.set('code', input.pinCode);
-  params.set('context[device][product]', input.productName);
-  params.set('forwardUrl', input.forwardUrl);
-  return `${PLEX_HOSTED_AUTH_BASE}${params.toString()}`;
+  // URLSearchParams percent-encodes [ and ], which breaks Plex's PHP-style
+  // nested param parsing for context[device][product]. Build the fragment manually.
+  const parts = [
+    `clientID=${encodeURIComponent(input.clientIdentifier)}`,
+    `code=${encodeURIComponent(input.pinCode)}`,
+    `context[device][product]=${encodeURIComponent(input.productName)}`,
+    `forwardUrl=${encodeURIComponent(input.forwardUrl)}`,
+  ];
+  return `${PLEX_HOSTED_AUTH_BASE}${parts.join('&')}`;
 }
 
 function createDeviceJwt(input: {
