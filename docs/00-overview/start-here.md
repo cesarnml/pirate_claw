@@ -10,71 +10,11 @@ Its job is to answer three questions quickly:
 
 ## Current Repo State
 
-Pirate Claw is implemented through **Phase 27** in the active delivery stack (product phases 01–27; see [`roadmap.md`](./roadmap.md)). Delivery artifacts for Phases 12–27 live under [`docs/02-delivery/`](../02-delivery/). The Phase 19 product spec remains the contract reference for the Obsidian Tide redesign and related dashboard/TV/movie read UI, **Phase 20** ([`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md)) remains the dashboard-as-Transmission-proxy contract, **Phase 23** ([`phase-23-plex-browser-auth-and-credential-lifecycle.md`](../01-product/phase-23-plex-browser-auth-and-credential-lifecycle.md)) remains the live Plex auth/lifecycle contract, **Phase 24** ([`phase-24-synology-supervision-and-restart.md`](../01-product/phase-24-synology-supervision-and-restart.md)) remains the durable restart/supervision boundary, **Phase 25** ([`phase-25-in-browser-restart-round-trip-proof.md`](../01-product/phase-25-in-browser-restart-round-trip-proof.md)) remains the live browser restart round-trip contract, **Phase 26** ([`phase-26-mac-first-class-always-on-deployment.md`](../01-product/phase-26-mac-first-class-always-on-deployment.md)) is the active Mac always-on deployment contract, and **Phase 27** ([`phase-27-synology-dsm-first-stack-and-cold-start.md`](../01-product/phase-27-synology-dsm-first-stack-and-cold-start.md)) is the DSM-first Synology owner install contract (validated on DS918+ / DSM 7.1.1; owner install guide at [`docs/synology-install.md`](../synology-install.md)). The next release-blocking planning sequence is **Phase 28** ([`phase-28-owner-web-security.md`](../01-product/phase-28-owner-web-security.md)) and **Phase 29** ([`phase-29-openvpn-bridge-for-bundled-transmission.md`](../01-product/phase-29-openvpn-bridge-for-bundled-transmission.md)); **Phase 30** is release-critical UX/UI polish and **Phase 31** ([`phase-31-v1-release-and-schema-versioning.md`](../01-product/phase-31-v1-release-and-schema-versioning.md)) handles the v1.0.0 / schema-versioning release ceremony.
+Pirate Claw is implemented through **Phase 27**. The next release-blocking sequence is Phase 28 (owner web security), Phase 29 (OpenVPN bridge), Phase 30 (UX/UI polish), and Phase 31 (v1 release ceremony).
 
-Current delivered surface:
+For the full feature inventory and phase status, read [`README.md`](../../README.md) and [`roadmap.md`](./roadmap.md). Use the roadmap to confirm whether a request is a bounded standalone change or needs a new approved phase.
 
-- `pirate-claw run`
-- `pirate-claw daemon`
-- `pirate-claw status`
-- `pirate-claw retry-failed`
-- `pirate-claw reconcile`
-- local config via `pirate-claw.config.json`
-- compact TV config via `tv.defaults + tv.shows` with per-show overrides
-- effective config inspection via `pirate-claw config show`
-- env-backed Transmission username/password loading via process env or `.env`
-- local runtime persistence via `pirate-claw.db`
-- runtime artifacts under `.pirate-claw/runtime/cycles/` with 7-day retention
-- movie codec policy mode via `movies.codecPolicy` (`prefer` by default, `require` for strict matching)
-- queue-time Transmission `movie` / `tv` labels with warning+retry fallback when labels are unsupported
-- per-media-type Transmission download directories via `transmission.downloadDirs`
-- SvelteKit dashboard in `web/` that consumes the daemon HTTP API, including bounded runtime Settings writes and full feed and target management (add/remove feeds, TV defaults, movie policy, TV show targets) through server-side actions
-- Phase 19 UI surface: Obsidian Tide design tokens, persistent left sidebar on desktop with mobile drawer fallback, four top-level routes (`/`, `/shows`, `/movies`, `/config`), poster-forward TV/movie views, show-detail TMDB refresh, and Plex chips/watch-state across supported library views
-- Phase 20 dashboard torrent proxy (shipped on `main`, see product doc above): Torrent Manager with live Transmission rows and context-menu pause, resume, remove, and remove-with-delete; Transmission failures card listing deduped enqueue failures with Queue-to-retry; daemon API and downloader wiring that support those flows
-- optional TMDB enrichment: `tmdb` config block and/or `PIRATE_CLAW_TMDB_API_KEY`, SQLite-backed cache, lazy enrichment on API reads, and an optional daemon background refresh cadence via `runtime.tmdbRefreshIntervalMinutes` (default 6 hours; set `0` to disable)
-- optional Plex enrichment with browser-managed auth: operator-managed `plex.url`, browser Connect/Reconnect flow in onboarding and `/config`, durable device identity and auth state in SQLite, current usable token persisted in `plex.token`, best-effort silent renewal, background refresh sweeps, and read-only `plexStatus` / `watchCount` / `lastWatchedAt` fields on `/api/movies` and `/api/shows`
-- Phase 24/25 restart contract: repo-owned daemon container artifact, durable restart proof for config + SQLite + persisted Plex auth state, browser-visible `requested -> restarting -> back_online | failed_to_return` proof in `/config`, shared restart vocabulary across browser surfaces, and explicit Synology Plex compatibility/remediation guidance
-- Phase 26 Mac deployment contract: repo-owned per-user `launchd` reference artifact, dedicated Mac operator runbook, validated Apple Silicon restart round-trip under `launchd`, and a browser-facing restart-status proxy proven against the same durable restart artifact
-- Phase 16 config editing: unified `/config` accordion cards, per-section toast feedback, post-save daemon restart affordance, Transmission ping, and read-only tooltips when write auth is absent
-- Phase 17 onboarding and empty states: `/onboarding` guided first-run flow, strict initial-empty auto-trigger plus dismissal suppression/resume, blocked onboarding when writes are disabled, and explicit empty-state guidance across `/`, `/config`, `/shows`, `/movies`, and `/candidates/unmatched`
-- Phase 27 DSM-first Synology owner install: `.spk` launcher/icon via Package Center, three-container stack (`pirate-claw-daemon`, `pirate-claw-web`, `transmission`) on a private Docker network, daemon first-startup bootstrap and generated write token, install health gate in onboarding; validated on DS918+ / DSM 7.1.1-42962 Update 9; owner install guide at [`docs/synology-install.md`](../synology-install.md)
-
-Current product boundary:
-
-- local CLI plus optional read-only browser dashboard
-- Transmission is the downloader adapter
-- SQLite is the local persistence boundary
-- real-world feed compatibility for EZTV and Atlas is implemented
-- post-queue lifecycle reconciliation and status visibility are implemented for Pirate Claw-queued torrents
-- foreground daemon mode with scheduled run and reconcile cycles
-- per-feed polling cadence with persistent poll state
-- shared runtime lock prevents overlapping cycles
-- machine-readable and human-readable cycle artifacts with bounded retention
-- daemon HTTP API with read endpoints plus bounded write controls (`/api/config*`, `/api/daemon/restart`, `/api/transmission/ping`, and Phase 19 TV-detail TMDB refresh) when `runtime.apiPort` is configured; **Phase 20** (shipped) adds Transmission torrent lifecycle JSON actions, missing-torrent dispose, and `POST /api/candidates/:id/requeue` on the same port — requeue requires the daemon process to host the Transmission downloader alongside the API
-- TMDB metadata is display-only and does not gate RSS intake
-
-Still deferred (beyond the current Phase 21–26 completion sequence):
-
-- remote feed capture
-- hosted persistence
-- download renaming or organization rules
-- Synology archiving
-- ingestion redesign beyond the local SQLite model
-
-Last verified against `README.md`, roadmap, and active product docs: 2026-04-27.
-
-Current planning focus:
-
-- see [`roadmap.md`](./roadmap.md) for numbered phases and what is implemented on `main`
-- use the roadmap to confirm whether the request is a bounded standalone change or needs a new approved phase/epic planning pass
-- treat the current Phase 07 config surface and the current extracted delivery-orchestrator module boundaries as the baseline for future work
-  <<<<<<< HEAD
-- for delivery-tooling architecture work, EE11 is the approved follow-up plan to replace the orchestrator `_config` singleton with an explicit context object and platform adapter factory; see [`engineering-epic-11/implementation-plan.md`](../02-delivery/engineering-epic-11/implementation-plan.md)
-- the next product-completion planning buckets are Phase 28 (owner web security) and Phase 29 (OpenVPN bridge for bundled Transmission)
-- treat the shipped Phase 25 browser proof as a follow-on to the Phase 24 restart contract, not as a replacement for the persisted Plex auth/device boundary
-- treat the shipped Phase 26 Mac `launchd` path as a parallel supported deployment contract alongside the Phase 27 DSM-first owner install path, not as a reason to merge those operator runbooks together
-- treat the Phase 27 DSM-first path as the validated Synology owner install path; the legacy expert-built runbook at `docs/synology-runbook.md` is now the advanced operator reference, not the default first-time path
-- Phase 30 is release-critical UX/UI polish after functional completion; Phase 31 (`schemaVersion`, tagged v1, `VERSIONING.md`, changelog) is the release/versioning ceremony after product-completion phases land; keep Phase 20 dashboard torrent work in [`phase-20-dashboard-torrent-actions.md`](../01-product/phase-20-dashboard-torrent-actions.md), not under the Phase 19 contract
+Delivery artifacts for phases land under [`docs/02-delivery/`](../02-delivery/). Product specs live under [`docs/01-product/`](../01-product/).
 
 ## Read These Docs By Task Type
 
