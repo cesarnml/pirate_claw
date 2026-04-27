@@ -2,9 +2,22 @@ import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const tsconfigRootDir = import.meta.dirname;
+
 export default tseslint.config(
   {
-    ignores: ['node_modules/', '.vscode/', 'test/fixtures/', 'web/'],
+    ignores: [
+      'node_modules/',
+      '.vscode/',
+      'test/fixtures/',
+      'web/',
+      '.claude/',
+      '.claude/**/*',
+      '.codex-clone-*/',
+      '.codex-clone-*/**/*',
+      '.codex-worktrees/',
+      '.codex-worktrees/**/*',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -16,6 +29,9 @@ export default tseslint.config(
         ...globals.node,
         ...globals.es2024,
         Bun: 'readonly',
+      },
+      parserOptions: {
+        tsconfigRootDir,
       },
     },
     rules: {
