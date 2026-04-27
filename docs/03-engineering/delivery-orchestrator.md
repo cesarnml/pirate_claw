@@ -16,30 +16,58 @@ This keeps the product boundary honest. `src/` remains the Pirate Claw applicati
 
 ## Module Structure
 
-After EE10, `tools/delivery/` is decomposed into focused single-concern modules.
+After EE11, `tools/delivery/` is decomposed into focused single-concern modules.
 `orchestrator.ts` is a pure re-export barrel with no logic — it exists only so
 external callers can import from one stable path.
 
-| Module                 | Concern                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------- |
-| `types.ts`             | All shared TypeScript types and interfaces                                                  |
-| `env.ts`               | `.env` parsing (`parseDotEnv`)                                                              |
-| `runtime-config.ts`    | `OrchestratorConfig` loading, `_config` singleton, `resolveOrchestratorConfig`              |
-| `format.ts`            | Human-readable status formatting (`formatStatus`, `formatCurrentTicketStatus`, etc.)        |
-| `platform.ts`          | Raw platform primitives: `spawnSync`, git worktree parsing, shell helpers                   |
-| `platform-adapters.ts` | Thin wrappers that inject `_config.runtime` into `platform.ts` calls                        |
-| `planning.ts`          | Branch and worktree naming (`deriveBranchName`, `deriveWorktreePath`, `findExistingBranch`) |
-| `state.ts`             | State persistence (`loadState`, `saveState`, `normalizeDeliveryStateFromPersisted`)         |
-| `ticket-flow.ts`       | Ticket lifecycle transitions, handoff artifact writing, `materializeTicketContext`          |
-| `notifications.ts`     | Telegram notification events and formatting                                                 |
-| `pr-metadata.ts`       | PR title/body construction and AI-review section builders                                   |
-| `review.ts`            | Review polling lifecycle, fetcher/triager adapters, artifact parsing                        |
-| `cli-runner.ts`        | `runDeliveryOrchestrator` dispatch switch and private CLI helpers                           |
-| `cli.ts`               | Argument parsing (`parseCliArgs`, `getUsage`)                                               |
-| `orchestrator.ts`      | Pure re-export barrel — no logic                                                            |
+| Module                 | Concern                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `types.ts`             | All shared TypeScript types and interfaces                                                             |
+| `env.ts`               | `.env` parsing (`parseDotEnv`) and environment readiness helpers                                       |
+| `runtime-config.ts`    | `OrchestratorConfig` loading, resolution, package-manager inference, and invocation formatting         |
+| `context.ts`           | Plain `DeliveryOrchestratorContext` construction from resolved config and platform adapters            |
+| `format.ts`            | Human-readable status formatting (`formatStatus`, `formatCurrentTicketStatus`, etc.) with config input |
+| `platform.ts`          | Raw platform primitives: `spawnSync`, git worktree parsing, shell helpers                              |
+| `platform-adapters.ts` | `createPlatformAdapters(config)` factory that binds runtime/config to platform primitives              |
+| `planning.ts`          | Branch and worktree naming (`deriveBranchName`, `deriveWorktreePath`, `findExistingBranch`)            |
+| `state.ts`             | State persistence (`loadState`, `saveState`, `normalizeDeliveryStateFromPersisted`)                    |
+| `ticket-flow.ts`       | Ticket lifecycle transitions, handoff artifact writing, `materializeTicketContext`                     |
+| `notifications.ts`     | Telegram notification events and formatting                                                            |
+| `pr-metadata.ts`       | PR title/body construction and AI-review section builders                                              |
+| `review.ts`            | Review polling lifecycle, fetcher/triager adapters, artifact parsing                                   |
+| `cli-runner.ts`        | `runDeliveryOrchestrator` dispatch switch and explicit command-helper wiring                           |
+| `cli.ts`               | Argument parsing (`parseCliArgs`, `getUsage`)                                                          |
+| `orchestrator.ts`      | Pure re-export barrel — no logic                                                                       |
 
 Each source module has a corresponding test file under `tools/delivery/test/`.
 Import from source modules in tests, not from the barrel.
+
+## Runtime Context Boundary
+
+Runtime config is not stored in a module-level singleton. The CLI loads
+`orchestrator.config.json`, resolves defaults once, builds a
+`DeliveryOrchestratorContext`, and passes that context or its `config` field into
+helpers that need runtime values.
+
+The context is intentionally small:
+
+- `config`: resolved branch, plan-root, runtime, package-manager, boundary-mode,
+  and review-policy values
+- `platform`: platform adapters created by `createPlatformAdapters(config)`
+- `invocation`: the package-manager-specific deliver command string used in
+  user-facing errors
+
+This keeps dependency direction visible at call sites. Helpers that need branch
+or runtime behavior accept `ResolvedOrchestratorConfig`; helpers that need git,
+GitHub, filesystem, or process adapters accept `DeliveryOrchestratorContext`.
+Tests use local config/context fixtures instead of mutating global module state.
+
+`runtime-config.ts` still owns config loading and validation, but it does not
+export `_config`, `initOrchestratorConfig`, or `getOrchestratorConfig`.
+`platform-adapters.ts` no longer reads runtime config directly; all adapter
+methods close over the config passed to `createPlatformAdapters(config)`.
+Formatters receive config explicitly so status rendering and boundary guidance
+do not depend on hidden process state.
 
 ## Configurable Core
 

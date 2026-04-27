@@ -68,14 +68,15 @@ Each ticket or PR should include a short rationale section with these prompts:
 
 ## Epic Status
 
-| Epic                                         | Status      | Notes                                                                                                                                                                                                 |
-| -------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EE10 — Delivery Tooling Module Decomposition | **closed**  | `orchestrator.ts` reduced to a pure re-export barrel; 6 focused modules extracted; `bun test` green throughout                                                                                        |
-| EE11 — Delivery Tooling Context Object       | **planned** | Approved ticket stack in `docs/02-delivery/engineering-epic-11/implementation-plan.md`; cleanly removes `_config`, adds explicit context, adapter factory, formatter config, and command helper split |
+| Epic                                         | Status     | Notes                                                                                                                                                                                            |
+| -------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EE10 — Delivery Tooling Module Decomposition | **closed** | `orchestrator.ts` reduced to a pure re-export barrel; 6 focused modules extracted; `bun test` green throughout                                                                                   |
+| EE11 — Delivery Tooling Context Object       | **closed** | `_config`, `initOrchestratorConfig`, and `getOrchestratorConfig` removed; delivery runtime config now flows through explicit context/config parameters, adapter factory, and local test fixtures |
 
-EE11 is the direct follow-up to EE10. It is an architectural improvement, not a
-structural refactor. The ticket stack is approved; implementation should run
-through the delivery orchestrator after the plan docs land on `main`.
+EE11 closed the direct follow-up from EE10. No follow-up epic is required for
+the context-object boundary itself; any future delivery-tooling work should start
+from the explicit context and adapter-factory model documented in
+`docs/03-engineering/delivery-orchestrator.md`.
 
 ## Source Of Truth
 
