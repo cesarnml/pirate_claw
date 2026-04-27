@@ -40,4 +40,8 @@ cp "$SOURCE_DIR/screenshots/dsm-7.2-container-manager/README.md" \
 rm -f "$ZIP_PATH"
 (cd "$BUNDLE_DIR" && zip -qr "$ZIP_PATH" .)
 
+RELEASES_DIR="$ROOT_DIR/releases"
+mkdir -p "$RELEASES_DIR"
+cp "$ZIP_PATH" "$RELEASES_DIR/${BUNDLE_NAME}.zip"
+
 echo "$ZIP_PATH"
