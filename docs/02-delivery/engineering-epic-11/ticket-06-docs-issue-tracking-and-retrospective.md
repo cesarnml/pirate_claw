@@ -48,9 +48,24 @@ and Markdown changed.
 ## Rationale
 
 Red first:
+The active delivery-orchestrator doc still described the EE10-era singleton as
+current architecture, and issue tracking still listed EE11 as planned even
+though the stacked implementation had landed through EE11.05.
 
 Why this path:
+The closeout docs now update the durable workflow map rather than repeating
+ticket details: delivery-orchestrator owns the final context/adapter/formatter
+model, issue tracking marks the epic closed, Start Here points future delivery
+tooling work at the new architecture, and the retrospective captures the lessons
+for future agents.
 
 Alternative considered:
+Leaving Start Here unchanged would keep the ticket inside its narrow change
+surface, but that document is the first place future delivery-tooling agents look
+for current repo state. A one-line status update avoids sending them to EE11 as
+future work after EE11 has closed.
 
 Deferred:
+No new follow-up epic is opened for the context boundary. Future cleanup should
+be proposed from concrete friction in later delivery-tooling work, not from this
+closeout ticket.
