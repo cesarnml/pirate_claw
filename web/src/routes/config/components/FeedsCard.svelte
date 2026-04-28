@@ -109,7 +109,7 @@
 						placeholder="https://example.com/feed.rss"
 						value={newFeedUrl}
 						disabled={!canWrite || feedsSubmitting}
-						class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+						class="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 w-full rounded-2xl border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
 						oninput={(event) => onNewFeedUrlChange(event.currentTarget.value)}
 					/>
 					{#if feedsUrlError}

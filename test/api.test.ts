@@ -1478,6 +1478,7 @@ describe('Plex browser auth flow', () => {
         state: 'connecting',
         plexUrl: 'http://localhost:32400',
         hasToken: false,
+        tokenSource: 'none',
         returnTo: '/onboarding',
         plexServerVersion: null,
         plexVersionCompatible: null,
@@ -1530,7 +1531,9 @@ describe('Plex browser auth flow', () => {
 
   it('disconnects Plex by clearing both config token and stored auth state', async () => {
     const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    const prevPlexToken = process.env.PIRATE_CLAW_PLEX_TOKEN;
     process.env.PIRATE_CLAW_API_WRITE_TOKEN = 'write-token';
+    delete process.env.PIRATE_CLAW_PLEX_TOKEN;
     const fetchSpy = spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(
         new Response(
@@ -1615,7 +1618,57 @@ describe('Plex browser auth flow', () => {
       } else {
         delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
       }
+      if (prevPlexToken !== undefined) {
+        process.env.PIRATE_CLAW_PLEX_TOKEN = prevPlexToken;
+      } else {
+        delete process.env.PIRATE_CLAW_PLEX_TOKEN;
+      }
       fetchSpy.mockRestore();
+    }
+  });
+
+  it('returns 409 when disconnect is attempted with PIRATE_CLAW_PLEX_TOKEN env override', async () => {
+    const prevWrite = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+    const prevPlexToken = process.env.PIRATE_CLAW_PLEX_TOKEN;
+    process.env.PIRATE_CLAW_API_WRITE_TOKEN = 'write-token';
+    process.env.PIRATE_CLAW_PLEX_TOKEN = 'env-plex-token';
+
+    try {
+      const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-plex-auth-'));
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+      const loaded = await loadConfig(configPath);
+      loaded.runtime.apiWriteToken = 'write-token';
+      const deps = createDatabaseBackedDeps(loaded, configPath);
+      const handler = createApiFetch(deps);
+
+      const current = await handler(new Request('http://localhost/api/config'));
+      const disconnect = await handler(
+        new Request('http://localhost/api/plex/auth/disconnect', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer write-token',
+            'if-match': current.headers.get('etag')!,
+          },
+        }),
+      );
+
+      expect(disconnect.status).toBe(409);
+      await expect(disconnect.json()).resolves.toMatchObject({
+        error: expect.stringContaining('PIRATE_CLAW_PLEX_TOKEN'),
+      });
+      deps.database?.close();
+    } finally {
+      if (prevWrite !== undefined) {
+        process.env.PIRATE_CLAW_API_WRITE_TOKEN = prevWrite;
+      } else {
+        delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+      }
+      if (prevPlexToken !== undefined) {
+        process.env.PIRATE_CLAW_PLEX_TOKEN = prevPlexToken;
+      } else {
+        delete process.env.PIRATE_CLAW_PLEX_TOKEN;
+      }
     }
   });
 

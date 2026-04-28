@@ -610,14 +610,8 @@ function resolveAuthState(
   identity: PlexAuthIdentity | null,
   pendingSession: PlexAuthSession | null,
 ): PlexAuthState {
-  if (pendingSession) {
-    return 'connecting';
-  }
-
-  if (identity?.renewalStartedAt) {
-    return 'renewing';
-  }
-
+  // Identity wins over an in-flight session: a stalled or just-started
+  // PIN flow must never demote an already-valid credential to "connecting".
   if (
     identity?.reconnectRequiredAt &&
     identity.reconnectRequiredReason === 'expired'
@@ -636,8 +630,16 @@ function resolveAuthState(
     return 'reconnect_required';
   }
 
+  if (identity?.renewalStartedAt) {
+    return 'renewing';
+  }
+
   if (identity?.refreshToken) {
     return 'connected';
+  }
+
+  if (pendingSession) {
+    return 'connecting';
   }
 
   return 'not_connected';

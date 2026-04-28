@@ -37,6 +37,7 @@ export const load: LayoutServerLoad = async () => {
 		healthResult,
 		sessionResult,
 		configResult,
+		setupStateResult,
 		readinessResult,
 		installHealthResult,
 		plexAuthResult
@@ -44,6 +45,7 @@ export const load: LayoutServerLoad = async () => {
 		apiFetch<DaemonHealth>('/api/health'),
 		apiFetch<SessionInfo>('/api/transmission/session'),
 		apiFetch<AppConfig>('/api/config'),
+		apiFetch<{ state: SetupState }>('/api/setup/state'),
 		apiFetch<ReadinessResponse>('/api/setup/readiness'),
 		apiFetch<InstallHealthResponse>('/api/setup/install-health'),
 		apiFetch<PlexAuthStatusResponse>('/api/plex/auth/status')
@@ -61,6 +63,10 @@ export const load: LayoutServerLoad = async () => {
 		console.error('[layout] failed to load /api/config:', configResult.reason);
 	}
 
+	if (setupStateResult.status === 'rejected') {
+		console.error('[layout] failed to load /api/setup/state:', setupStateResult.reason);
+	}
+
 	if (readinessResult.status === 'rejected') {
 		console.error('[layout] failed to load /api/setup/readiness:', readinessResult.reason);
 	}
@@ -74,6 +80,7 @@ export const load: LayoutServerLoad = async () => {
 	}
 
 	const readiness = readinessResult.status === 'fulfilled' ? readinessResult.value : null;
+	const setupState = setupStateResult.status === 'fulfilled' ? setupStateResult.value.state : null;
 	const configHasPlex =
 		configResult.status === 'fulfilled' && configResult.value.plex !== undefined;
 	const plexAuthState =
@@ -83,7 +90,7 @@ export const load: LayoutServerLoad = async () => {
 		health: healthResult.status === 'fulfilled' ? healthResult.value : null,
 		transmissionSession: sessionResult.status === 'fulfilled' ? sessionResult.value : null,
 		plexAuthState: normalizePlexAuthState(configHasPlex, plexAuthState),
-		setupState: normalizeSetupState(readiness?.configState),
+		setupState: normalizeSetupState(setupState),
 		readinessState: normalizeReadinessState(readiness?.state),
 		installHealthState:
 			installHealthResult.status === 'fulfilled' ? installHealthResult.value : null

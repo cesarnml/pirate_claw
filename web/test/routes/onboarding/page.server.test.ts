@@ -40,6 +40,7 @@ describe('onboarding page server', () => {
 								state: 'not_connected',
 								plexUrl: 'http://localhost:32400',
 								hasToken: false,
+								tokenSource: 'none',
 								returnTo: null
 							}),
 							{ status: 200 }
@@ -81,6 +82,7 @@ describe('onboarding page server', () => {
 								state: 'not_connected',
 								plexUrl: 'http://localhost:32400',
 								hasToken: false,
+								tokenSource: 'none',
 								returnTo: null
 							}),
 							{ status: 200 }
@@ -127,6 +129,7 @@ describe('onboarding page server', () => {
 								state: 'connected',
 								plexUrl: 'http://localhost:32400',
 								hasToken: true,
+								tokenSource: 'config',
 								returnTo: null
 							}),
 							{ status: 200 }

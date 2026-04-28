@@ -44,6 +44,7 @@ describe('config page server actions', () => {
 							state: 'not_connected',
 							plexUrl: 'http://localhost:32400',
 							hasToken: false,
+							tokenSource: 'none',
 							returnTo: null
 						}),
 						{ status: 200 }
@@ -88,6 +89,7 @@ describe('config page server actions', () => {
 							state: 'not_connected',
 							plexUrl: 'http://localhost:32400',
 							hasToken: false,
+							tokenSource: 'none',
 							returnTo: null
 						}),
 						{ status: 200 }
@@ -144,6 +146,7 @@ describe('config page server actions', () => {
 							state: 'connected',
 							plexUrl: 'http://localhost:32400',
 							hasToken: true,
+							tokenSource: 'config',
 							returnTo: null
 						}),
 						{ status: 200 }

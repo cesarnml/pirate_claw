@@ -189,10 +189,9 @@ async function fetchPlexServerVersion(
 ): Promise<string | null> {
   let response: Response;
   try {
-    response = await fetch(new URL('/', plexUrl).toString(), {
+    response = await fetch(new URL('/identity', plexUrl).toString(), {
       headers: {
         Accept: 'application/xml',
-        'X-Plex-Token': token,
       },
       signal: AbortSignal.timeout(PLEX_VERSION_PROBE_TIMEOUT_MS),
     });
@@ -201,7 +200,22 @@ async function fetchPlexServerVersion(
   }
 
   if (!response.ok) {
-    return null;
+    // Some PMS deployments gate /identity unexpectedly; fall back to a root
+    // probe with the token for compatibility.
+    try {
+      response = await fetch(new URL('/', plexUrl).toString(), {
+        headers: {
+          Accept: 'application/xml',
+          'X-Plex-Token': token,
+        },
+        signal: AbortSignal.timeout(PLEX_VERSION_PROBE_TIMEOUT_MS),
+      });
+    } catch {
+      return null;
+    }
+    if (!response.ok) {
+      return null;
+    }
   }
 
   const body = await response.text();
@@ -603,11 +617,14 @@ export function createApiFetch(
         });
 
         if (!authToken) {
-          store.cancelSession(sessionId);
+          // Plex hasn't bound the PIN to a user yet. Surface as soft-pending so
+          // the callback page retries instead of cancelling the session.
           return Response.json(
             {
-              error:
-                'Plex sign-in was cancelled or has not completed yet. Try Connect again.',
+              pending: true,
+              error: 'Plex sign-in is still completing at Plex.',
+              returnTo: snapshot.pendingSession.returnTo,
+              expiresAt: snapshot.pendingSession.expiresAt,
             },
             { status: 409 },
           );
@@ -648,22 +665,32 @@ export function createApiFetch(
       const store = new PlexAuthStore(database);
       const snapshot = store.getSnapshot();
       const plexUrl = activeConfig.plex?.url ?? 'http://localhost:32400';
-      const token = activeConfig.plex?.token?.trim() ?? '';
-      const shouldProbeVersion =
-        snapshot.state === 'connected' && token.length > 0;
-      const plexServerVersion = shouldProbeVersion
-        ? await fetchPlexServerVersion(plexUrl, token)
-        : null;
+      const configToken = activeConfig.plex?.token?.trim() ?? '';
+      const identityToken = snapshot.identity?.refreshToken?.trim() ?? '';
+      const token = configToken || identityToken;
+      const envToken = process.env.PIRATE_CLAW_PLEX_TOKEN?.trim();
+      const tokenSource: PlexAuthStatusResponse['tokenSource'] =
+        configToken.length === 0
+          ? 'none'
+          : envToken && envToken.length > 0
+            ? 'env'
+            : 'config';
+      const plexServerVersion =
+        snapshot.state === 'connected'
+          ? await fetchPlexServerVersion(plexUrl, token)
+          : null;
+      const plexVersionCompatible =
+        plexServerVersion === null
+          ? null
+          : isVersionAtLeast(plexServerVersion, MIN_SUPPORTED_PLEX_VERSION);
       return Response.json({
         state: snapshot.state,
         plexUrl,
         hasToken: Boolean(activeConfig.plex?.token),
+        tokenSource,
         returnTo: snapshot.pendingSession?.returnTo ?? null,
         plexServerVersion,
-        plexVersionCompatible:
-          plexServerVersion === null
-            ? null
-            : isVersionAtLeast(plexServerVersion, MIN_SUPPORTED_PLEX_VERSION),
+        plexVersionCompatible,
       } satisfies PlexAuthStatusResponse);
     }
 
@@ -1117,6 +1144,16 @@ export function createApiFetch(
       if (authError) return authError;
       const etagError = checkEtag(request, activeConfig);
       if (etagError) return etagError;
+      const envToken = process.env.PIRATE_CLAW_PLEX_TOKEN?.trim();
+      if (envToken && envToken.length > 0) {
+        return Response.json(
+          {
+            error:
+              'Disconnect is blocked because PIRATE_CLAW_PLEX_TOKEN is set in the daemon environment. Remove it to manage Plex auth from the UI.',
+          },
+          { status: 409 },
+        );
+      }
 
       try {
         if (database) {
@@ -1882,6 +1919,7 @@ export type PlexAuthStatusResponse = {
     | 'error_reconnect_required';
   plexUrl: string;
   hasToken: boolean;
+  tokenSource: 'config' | 'env' | 'none';
   returnTo: string | null;
   plexServerVersion: string | null;
   plexVersionCompatible: boolean | null;
@@ -2104,6 +2142,7 @@ async function writePlexConfigToDisk(input: {
 }): Promise<AppConfig> {
   const baseOnDisk = await readConfigFileRecord(input.configPath);
   const diskPlex = isRecord(baseOnDisk.plex) ? baseOnDisk.plex : {};
+  const hasTokenPatch = Object.prototype.hasOwnProperty.call(input.patch, 'token');
   const merged = {
     ...baseOnDisk,
     plex: {
@@ -2114,10 +2153,11 @@ async function writePlexConfigToDisk(input: {
         input.currentConfig.plex?.url ??
         'http://localhost:32400',
       token:
-        input.patch.token ??
-        optionalStringValue(diskPlex.token) ??
-        input.currentConfig.plex?.token ??
-        '',
+        hasTokenPatch
+          ? (input.patch.token ?? '')
+          : (optionalStringValue(diskPlex.token) ??
+            input.currentConfig.plex?.token ??
+            ''),
       refreshIntervalMinutes:
         input.patch.refreshIntervalMinutes ??
         optionalNonNegativeNumber(diskPlex.refreshIntervalMinutes) ??

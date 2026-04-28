@@ -33,6 +33,7 @@ describe('layout server load', () => {
 					refreshIntervalMinutes: 30
 				}
 			})
+			.mockResolvedValueOnce({ state: 'ready' })
 			.mockResolvedValueOnce({
 				state: 'ready',
 				configState: 'ready',
@@ -44,6 +45,7 @@ describe('layout server load', () => {
 				state: 'connected',
 				plexUrl: 'http://localhost:32400',
 				hasToken: true,
+				tokenSource: 'config',
 				returnTo: null
 			});
 
@@ -82,6 +84,7 @@ describe('layout server load', () => {
 			.mockResolvedValueOnce({
 				plex: { url: 'http://localhost:32400', token: '', refreshIntervalMinutes: 30 }
 			})
+			.mockResolvedValueOnce({ state: 'starter' })
 			.mockResolvedValueOnce({
 				state: 'not_ready',
 				configState: 'starter',
@@ -93,6 +96,7 @@ describe('layout server load', () => {
 				state: 'connected',
 				plexUrl: 'http://localhost:32400',
 				hasToken: true,
+				tokenSource: 'config',
 				returnTo: null
 			});
 
@@ -115,6 +119,7 @@ describe('layout server load', () => {
 			.mockResolvedValueOnce({
 				plex: { url: 'http://localhost:32400', token: '', refreshIntervalMinutes: 30 }
 			})
+			.mockResolvedValueOnce({ state: 'partially_configured' })
 			.mockResolvedValueOnce({
 				state: 'not_ready',
 				configState: 'mystery',
@@ -126,6 +131,7 @@ describe('layout server load', () => {
 				state: 'connected',
 				plexUrl: 'http://localhost:32400',
 				hasToken: true,
+				tokenSource: 'config',
 				returnTo: null
 			});
 
@@ -147,6 +153,7 @@ describe('layout server load', () => {
 			.mockResolvedValueOnce({
 				plex: { url: 'http://localhost:32400', token: '', refreshIntervalMinutes: 30 }
 			})
+			.mockResolvedValueOnce({ state: 'ready' })
 			.mockResolvedValueOnce({
 				state: 'mystery',
 				configState: 'ready',
@@ -158,6 +165,7 @@ describe('layout server load', () => {
 				state: 'connected',
 				plexUrl: 'http://localhost:32400',
 				hasToken: true,
+				tokenSource: 'config',
 				returnTo: null
 			});
 
@@ -174,6 +182,7 @@ describe('layout server load', () => {
 				.mockRejectedValueOnce(new Error('health down'))
 				.mockRejectedValueOnce(new Error('tx down'))
 				.mockRejectedValueOnce(new Error('config down'))
+				.mockRejectedValueOnce(new Error('setup state down'))
 				.mockRejectedValueOnce(new Error('readiness down'))
 				.mockRejectedValueOnce(new Error('install health down'))
 				.mockRejectedValueOnce(new Error('plex auth down'));

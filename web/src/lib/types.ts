@@ -192,6 +192,7 @@ export type PlexAuthStatusResponse = {
 	state: PlexAuthState;
 	plexUrl: string;
 	hasToken: boolean;
+	tokenSource: 'config' | 'env' | 'none';
 	returnTo: string | null;
 	plexServerVersion: string | null;
 	plexVersionCompatible: boolean | null;

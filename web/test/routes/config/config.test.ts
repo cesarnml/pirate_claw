@@ -144,6 +144,28 @@ describe('/config', () => {
 		expect(screen.getByRole('alert')).toHaveTextContent('Could not reach the API.');
 	});
 
+	it('hides reconnect CTA when Plex auth is already connected', () => {
+		renderPage({
+			config: mockConfig,
+			error: null,
+			etag: '"rev-1"',
+			canWrite: true,
+			onboarding: null,
+			plexAuth: {
+				state: 'connected',
+				plexUrl: 'http://localhost:32400',
+				hasToken: true,
+				tokenSource: 'config',
+				returnTo: null,
+				plexServerVersion: '1.43.1.10611-1e34174b1',
+				plexVersionCompatible: true
+			}
+		});
+
+		expect(screen.queryByRole('link', { name: 'Reconnect in browser' })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Save PMS URL' })).toBeInTheDocument();
+	});
+
 	it('renders when feeds list is empty and tv list is empty', () => {
 		renderPage({
 			config: { ...mockConfig, feeds: [], tv: [] },

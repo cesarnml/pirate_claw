@@ -59,8 +59,22 @@
 	} satisfies Record<PlexAuthStatusResponse['state'], { label: string; description: string }>;
 
 	const connectHref = $derived(`/plex/connect?returnTo=${encodeURIComponent(returnTo)}`);
+	const showConnectAction = $derived(status.state !== 'connected');
+	const showDisconnectAction = $derived.by(() => {
+		if (mode !== 'config') return false;
+		if (status.tokenSource === 'env') return false;
+		return (
+			status.state === 'connected' ||
+			status.state === 'connecting' ||
+			status.state === 'renewing' ||
+			status.state === 'reconnect_required' ||
+			status.state === 'expired_reconnect_required' ||
+			status.state === 'error_reconnect_required'
+		);
+	});
+	const disconnectLabel = $derived(status.state === 'connecting' ? 'Cancel sign-in' : 'Disconnect');
 	const connectLabel = $derived.by(() => {
-		if (status.state === 'connected' || status.state === 'reconnect_required') {
+		if (status.state === 'reconnect_required') {
 			return 'Reconnect in browser';
 		}
 		if (
@@ -115,62 +129,73 @@
 					{stateCopy[status.state].description} Use Plex&apos;s hosted browser flow instead of manually
 					extracting a token.
 				</p>
+				{#if status.tokenSource === 'env'}
+					<p class="text-xs text-amber-300/90">
+						Using <code>PIRATE_CLAW_PLEX_TOKEN</code> from environment. Disconnect/reconnect in UI is
+						disabled until that override is removed.
+					</p>
+				{/if}
 			</div>
 		</div>
 
-		<a
-			class:text-muted-foreground={!canWrite}
-			class:pointer-events-none={!canWrite}
-			class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold transition disabled:opacity-50"
-			href={connectHref}
-		>
-			{connectLabel}
-		</a>
+		<div class="flex flex-wrap items-center justify-end gap-3">
+			{#if showConnectAction}
+				<a
+					class:text-muted-foreground={!canWrite}
+					class:pointer-events-none={!canWrite}
+					class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold transition disabled:opacity-50"
+					href={connectHref}
+				>
+					{connectLabel}
+				</a>
+			{/if}
+
+			{#if showDisconnectAction}
+				<form method="POST" action={disconnectAction}>
+					<input type="hidden" name="ifMatch" value={currentEtag ?? ''} />
+					<button
+						type="submit"
+						class="border-border bg-background/55 hover:bg-muted/80 inline-flex h-11 cursor-pointer items-center rounded-xl border px-4 text-sm transition-colors disabled:opacity-50"
+						disabled={!canWrite || !currentEtag}
+					>
+						{disconnectLabel}
+					</button>
+				</form>
+			{/if}
+		</div>
 	</div>
 
 	{#if mode === 'config'}
-		<form method="POST" action={saveAction} class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-			<div class="space-y-1">
+		<form method="POST" action={saveAction} class="space-y-1">
+			<div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
 				<label class="text-sm font-medium" for="plex-url">Plex Media Server URL</label>
-				<input
-					id="plex-url"
-					name="plexUrl"
-					type="url"
-					value={status.plexUrl}
-					class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-				/>
-				<p class="text-muted-foreground text-xs">
-					Operator-managed PMS URL. Keep this pointed at the server Pirate Claw should read.
-				</p>
+				<div class="md:col-start-1">
+					<input
+						id="plex-url"
+						name="plexUrl"
+						type="url"
+						value={status.plexUrl}
+						class="border-input bg-background/70 ring-offset-background placeholder:text-muted-foreground/70 h-11 w-full rounded-xl border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+					/>
+				</div>
+				<div class="md:col-start-2">
+					<input type="hidden" name="ifMatch" value={currentEtag ?? ''} />
+					<button
+						type="submit"
+						class="border-border bg-background/55 hover:bg-muted/80 inline-flex h-11 items-center rounded-xl border px-4 text-sm transition-colors disabled:opacity-50"
+						disabled={!canWrite || !currentEtag}
+					>
+						Save PMS URL
+					</button>
+				</div>
 			</div>
-
-			<div class="flex items-end">
-				<input type="hidden" name="ifMatch" value={currentEtag ?? ''} />
-				<button
-					type="submit"
-					class="border-border bg-background/55 hover:bg-muted/80 inline-flex h-11 items-center rounded-xl border px-4 text-sm transition-colors disabled:opacity-50"
-					disabled={!canWrite || !currentEtag}
-				>
-					Save PMS URL
-				</button>
-			</div>
+			<p class="text-muted-foreground text-xs">
+				Operator-managed PMS URL. Keep this pointed at the server Pirate Claw should read.
+			</p>
 		</form>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-3">
-		{#if mode === 'config' && status.hasToken}
-			<form method="POST" action={disconnectAction}>
-				<input type="hidden" name="ifMatch" value={currentEtag ?? ''} />
-				<button
-					type="submit"
-					class="border-border bg-background/55 hover:bg-muted/80 inline-flex h-11 items-center rounded-xl border px-4 text-sm transition-colors disabled:opacity-50"
-					disabled={!canWrite || !currentEtag}
-				>
-					Disconnect
-				</button>
-			</form>
-		{/if}
-
 		{#if mode === 'onboarding' && skipHref}
 			<a href={skipHref} class="text-muted-foreground text-sm hover:underline">Skip for now</a>
 		{/if}

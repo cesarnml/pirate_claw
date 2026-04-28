@@ -321,6 +321,7 @@
 							state: 'not_connected',
 							plexUrl: data.config?.plex?.url ?? 'http://localhost:32400',
 							hasToken: !!data.config?.plex?.token,
+							tokenSource: data.config?.plex?.token ? 'config' : 'none',
 							returnTo: null,
 							plexServerVersion: null,
 							plexVersionCompatible: null

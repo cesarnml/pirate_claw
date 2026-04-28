@@ -5,6 +5,7 @@ import type { PlexAuthIdentity } from './auth';
 const PLEX_CLIENTS_API = 'https://clients.plex.tv';
 const PLEX_HOSTED_AUTH_BASE = 'https://app.plex.tv/auth#?';
 const PLEX_AUTH_SCOPE = 'username,email,friendly_name';
+const PLEX_DEVICE_SCREEN_RESOLUTION = '1920x1080';
 
 export type StartPlexPinAuthInput = {
   clientIdentifier: string;
@@ -70,8 +71,8 @@ export async function startPlexPinAuth(
   };
 }
 
-const PIN_POLL_ATTEMPTS = 4;
-const PIN_POLL_DELAY_MS = 600;
+const PIN_POLL_ATTEMPTS = 20;
+const PIN_POLL_DELAY_MS = 1_000;
 
 export async function exchangePlexPinForAuthToken(input: {
   clientIdentifier: string;
@@ -189,6 +190,12 @@ function buildPlexHostedAuthUrl(input: {
     `context[device][product]=${encodeURIComponent(input.productName)}`,
     `context[device][device]=${encodeURIComponent(input.productName)}`,
     `context[device][deviceName]=${encodeURIComponent(input.productName)}`,
+    // Plex auth-form has changed key parsing behavior across versions.
+    // Send multiple aliases so the downstream X-Plex-Device-Screen-Resolution
+    // header does not degrade to the literal string "undefined".
+    `context[device][deviceScreenResolution]=${encodeURIComponent(PLEX_DEVICE_SCREEN_RESOLUTION)}`,
+    `context[device][screenResolution]=${encodeURIComponent(PLEX_DEVICE_SCREEN_RESOLUTION)}`,
+    `context[device][screen_resolution]=${encodeURIComponent(PLEX_DEVICE_SCREEN_RESOLUTION)}`,
     `context[device][platform]=Web`,
     `context[device][platformVersion]=1.0.0`,
     `context[device][version]=1.0.0`,

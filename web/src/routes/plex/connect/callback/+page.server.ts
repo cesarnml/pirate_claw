@@ -9,8 +9,10 @@ export const load: PageServerLoad = async ({ url }) => {
 	if (!writeToken || !sessionId) {
 		return {
 			ok: false,
+			pending: false,
 			message: 'Missing Plex auth session. Start the connect flow again.',
-			returnTo: '/config'
+			returnTo: '/config',
+			expiresAt: null
 		};
 	}
 
@@ -24,18 +26,36 @@ export const load: PageServerLoad = async ({ url }) => {
 	});
 
 	if (!response.ok) {
-		const body = (await response.json().catch(() => ({}))) as { error?: string };
+		const body = (await response.json().catch(() => ({}))) as {
+			error?: string;
+			pending?: boolean;
+			returnTo?: string | null;
+			expiresAt?: string | null;
+		};
+		if (response.status === 409 && body.pending) {
+			return {
+				ok: false,
+				pending: true,
+				message: body.error ?? 'Plex sign-in is still completing.',
+				returnTo: body.returnTo ?? '/config',
+				expiresAt: body.expiresAt ?? null
+			};
+		}
 		return {
 			ok: false,
+			pending: false,
 			message: body.error ?? 'Could not complete Plex auth.',
-			returnTo: '/config'
+			returnTo: '/config',
+			expiresAt: null
 		};
 	}
 
 	const body = (await response.json()) as { returnTo?: string | null };
 	return {
 		ok: true,
+		pending: false,
 		message: 'Plex connected successfully.',
-		returnTo: body.returnTo ?? '/config'
+		returnTo: body.returnTo ?? '/config',
+		expiresAt: null
 	};
 };
