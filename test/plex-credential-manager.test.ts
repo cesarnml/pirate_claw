@@ -82,7 +82,7 @@ describe('Plex credential renewal', () => {
     fetchMock.mockRestore();
   });
 
-  it('moves renewal failures into reconnect-required state without throwing', async () => {
+  it('keeps existing token and stays connected when startup renewal fails', async () => {
     const { configPath, database, configHolder } = await createRenewalHarness();
     const store = new PlexAuthStore(database);
     store.ensureIdentity('2026-04-22T09:00:00.000Z');
@@ -107,10 +107,13 @@ describe('Plex credential renewal', () => {
     await manager.startupRenew();
 
     fetchMock.mockRestore();
+    // Startup renewal failure must not flip the state to error_reconnect_required.
+    // The existing token stays in place; the user is only asked to reconnect if
+    // an actual API call later fails with an auth error.
     expect(store.getSnapshot('2026-04-22T09:05:00.000Z')).toMatchObject({
-      state: 'error_reconnect_required',
+      state: 'connected',
       identity: {
-        reconnectRequiredReason: 'error',
+        reconnectRequiredReason: null,
       },
     });
     expect(configHolder.current.plex?.token).toBe('old-plex-token');

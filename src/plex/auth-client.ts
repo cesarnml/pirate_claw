@@ -8,9 +8,9 @@ const PLEX_AUTH_SCOPE = 'username,email,friendly_name';
 
 export type StartPlexPinAuthInput = {
   clientIdentifier: string;
-  publicJwk: PlexAuthIdentity['publicJwk'];
   productName: string;
   forwardUrl: string;
+  jwk: Record<string, unknown>;
 };
 
 export type StartedPlexPinAuth = {
@@ -29,15 +29,18 @@ export async function startPlexPinAuth(
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'X-Plex-Client-Identifier': input.clientIdentifier,
+      'X-Plex-Product': input.productName,
+      'X-Plex-Version': '1.0.0',
+      'X-Plex-Platform': 'Web',
+      'X-Plex-Device': input.productName,
+      'X-Plex-Device-Name': input.productName,
     },
-    body: JSON.stringify({
-      jwk: input.publicJwk,
-      strong: true,
-    }),
+    body: JSON.stringify({ strong: true, jwk: input.jwk }),
   });
 
   if (!response.ok) {
-    throw new Error(`Plex PIN start failed with HTTP ${response.status}.`);
+    const text = await response.text().catch(() => '');
+    throw new Error(`Plex PIN start failed with HTTP ${response.status}. ${text}`);
   }
 
   const body = (await response.json()) as {
@@ -50,16 +53,18 @@ export async function startPlexPinAuth(
     throw new Error('Plex PIN start returned an incomplete response.');
   }
 
+  const authUrl = buildPlexHostedAuthUrl({
+    clientIdentifier: input.clientIdentifier,
+    pinCode: body.code,
+    productName: input.productName,
+    forwardUrl: input.forwardUrl,
+  });
+
   return {
     pinId: body.id,
     pinCode: body.code,
     expiresAt: new Date(Date.now() + body.expiresIn * 1000).toISOString(),
-    authUrl: buildPlexHostedAuthUrl({
-      clientIdentifier: input.clientIdentifier,
-      pinCode: body.code,
-      productName: input.productName,
-      forwardUrl: input.forwardUrl,
-    }),
+    authUrl,
   };
 }
 
@@ -68,9 +73,7 @@ const PIN_POLL_DELAY_MS = 600;
 
 export async function exchangePlexPinForAuthToken(input: {
   clientIdentifier: string;
-  identity: PlexAuthIdentity;
   pinId: number;
-  now?: Date;
 }): Promise<string | null> {
   // Plex redirects to forwardUrl before the PIN is committed server-side.
   // Poll a few times with a short delay to give Plex time to finalize.
@@ -79,15 +82,8 @@ export async function exchangePlexPinForAuthToken(input: {
       await new Promise((resolve) => setTimeout(resolve, PIN_POLL_DELAY_MS));
     }
 
-    const deviceJwt = createDeviceJwt({
-      clientIdentifier: input.clientIdentifier,
-      keyId: input.identity.keyId,
-      privateKeyPem: input.identity.privateKeyPem,
-      now: input.now,
-    });
-
     const response = await fetch(
-      `${PLEX_CLIENTS_API}/api/v2/pins/${String(input.pinId)}?deviceJWT=${encodeURIComponent(deviceJwt)}`,
+      `${PLEX_CLIENTS_API}/api/v2/pins/${String(input.pinId)}`,
       {
         method: 'GET',
         headers: {
@@ -98,7 +94,8 @@ export async function exchangePlexPinForAuthToken(input: {
     );
 
     if (!response.ok) {
-      throw new Error(`Plex PIN exchange failed with HTTP ${response.status}.`);
+      const text = await response.text().catch(() => '');
+      throw new Error(`Plex PIN exchange failed with HTTP ${response.status}. ${text}`);
     }
 
     const body = (await response.json()) as { authToken?: string | null };
@@ -177,11 +174,20 @@ function buildPlexHostedAuthUrl(input: {
   forwardUrl: string;
 }): string {
   // URLSearchParams percent-encodes [ and ], which breaks Plex's PHP-style
-  // nested param parsing for context[device][product]. Build the fragment manually.
+  // nested param parsing for context[device][*]. Build the fragment manually.
+  //
+  // Plex's hosted auth page reads every context[device][*] param and forwards
+  // them as X-Plex-* headers on its PUT /api/v2/pins/link call. Missing params
+  // become the literal string "undefined" in those headers, causing a 403.
   const parts = [
     `clientID=${encodeURIComponent(input.clientIdentifier)}`,
     `code=${encodeURIComponent(input.pinCode)}`,
     `context[device][product]=${encodeURIComponent(input.productName)}`,
+    `context[device][device]=${encodeURIComponent(input.productName)}`,
+    `context[device][deviceName]=${encodeURIComponent(input.productName)}`,
+    `context[device][platform]=Web`,
+    `context[device][platformVersion]=1.0.0`,
+    `context[device][version]=1.0.0`,
     `forwardUrl=${encodeURIComponent(input.forwardUrl)}`,
   ];
   return `${PLEX_HOSTED_AUTH_BASE}${parts.join('&')}`;

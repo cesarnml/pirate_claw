@@ -335,6 +335,57 @@ export class PlexAuthStore {
     };
   }
 
+  rotateClientIdentifier(now = new Date().toISOString()): PlexAuthIdentity {
+    const identity = this.ensureIdentity(now);
+    const newClientIdentifier = buildClientIdentifier();
+    const newKeys = createDeviceKeyMaterial();
+
+    this.database
+      .query(
+        `UPDATE plex_auth_identity
+        SET client_identifier = ?1,
+            key_id = ?2,
+            key_algorithm = ?3,
+            public_jwk_json = ?4,
+            private_key_pem = ?5,
+            updated_at = ?6
+        WHERE singleton = 1`,
+      )
+      .run(
+        newClientIdentifier,
+        newKeys.keyId,
+        newKeys.keyAlgorithm,
+        JSON.stringify(newKeys.publicJwk),
+        newKeys.privateKeyPem,
+        now,
+      );
+
+    return {
+      ...identity,
+      clientIdentifier: newClientIdentifier,
+      ...newKeys,
+      updatedAt: now,
+    };
+  }
+
+  clearRenewalState(
+    configToken: string | null,
+    now = new Date().toISOString(),
+  ): void {
+    this.database
+      .query(
+        `UPDATE plex_auth_identity
+        SET renewal_started_at = NULL,
+            reconnect_required_at = NULL,
+            reconnect_required_reason = NULL,
+            last_error = NULL,
+            refresh_token = COALESCE(?2, refresh_token),
+            updated_at = ?1
+        WHERE singleton = 1`,
+      )
+      .run(now, configToken);
+  }
+
   cancelSession(sessionId: string, now = new Date().toISOString()): void {
     this.database
       .query(

@@ -102,16 +102,22 @@ export class PlexCredentialManager {
       return authToken;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const reconnectReason = reason === 'auth_failure' ? 'expired' : 'error';
-      store.markReconnectRequired(reconnectReason, message);
       this.input.log(`[plex-auth] ${reason} renewal failed: ${message}`);
 
       if (reason === 'auth_failure') {
+        store.markReconnectRequired('expired', message);
         await this.persistCurrentToken('');
         return null;
       }
 
-      return this.input.configHolder.current.plex?.token ?? null;
+      // For startup/first-touch failures, clear the renewal flag but don't
+      // gate the user out — keep whatever token is in config and let the
+      // next actual API failure trigger a reconnect if the token is truly dead.
+      // Also sync the config token into the identity so the auth state reads
+      // as connected rather than not_connected when they differ.
+      const configToken = this.input.configHolder.current.plex?.token ?? null;
+      store.clearRenewalState(configToken || null);
+      return configToken;
     }
   }
 

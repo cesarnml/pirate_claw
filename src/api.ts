@@ -474,9 +474,9 @@ export function createApiFetch(
         const identity = store.ensureIdentity();
         const started = await startPlexPinAuth({
           clientIdentifier: identity.clientIdentifier,
-          publicJwk: identity.publicJwk,
           productName: identity.clientName,
           forwardUrl,
+          jwk: identity.publicJwk,
         });
         const created = store.createSession({
           oauthState: started.pinCode,
@@ -488,12 +488,13 @@ export function createApiFetch(
           expiresAt: started.expiresAt,
         });
 
+        const redirectUrl = appendSessionToForwardUrl(
+          started.authUrl,
+          created.session.id,
+        );
         return Response.json({
           sessionId: created.session.id,
-          redirectUrl: appendSessionToForwardUrl(
-            started.authUrl,
-            created.session.id,
-          ),
+          redirectUrl,
           expiresAt: created.session.expiresAt,
         });
       } catch (error) {
@@ -544,7 +545,6 @@ export function createApiFetch(
         const identity = store.ensureIdentity();
         const authToken = await exchangePlexPinForAuthToken({
           clientIdentifier: identity.clientIdentifier,
-          identity,
           pinId: snapshot.pendingSession.pinId,
         });
 
