@@ -2142,7 +2142,10 @@ async function writePlexConfigToDisk(input: {
 }): Promise<AppConfig> {
   const baseOnDisk = await readConfigFileRecord(input.configPath);
   const diskPlex = isRecord(baseOnDisk.plex) ? baseOnDisk.plex : {};
-  const hasTokenPatch = Object.prototype.hasOwnProperty.call(input.patch, 'token');
+  const hasTokenPatch = Object.prototype.hasOwnProperty.call(
+    input.patch,
+    'token',
+  );
   const merged = {
     ...baseOnDisk,
     plex: {
@@ -2152,12 +2155,11 @@ async function writePlexConfigToDisk(input: {
         optionalStringValue(diskPlex.url) ??
         input.currentConfig.plex?.url ??
         'http://localhost:32400',
-      token:
-        hasTokenPatch
-          ? (input.patch.token ?? '')
-          : (optionalStringValue(diskPlex.token) ??
-            input.currentConfig.plex?.token ??
-            ''),
+      token: hasTokenPatch
+        ? (input.patch.token ?? '')
+        : (optionalStringValue(diskPlex.token) ??
+          input.currentConfig.plex?.token ??
+          ''),
       refreshIntervalMinutes:
         input.patch.refreshIntervalMinutes ??
         optionalNonNegativeNumber(diskPlex.refreshIntervalMinutes) ??
