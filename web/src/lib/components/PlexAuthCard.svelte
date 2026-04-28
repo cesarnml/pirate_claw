@@ -176,14 +176,37 @@
 		{/if}
 	</div>
 
-	<div class="space-y-2 rounded-2xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-sm">
-		<p class="font-medium text-amber-100">Synology compatibility note</p>
-		<p class="text-amber-50/90">
-			The reviewed Synology baseline is Pirate Claw on Docker plus an operator-managed PMS URL. If
-			the Synology Package Center Plex build is below <code>PMS 1.43.0</code>, update Plex with a
-			newer manual install through Package Center before connecting it here.
-		</p>
-	</div>
+	{#if status.state === 'connected' && status.plexServerVersion && status.plexVersionCompatible === true}
+		<div
+			class="space-y-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3 text-sm"
+		>
+			<p class="font-medium text-emerald-100">Synology compatibility check passed</p>
+			<p class="text-emerald-50/90">
+				Connected PMS version: <code>{status.plexServerVersion}</code> (meets
+				<code>PMS 1.43.0</code> baseline).
+			</p>
+		</div>
+	{:else}
+		<div class="space-y-2 rounded-2xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-sm">
+			<p class="font-medium text-amber-100">Synology compatibility note</p>
+			<p class="text-amber-50/90">
+				The reviewed Synology baseline is Pirate Claw on Docker plus an operator-managed PMS URL. If
+				the Synology Package Center Plex build is below <code>PMS 1.43.0</code>, update Plex with a
+				newer manual install through Package Center before connecting it here.
+			</p>
+			{#if status.state === 'connected' && status.plexServerVersion && status.plexVersionCompatible === false}
+				<p class="text-amber-50/90">
+					Detected PMS version: <code>{status.plexServerVersion}</code> (below
+					<code>PMS 1.43.0</code>).
+				</p>
+			{:else if status.state === 'connected' && !status.plexServerVersion}
+				<p class="text-amber-50/90">
+					Connected, but Pirate Claw could not read the PMS version yet. Re-check after confirming
+					the PMS URL is reachable from the daemon.
+				</p>
+			{/if}
+		</div>
+	{/if}
 
 	{#if status.state === 'connecting' && status.returnTo}
 		<p class="text-muted-foreground text-sm">

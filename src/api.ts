@@ -170,6 +170,9 @@ type ManagedTorrentRowState =
   | 'paused'
   | 'completed';
 
+const MIN_SUPPORTED_PLEX_VERSION = '1.43.0';
+const PLEX_VERSION_PROBE_TIMEOUT_MS = 2_500;
+
 function managedTorrentRowState(
   torrent: TorrentStatSnapshot | undefined,
 ): ManagedTorrentRowState {
@@ -178,6 +181,57 @@ function managedTorrentRowState(
   if (torrent.percentDone >= 1) return 'completed';
   if (torrent.status === 'downloading') return 'downloading';
   return 'paused';
+}
+
+async function fetchPlexServerVersion(
+  plexUrl: string,
+  token: string,
+): Promise<string | null> {
+  let response: Response;
+  try {
+    response = await fetch(new URL('/', plexUrl).toString(), {
+      headers: {
+        Accept: 'application/xml',
+        'X-Plex-Token': token,
+      },
+      signal: AbortSignal.timeout(PLEX_VERSION_PROBE_TIMEOUT_MS),
+    });
+  } catch {
+    return null;
+  }
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const body = await response.text();
+  const match = body.match(/<MediaContainer[^>]*\bversion="([^"]+)"/i);
+  return match?.[1]?.trim() || null;
+}
+
+function isVersionAtLeast(version: string, minimum: string): boolean {
+  const current = parseSemverPrefix(version);
+  const baseline = parseSemverPrefix(minimum);
+  if (!current || !baseline) {
+    return false;
+  }
+
+  const length = Math.max(current.length, baseline.length);
+  for (let i = 0; i < length; i += 1) {
+    const left = current[i] ?? 0;
+    const right = baseline[i] ?? 0;
+    if (left > right) return true;
+    if (left < right) return false;
+  }
+  return true;
+}
+
+function parseSemverPrefix(version: string): number[] | null {
+  const match = version.trim().match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return null;
+  }
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
 
 async function parseJsonTorrentHash(
@@ -593,11 +647,23 @@ export function createApiFetch(
 
       const store = new PlexAuthStore(database);
       const snapshot = store.getSnapshot();
+      const plexUrl = activeConfig.plex?.url ?? 'http://localhost:32400';
+      const token = activeConfig.plex?.token?.trim() ?? '';
+      const shouldProbeVersion =
+        snapshot.state === 'connected' && token.length > 0;
+      const plexServerVersion = shouldProbeVersion
+        ? await fetchPlexServerVersion(plexUrl, token)
+        : null;
       return Response.json({
         state: snapshot.state,
-        plexUrl: activeConfig.plex?.url ?? 'http://localhost:32400',
+        plexUrl,
         hasToken: Boolean(activeConfig.plex?.token),
         returnTo: snapshot.pendingSession?.returnTo ?? null,
+        plexServerVersion,
+        plexVersionCompatible:
+          plexServerVersion === null
+            ? null
+            : isVersionAtLeast(plexServerVersion, MIN_SUPPORTED_PLEX_VERSION),
       } satisfies PlexAuthStatusResponse);
     }
 
@@ -1817,6 +1883,8 @@ export type PlexAuthStatusResponse = {
   plexUrl: string;
   hasToken: boolean;
   returnTo: string | null;
+  plexServerVersion: string | null;
+  plexVersionCompatible: boolean | null;
 };
 
 export function buildFeedStatuses(

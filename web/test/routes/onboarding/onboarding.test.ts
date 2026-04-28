@@ -25,7 +25,9 @@ const sharedLayoutData = {
 		state: 'not_connected' as const,
 		plexUrl: 'http://localhost:32400',
 		hasToken: false,
-		returnTo: null
+		returnTo: null,
+		plexServerVersion: null,
+		plexVersionCompatible: null
 	}
 };
 

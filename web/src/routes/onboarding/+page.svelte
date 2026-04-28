@@ -321,7 +321,9 @@
 							state: 'not_connected',
 							plexUrl: data.config?.plex?.url ?? 'http://localhost:32400',
 							hasToken: !!data.config?.plex?.token,
-							returnTo: null
+							returnTo: null,
+							plexServerVersion: null,
+							plexVersionCompatible: null
 						}}
 						canWrite={data.canWrite}
 						returnTo="/onboarding"

@@ -193,6 +193,8 @@ export type PlexAuthStatusResponse = {
 	plexUrl: string;
 	hasToken: boolean;
 	returnTo: string | null;
+	plexServerVersion: string | null;
+	plexVersionCompatible: boolean | null;
 };
 
 export type AppConfig = {

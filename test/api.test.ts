@@ -1479,6 +1479,8 @@ describe('Plex browser auth flow', () => {
         plexUrl: 'http://localhost:32400',
         hasToken: false,
         returnTo: '/onboarding',
+        plexServerVersion: null,
+        plexVersionCompatible: null,
       });
       deps.database?.close();
     } finally {
@@ -1613,6 +1615,77 @@ describe('Plex browser auth flow', () => {
       } else {
         delete process.env.PIRATE_CLAW_API_WRITE_TOKEN;
       }
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('reports PMS version compatibility when Plex is connected', async () => {
+    const fetchSpy = spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ id: 99, code: 'pin-code', expiresIn: 300 }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ authToken: 'plex-jwt-token' }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          '<?xml version="1.0" encoding="UTF-8"?><MediaContainer size="0" version="1.43.2.1005-abc123"></MediaContainer>',
+          { status: 200 },
+        ),
+      );
+
+    try {
+      const directory = await mkdtemp(join(tmpdir(), 'pirate-claw-plex-auth-'));
+      const configPath = join(directory, 'pirate-claw.config.json');
+      await writeCompactTvConfigFile(configPath);
+      const loaded = await loadConfig(configPath);
+      loaded.runtime.apiWriteToken = 'write-token';
+      const deps = createDatabaseBackedDeps(loaded, configPath);
+      const handler = createApiFetch(deps);
+
+      const started = await handler(
+        new Request('http://localhost/api/plex/auth/start', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+          },
+          body: JSON.stringify({
+            forwardUrl: 'http://localhost:5173/plex/connect/callback',
+            returnTo: '/config',
+          }),
+        }),
+      );
+      const startedBody = (await started.json()) as { sessionId: string };
+
+      await handler(
+        new Request('http://localhost/api/plex/auth/finalize', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: 'Bearer write-token',
+          },
+          body: JSON.stringify({ sessionId: startedBody.sessionId }),
+        }),
+      );
+
+      const status = await handler(
+        new Request('http://localhost/api/plex/auth/status'),
+      );
+
+      expect(status.status).toBe(200);
+      expect(await status.json()).toMatchObject({
+        state: 'connected',
+        plexServerVersion: '1.43.2.1005-abc123',
+        plexVersionCompatible: true,
+      });
+      deps.database?.close();
+    } finally {
       fetchSpy.mockRestore();
     }
   });
