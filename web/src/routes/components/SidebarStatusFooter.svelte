@@ -1,11 +1,53 @@
 <script lang="ts">
+	import type { PlexAuthState } from '$lib/types';
+
+	type SidebarPlexAuthState = PlexAuthState | 'unavailable';
+
 	interface Props {
 		daemonUptime: string;
 		daemonHealthy: boolean;
 		transmissionConnected: boolean;
-		plexConfigured: boolean;
+		plexAuthState: SidebarPlexAuthState;
 	}
-	let { daemonUptime, daemonHealthy, transmissionConnected, plexConfigured }: Props = $props();
+	let { daemonUptime, daemonHealthy, transmissionConnected, plexAuthState }: Props = $props();
+
+	const plexStatus = $derived.by(() => {
+		switch (plexAuthState) {
+			case 'connected':
+			case 'renewing':
+				return {
+					label: 'Connected',
+					dotClass: 'bg-emerald-400',
+					title: 'Plex connected'
+				};
+			case 'connecting':
+				return {
+					label: 'Connecting',
+					dotClass: 'bg-amber-400',
+					title: 'Plex sign-in in progress'
+				};
+			case 'reconnect_required':
+			case 'expired_reconnect_required':
+			case 'error_reconnect_required':
+				return {
+					label: 'Reconnect required',
+					dotClass: 'bg-rose-400',
+					title: 'Plex reconnect required'
+				};
+			case 'not_connected':
+				return {
+					label: 'Not connected',
+					dotClass: 'bg-amber-400',
+					title: 'Plex not connected'
+				};
+			case 'unavailable':
+				return {
+					label: 'Unavailable',
+					dotClass: 'bg-amber-400',
+					title: 'Plex unavailable'
+				};
+		}
+	});
 </script>
 
 <!-- collapsed sidebar: dots only with custom hover tooltip -->
@@ -22,11 +64,7 @@
 				class:bg-emerald-400={transmissionConnected}
 				class:bg-amber-400={!transmissionConnected}
 			></div>
-			<div
-				class="h-2.5 w-2.5 shrink-0 rounded-full"
-				class:bg-emerald-400={plexConfigured}
-				class:bg-amber-400={!plexConfigured}
-			></div>
+			<div class={`h-2.5 w-2.5 shrink-0 rounded-full ${plexStatus.dotClass}`}></div>
 		</div>
 
 		<!-- tooltip: appears on hover of the whole panel -->
@@ -67,14 +105,8 @@
 					>Plex</span
 				>
 				<div class="flex items-center gap-1.5">
-					<span class="text-foreground text-xs"
-						>{plexConfigured ? 'Configured' : 'Unavailable'}</span
-					>
-					<div
-						class="h-2 w-2 shrink-0 rounded-full"
-						class:bg-emerald-400={plexConfigured}
-						class:bg-amber-400={!plexConfigured}
-					></div>
+					<span class="text-foreground text-xs">{plexStatus.label}</span>
+					<div class={`h-2 w-2 shrink-0 rounded-full ${plexStatus.dotClass}`}></div>
 				</div>
 			</div>
 		</div>
@@ -123,14 +155,12 @@
 					Plex
 				</p>
 				<p class="text-foreground mt-1 text-sm font-medium">
-					{plexConfigured ? 'Configured' : 'Unavailable'}
+					{plexStatus.label}
 				</p>
 			</div>
 			<div
-				class="h-2.5 w-2.5 shrink-0 rounded-full"
-				class:bg-emerald-400={plexConfigured}
-				class:bg-amber-400={!plexConfigured}
-				title={plexConfigured ? 'Plex configured' : 'Plex unavailable'}
+				class={`h-2.5 w-2.5 shrink-0 rounded-full ${plexStatus.dotClass}`}
+				title={plexStatus.title}
 			></div>
 		</div>
 	</div>

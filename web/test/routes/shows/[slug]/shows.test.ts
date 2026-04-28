@@ -8,14 +8,14 @@ const sharedLayoutData: Pick<
 	PageData,
 	| 'health'
 	| 'transmissionSession'
-	| 'plexConfigured'
+	| 'plexAuthState'
 	| 'setupState'
 	| 'readinessState'
 	| 'installHealthState'
 > = {
 	health: null,
 	transmissionSession: null,
-	plexConfigured: false,
+	plexAuthState: 'unavailable',
 	setupState: 'ready' as const,
 	readinessState: 'ready' as const,
 	installHealthState: null

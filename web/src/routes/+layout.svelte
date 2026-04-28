@@ -46,7 +46,7 @@
 
 	const daemonUptime = $derived(formatUptime(data.health?.uptime ?? null));
 	const transmissionConnected = $derived(data.transmissionSession !== null);
-	const plexConfigured = $derived(data.plexConfigured === true);
+	const plexAuthState = $derived(data.plexAuthState ?? 'unavailable');
 	const isOnboarding = $derived($page.url.pathname === '/onboarding');
 	const showSidebar = $derived(!isOnboarding);
 	const setupState = $derived(data.setupState ?? 'partially_configured');
@@ -165,7 +165,7 @@
 			{daemonUptime}
 			daemonHealthy={!!data.health}
 			{transmissionConnected}
-			{plexConfigured}
+			{plexAuthState}
 		/>
 	</div>
 {/snippet}

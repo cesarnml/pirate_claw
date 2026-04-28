@@ -38,6 +38,13 @@ describe('layout server load', () => {
 				configState: 'ready',
 				transmissionReachable: true,
 				daemonLive: true
+			})
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({
+				state: 'connected',
+				plexUrl: 'http://localhost:32400',
+				hasToken: true,
+				returnTo: null
 			});
 
 		const result = await load({} as never);
@@ -54,9 +61,10 @@ describe('layout server load', () => {
 				currentDownloadedBytes: 0,
 				currentUploadedBytes: 0
 			},
-			plexConfigured: true,
+			plexAuthState: 'connected',
 			setupState: 'ready',
-			readinessState: 'ready'
+			readinessState: 'ready',
+			installHealthState: null
 		});
 	});
 
@@ -79,6 +87,13 @@ describe('layout server load', () => {
 				configState: 'starter',
 				transmissionReachable: false,
 				daemonLive: true
+			})
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({
+				state: 'connected',
+				plexUrl: 'http://localhost:32400',
+				hasToken: true,
+				returnTo: null
 			});
 
 		const result = (await load({} as never)) as { setupState: string; readinessState: string };
@@ -105,6 +120,13 @@ describe('layout server load', () => {
 				configState: 'mystery',
 				transmissionReachable: false,
 				daemonLive: true
+			})
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({
+				state: 'connected',
+				plexUrl: 'http://localhost:32400',
+				hasToken: true,
+				returnTo: null
 			});
 
 		const result = (await load({} as never)) as { setupState: string };
@@ -130,6 +152,13 @@ describe('layout server load', () => {
 				configState: 'ready',
 				transmissionReachable: true,
 				daemonLive: true
+			})
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({
+				state: 'connected',
+				plexUrl: 'http://localhost:32400',
+				hasToken: true,
+				returnTo: null
 			});
 
 		const result = (await load({} as never)) as { readinessState: string };
@@ -145,16 +174,19 @@ describe('layout server load', () => {
 				.mockRejectedValueOnce(new Error('health down'))
 				.mockRejectedValueOnce(new Error('tx down'))
 				.mockRejectedValueOnce(new Error('config down'))
-				.mockRejectedValueOnce(new Error('readiness down'));
+				.mockRejectedValueOnce(new Error('readiness down'))
+				.mockRejectedValueOnce(new Error('install health down'))
+				.mockRejectedValueOnce(new Error('plex auth down'));
 
 			const result = await load({} as never);
 
 			expect(result).toEqual({
 				health: null,
 				transmissionSession: null,
-				plexConfigured: false,
+				plexAuthState: 'unavailable',
 				setupState: 'partially_configured',
-				readinessState: 'not_ready'
+				readinessState: 'not_ready',
+				installHealthState: null
 			});
 		} finally {
 			errorSpy.mockRestore();

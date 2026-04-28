@@ -3,6 +3,8 @@ import type {
 	AppConfig,
 	DaemonHealth,
 	InstallHealthResponse,
+	PlexAuthState,
+	PlexAuthStatusResponse,
 	ReadinessResponse,
 	ReadinessState,
 	SessionInfo,
@@ -22,15 +24,30 @@ function normalizeReadinessState(state: unknown): ReadinessState {
 		: 'not_ready';
 }
 
+function normalizePlexAuthState(
+	configHasPlex: boolean,
+	authState: PlexAuthState | undefined
+): PlexAuthState | 'unavailable' {
+	if (!configHasPlex) return 'unavailable';
+	return authState ?? 'not_connected';
+}
+
 export const load: LayoutServerLoad = async () => {
-	const [healthResult, sessionResult, configResult, readinessResult, installHealthResult] =
-		await Promise.allSettled([
-			apiFetch<DaemonHealth>('/api/health'),
-			apiFetch<SessionInfo>('/api/transmission/session'),
-			apiFetch<AppConfig>('/api/config'),
-			apiFetch<ReadinessResponse>('/api/setup/readiness'),
-			apiFetch<InstallHealthResponse>('/api/setup/install-health')
-		]);
+	const [
+		healthResult,
+		sessionResult,
+		configResult,
+		readinessResult,
+		installHealthResult,
+		plexAuthResult
+	] = await Promise.allSettled([
+		apiFetch<DaemonHealth>('/api/health'),
+		apiFetch<SessionInfo>('/api/transmission/session'),
+		apiFetch<AppConfig>('/api/config'),
+		apiFetch<ReadinessResponse>('/api/setup/readiness'),
+		apiFetch<InstallHealthResponse>('/api/setup/install-health'),
+		apiFetch<PlexAuthStatusResponse>('/api/plex/auth/status')
+	]);
 
 	if (healthResult.status === 'rejected') {
 		console.error('[layout] failed to load /api/health:', healthResult.reason);
@@ -52,12 +69,20 @@ export const load: LayoutServerLoad = async () => {
 		console.error('[layout] failed to load /api/setup/install-health:', installHealthResult.reason);
 	}
 
+	if (plexAuthResult.status === 'rejected') {
+		console.error('[layout] failed to load /api/plex/auth/status:', plexAuthResult.reason);
+	}
+
 	const readiness = readinessResult.status === 'fulfilled' ? readinessResult.value : null;
+	const configHasPlex =
+		configResult.status === 'fulfilled' && configResult.value.plex !== undefined;
+	const plexAuthState =
+		plexAuthResult.status === 'fulfilled' ? plexAuthResult.value.state : undefined;
 
 	return {
 		health: healthResult.status === 'fulfilled' ? healthResult.value : null,
 		transmissionSession: sessionResult.status === 'fulfilled' ? sessionResult.value : null,
-		plexConfigured: configResult.status === 'fulfilled' && configResult.value.plex !== undefined,
+		plexAuthState: normalizePlexAuthState(configHasPlex, plexAuthState),
 		setupState: normalizeSetupState(readiness?.configState),
 		readinessState: normalizeReadinessState(readiness?.state),
 		installHealthState:

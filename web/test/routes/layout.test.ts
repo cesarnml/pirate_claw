@@ -84,7 +84,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
-					plexConfigured: true,
+					plexAuthState: 'connected' as const,
 					setupState: 'ready' as const,
 					readinessState: 'ready' as const
 				}
@@ -111,7 +111,6 @@ describe('+layout.svelte', () => {
 		expect(screen.getAllByText('Transmission').length).toBeGreaterThanOrEqual(1);
 		expect(screen.getAllByText('Connected').length).toBeGreaterThanOrEqual(1);
 		expect(screen.getAllByText('Plex').length).toBeGreaterThanOrEqual(1);
-		expect(screen.getAllByText('Configured').length).toBeGreaterThanOrEqual(1);
 	});
 
 	it('surfaces unavailable shell status when shared API data is missing', () => {
@@ -124,7 +123,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: null,
 					transmissionSession: null,
-					plexConfigured: false,
+					plexAuthState: 'unavailable' as const,
 					setupState: 'partially_configured' as const,
 					readinessState: 'not_ready' as const
 				}
@@ -150,7 +149,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: null,
 					transmissionSession: null,
-					plexConfigured: false,
+					plexAuthState: 'unavailable' as const,
 					setupState: 'starter' as const,
 					readinessState: 'not_ready' as const
 				}
@@ -177,7 +176,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: null,
 					transmissionSession: null,
-					plexConfigured: false,
+					plexAuthState: 'unavailable' as const,
 					setupState: 'starter' as const,
 					readinessState: 'not_ready' as const
 				}
@@ -199,7 +198,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
-					plexConfigured: true,
+					plexAuthState: 'connected' as const,
 					setupState: 'partially_configured' as const,
 					readinessState: 'not_ready' as const
 				}
@@ -224,7 +223,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
-					plexConfigured: true,
+					plexAuthState: 'connected' as const,
 					setupState: 'ready' as const,
 					readinessState: 'ready_pending_restart' as const
 				}
@@ -252,7 +251,7 @@ describe('+layout.svelte', () => {
 					...sharedLayoutData,
 					health: mockHealth,
 					transmissionSession: mockSession,
-					plexConfigured: true,
+					plexAuthState: 'connected' as const,
 					setupState: 'ready' as const,
 					readinessState: 'ready' as const
 				}
