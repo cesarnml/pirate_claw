@@ -31,7 +31,9 @@ describe('PlexAuthStore', () => {
     const store = new PlexAuthStore(database);
 
     const first = store.ensureIdentity('2026-04-22T08:00:00.000Z');
-    expect(first.clientIdentifier).toStartWith('pirate-claw-');
+    expect(first.clientIdentifier).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
     expect(first.keyId).toBeTruthy();
     expect(first.keyAlgorithm).toBe('EdDSA');
     expect(first.publicJwk).toMatchObject({

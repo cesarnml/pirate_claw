@@ -646,7 +646,10 @@ function resolveAuthState(
 }
 
 function buildClientIdentifier(): string {
-  return `pirate-claw-${randomUUID()}`;
+  // Plex's hosted auth form rejects PUT /api/v2/pins/link with 401 when the
+  // X-Plex-Client-Identifier carries a non-UUID prefix. Use a bare UUID so
+  // the hosted form's link step succeeds.
+  return randomUUID();
 }
 
 function createDeviceKeyMaterial(): Pick<

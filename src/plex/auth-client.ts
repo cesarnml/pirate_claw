@@ -180,22 +180,13 @@ function buildPlexHostedAuthUrl(input: {
 }): string {
   // URLSearchParams percent-encodes [ and ], which breaks Plex's PHP-style
   // nested param parsing for context[device][*]. Build the fragment manually.
-  //
-  // Plex's hosted auth page reads every context[device][*] param and forwards
-  // them as X-Plex-* headers on its PUT /api/v2/pins/link call. Missing params
-  // become the literal string "undefined" in those headers, causing a 403.
   const parts = [
     `clientID=${encodeURIComponent(input.clientIdentifier)}`,
     `code=${encodeURIComponent(input.pinCode)}`,
     `context[device][product]=${encodeURIComponent(input.productName)}`,
     `context[device][device]=${encodeURIComponent(input.productName)}`,
     `context[device][deviceName]=${encodeURIComponent(input.productName)}`,
-    // Plex auth-form has changed key parsing behavior across versions.
-    // Send multiple aliases so the downstream X-Plex-Device-Screen-Resolution
-    // header does not degrade to the literal string "undefined".
-    `context[device][deviceScreenResolution]=${encodeURIComponent(PLEX_DEVICE_SCREEN_RESOLUTION)}`,
     `context[device][screenResolution]=${encodeURIComponent(PLEX_DEVICE_SCREEN_RESOLUTION)}`,
-    `context[device][screen_resolution]=${encodeURIComponent(PLEX_DEVICE_SCREEN_RESOLUTION)}`,
     `context[device][platform]=Web`,
     `context[device][platformVersion]=1.0.0`,
     `context[device][version]=1.0.0`,
