@@ -1,6 +1,6 @@
-# Phase 31: v1.0.0 Release and Schema Versioning
+# Phase 35: v1.0.0 Release Ceremony
 
-**Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-31/` implementation plan until tickets are approved.
+**Delivery status:** Not started — product definition only; no `docs/02-delivery/phase-35/` implementation plan until tickets are approved.
 
 ## TL;DR
 
@@ -8,20 +8,20 @@
 
 **Ships:** Optional `schemaVersion` field in config; `PRAGMA user_version` in SQLite DB; `package.json` bumped to `1.0.0`; tagged release with CHANGELOG; `VERSIONING.md` with breaking change policy.
 
-**Defers:** Automated cross-version migration; new auth beyond Phase 13; audit logs; any user-visible features.
+**Defers:** Automated cross-version migration; new auth beyond Phase 28; audit logs; any user-visible features.
 
 ---
 
-Phase 31 is the formal v1.0.0 milestone. It stamps the config and database with versioning, establishes the breaking change policy, and cuts the first tagged release. No new features, no new API endpoints, and no new product behavior belongs here; DSM-first install, owner security, OpenVPN bridge, and release-critical polish must land in Phases 27–30 first.
+Phase 35 is the formal v1.0.0 milestone. It stamps the config and database with versioning, establishes the breaking change policy, and cuts the first tagged release. No new features, no new API endpoints, and no new product behavior belongs here — Mac GUI install, DSM 7.2.1 Container Manager install, owner security, OpenVPN bridge, PMS enrichment, stabilization, and release-critical polish must all land in Phases 27–34 first.
 
 ## Phase Goal
 
-Phase 31 should leave Pirate Claw in a state where:
+Phase 35 should leave Pirate Claw in a state where:
 
 - the running daemon, config file, and SQLite database are all stamped with a schema version that future operators and tooling can inspect
 - the breaking change policy is documented: major version bump = new config/db schema pair; no cross-version migration path is guaranteed
 - `package.json` version is `1.0.0` and a tagged release exists on the repository
-- existing installs are not broken by any of the above — an unversioned config or DB from before Phase 31 ships is treated as v1 automatically
+- existing installs are not broken by any of the above — an unversioned config or DB from before Phase 35 ships is treated as v1 automatically
 
 ## Committed Scope
 
@@ -34,7 +34,7 @@ Phase 31 should leave Pirate Claw in a state where:
 ### Database schema versioning
 
 - use SQLite `PRAGMA user_version` — built in, no extra table needed
-- on first startup after Phase 31 ships: if `user_version` is `0` (the default for all existing DBs), set it to `1` — this is non-destructive and silent
+- on first startup after Phase 35 ships: if `user_version` is `0` (the default for all existing DBs), set it to `1` — this is non-destructive and silent
 - future breaking DB changes increment `user_version`; the startup check refuses to run if the DB version is ahead of what the binary knows
 - the existing ad-hoc `ALTER TABLE ADD COLUMN` guards in `src/repository.ts` are preserved as the migration mechanism for non-breaking additive changes; `user_version` only changes on breaking schema changes
 
@@ -42,7 +42,7 @@ Phase 31 should leave Pirate Claw in a state where:
 
 - `package.json` version bumped to `1.0.0`
 - `web/package.json` version bumped to `1.0.0`
-- tagged release on `main` with a CHANGELOG entry summarizing shipped product work through Phase 22 and prior numbered phases
+- tagged release on `main` with a CHANGELOG entry summarizing shipped product work across Phases 1–34
 - `VERSIONING.md` added to the repo root documenting the breaking change policy (see below)
 
 ### Breaking change policy (`VERSIONING.md`)
@@ -73,12 +73,12 @@ columns) are backward-compatible and do not require operator action.
 
 - automated migration tooling between major versions (manual re-import is the policy)
 - audit logs, plugin or extension support (not in v1)
-- new auth enforcement beyond what Phase 13 delivered (bearer token + localhost bind)
-- any new user-visible features — Phase 31 is infrastructure and release only
+- new auth enforcement beyond what Phase 28 delivered
+- any new user-visible features — Phase 35 is infrastructure and release only
 
 ## Exit Condition
 
-The repo has a `v1.0.0` tag. A fresh install sees `"schemaVersion": 1` in the config after first write and `PRAGMA user_version = 1` in the DB. An operator upgrading from an install before Phase 31 versioning ships sees no errors — the unversioned config is silently treated as v1, and the DB is silently stamped on first startup.
+The repo has a `v1.0.0` tag. A fresh install sees `"schemaVersion": 1` in the config after first write and `PRAGMA user_version = 1` in the DB. An operator upgrading from an install before Phase 35 versioning ships sees no errors — the unversioned config is silently treated as v1, and the DB is silently stamped on first startup.
 
 ## Retrospective
 
@@ -86,4 +86,4 @@ The repo has a `v1.0.0` tag. A fresh install sees `"schemaVersion": 1` in the co
 
 ## Rationale
 
-Config and DB schema are always shipped as a compatible pair with each major version. There is no strong incentive to support durable upgrades across major versions on a personal NAS tool — operators have full control of their install, data volumes are small, and re-import from the UI (Phase 14/16) is fast. The versioning system exists to make incompatibilities explicit and loud, not to automate migrations. A single PRAGMA integer and an optional config field accomplish this with minimal code.
+Config and DB schema are always shipped as a compatible pair with each major version. There is no strong incentive to support durable upgrades across major versions on a personal NAS tool — operators have full control of their install, data volumes are small, and re-import from the UI is fast. The versioning system exists to make incompatibilities explicit and loud, not to automate migrations. A single PRAGMA integer and an optional config field accomplish this with minimal code.
