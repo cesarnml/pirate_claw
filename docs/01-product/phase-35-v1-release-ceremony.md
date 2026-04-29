@@ -12,7 +12,7 @@
 
 ---
 
-Phase 35 is the formal v1.0.0 milestone. It stamps the config and database with versioning, establishes the breaking change policy, and cuts the first tagged release. No new features, no new API endpoints, and no new product behavior belongs here — Mac GUI install, DSM 7.2.1 Container Manager install, owner security, OpenVPN bridge, PMS enrichment, stabilization, and release-critical polish must all land in Phases 27–34 first.
+Phase 35 is the formal v1.0.0 milestone. It stamps the config and database with versioning, establishes the breaking change policy, and cuts the first tagged release. No new features, no new API endpoints, and no new product behavior belongs here — Mac GUI install, DSM 7.2.1 Container Manager install, owner security, OpenVPN bridge, PMS enrichment, UI/UX polish, and the beta release checkpoint must all land in Phases 27–34 first.
 
 ## Phase Goal
 
