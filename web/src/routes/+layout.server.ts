@@ -1,8 +1,10 @@
-import { apiFetch } from '$lib/server/api';
+import { apiRequest, apiFetch } from '$lib/server/api';
 import type {
 	AppConfig,
+	AuthStateResult,
 	DaemonHealth,
 	InstallHealthResponse,
+	NetworkPostureState,
 	PlexAuthState,
 	PlexAuthStatusResponse,
 	ReadinessResponse,
@@ -32,7 +34,17 @@ function normalizePlexAuthState(
 	return authState ?? 'not_connected';
 }
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals, url }) => {
+	const writeToken = process.env.PIRATE_CLAW_API_WRITE_TOKEN;
+	const authStateFetch: Promise<AuthStateResult> = writeToken
+		? apiRequest('/api/auth/state', {
+				headers: { Authorization: `Bearer ${writeToken}` }
+			}).then(async (res) => {
+				if (!res.ok) throw new Error(`auth/state ${res.status}`);
+				return res.json() as Promise<AuthStateResult>;
+			})
+		: Promise.reject(new Error('no write token'));
+
 	const [
 		healthResult,
 		sessionResult,
@@ -40,7 +52,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		setupStateResult,
 		readinessResult,
 		installHealthResult,
-		plexAuthResult
+		plexAuthResult,
+		authStateResult
 	] = await Promise.allSettled([
 		apiFetch<DaemonHealth>('/api/health'),
 		apiFetch<SessionInfo>('/api/transmission/session'),
@@ -48,7 +61,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		apiFetch<{ state: SetupState }>('/api/setup/state'),
 		apiFetch<ReadinessResponse>('/api/setup/readiness'),
 		apiFetch<InstallHealthResponse>('/api/setup/install-health'),
-		apiFetch<PlexAuthStatusResponse>('/api/plex/auth/status')
+		apiFetch<PlexAuthStatusResponse>('/api/plex/auth/status'),
+		authStateFetch
 	]);
 
 	if (healthResult.status === 'rejected') {
@@ -85,6 +99,12 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		configResult.status === 'fulfilled' && configResult.value.plex !== undefined;
 	const plexAuthState =
 		plexAuthResult.status === 'fulfilled' ? plexAuthResult.value.state : undefined;
+	const authState = authStateResult.status === 'fulfilled' ? authStateResult.value : null;
+	const trustedOrigins = authState?.trusted_origins ?? [];
+	const requestOrigin = url.origin;
+	const untrustedOrigin: string | null =
+		locals.user && !trustedOrigins.includes(requestOrigin) ? requestOrigin : null;
+	const networkPosture: NetworkPostureState | null = authState?.network_posture ?? null;
 
 	return {
 		user: locals.user ?? null,
@@ -94,6 +114,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		setupState: normalizeSetupState(setupState),
 		readinessState: normalizeReadinessState(readiness?.state),
 		installHealthState:
-			installHealthResult.status === 'fulfilled' ? installHealthResult.value : null
+			installHealthResult.status === 'fulfilled' ? installHealthResult.value : null,
+		untrustedOrigin,
+		networkPosture
 	};
 };
