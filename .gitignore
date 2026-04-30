@@ -22,3 +22,5 @@ pirate-claw.db
 .codex-worktrees/
 validation
 .claude/worktrees
+.conductor
+.vscode
