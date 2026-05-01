@@ -18,3 +18,6 @@ web/
 docs/*.sh
 .claude/**/*
 .codex-clone*/**/*
+graphify-out/**/*
+graphify-out-src/**/*
+graphify-out-web/**/*

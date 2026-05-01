@@ -24,3 +24,6 @@ validation
 .claude/worktrees
 .conductor
 .vscode
+graphify*
+releases/**/*
+.graphifyignore
