@@ -27,3 +27,4 @@ validation
 graphify*
 releases/**/*
 .graphifyignore
+releases

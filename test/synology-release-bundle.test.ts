@@ -1,7 +1,9 @@
 import { afterAll, describe, expect, it } from 'bun:test';
 
 const version = (await Bun.file('package.json').json()).version as string;
-const bundlePath = `.pirate-claw/synology-release/pirate-claw-synology-v${version}.zip`;
+const synologyReleaseDir = 'releases/phase-28/synology-release';
+const bundleOutputDir = '.pirate-claw/phase-28/synology-release';
+const bundlePath = `${bundleOutputDir}/pirate-claw-synology-v${version}.zip`;
 const abandonedPackageName = ['pirate-claw', 'spk'].join('.');
 
 async function run(args: string[]): Promise<string> {
@@ -26,31 +28,29 @@ async function run(args: string[]): Promise<string> {
 
 describe('Synology release bundle', () => {
   async function writeFixtureTarballs() {
-    await run(['mkdir', '-p', '.pirate-claw/synology-release/images']);
+    await run(['mkdir', '-p', `${bundleOutputDir}/images`]);
     await Bun.write(
-      `.pirate-claw/synology-release/images/pirate-claw-image-v${version}.tar`,
+      `${bundleOutputDir}/images/pirate-claw-image-v${version}.tar`,
       'fixture daemon image tarball',
     );
     await Bun.write(
-      `.pirate-claw/synology-release/images/pirate-claw-web-image-v${version}.tar`,
+      `${bundleOutputDir}/images/pirate-claw-web-image-v${version}.tar`,
       'fixture web image tarball',
     );
     await Bun.write(
-      `.pirate-claw/synology-release/images/transmission-image-v${version}.tar`,
+      `${bundleOutputDir}/images/transmission-image-v${version}.tar`,
       'fixture transmission image tarball',
     );
   }
 
   afterAll(async () => {
-    await run(['rm', '-rf', '.pirate-claw/synology-release/test-extract']);
+    await run(['rm', '-rf', `${bundleOutputDir}/test-extract`]);
   });
 
   it('assembles the expected DSM-first release zip structure', async () => {
     await writeFixtureTarballs();
 
-    const output = await run([
-      'releases/synology-release/version01/build-release-bundle.sh',
-    ]);
+    const output = await run([`${synologyReleaseDir}/build-release-bundle.sh`]);
     expect(output.trim()).toEndWith(bundlePath);
 
     const contents = await run(['unzip', '-Z1', bundlePath]);
@@ -58,6 +58,7 @@ describe('Synology release bundle', () => {
     expect(contents).toContain(`images/pirate-claw-image-v${version}.tar`);
     expect(contents).toContain(`images/pirate-claw-web-image-v${version}.tar`);
     expect(contents).toContain(`images/transmission-image-v${version}.tar`);
+    expect(contents).toContain('compose.synology.yml');
     expect(contents).toContain('compose.synology.cm.yml');
     expect(contents).toContain('README-synology-install.md');
     expect(contents).toContain('install-dsm-7.1-docker.md');
@@ -71,29 +72,27 @@ describe('Synology release bundle', () => {
   it('keeps bundle install docs inside the DSM GUI-only owner contract', async () => {
     const docs = await Promise.all(
       [
-        'releases/synology-release/version01/README-synology-install.md',
-        'releases/synology-release/version01/install-dsm-7.1-docker.md',
-        'releases/synology-release/version01/install-dsm-7.2-container-manager.md',
+        `${synologyReleaseDir}/README-synology-install.md`,
+        `${synologyReleaseDir}/install-dsm-7.1-docker.md`,
+        `${synologyReleaseDir}/install-dsm-7.2-container-manager.md`,
       ].map((path) => Bun.file(path).text()),
     );
     const combined = docs.join('\n');
 
     expect(combined).toContain('File Station');
-    expect(combined).toContain('Add from file');
-    expect(combined).toContain('enable auto-restart');
+    expect(combined).toContain('Import `images/pirate-claw-image-v');
+    expect(combined).toContain('Enable auto-restart.');
     expect(combined).toContain(
-      'Do not pull Transmission from Registry for the Phase 27 validation path',
+      'Do not use phase-specific image tags for Phase 28 validation.',
     );
-    expect(combined).toContain(
-      'DSM may display the image using its upstream registry tag',
-    );
+    expect(combined).toContain('lscr.io/linuxserver/transmission:latest');
     expect(combined).toContain('`PUID` = `0`');
     expect(combined).toContain('`PGID` = `0`');
     expect(combined).toContain(
       'Do not set Transmission `USER`, `PASS`, or `WHITELIST`',
     );
     expect(combined).toContain(
-      'Validation status: pending external DSM 7.2+ tester verification.',
+      'Validation status: pending DSM 7.2+ tester verification.',
     );
     expect(combined).not.toContain(abandonedPackageName);
     expect(combined).not.toContain('docker run');
