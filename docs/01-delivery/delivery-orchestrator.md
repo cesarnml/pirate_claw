@@ -470,10 +470,17 @@ The orchestrator can emit best-effort Telegram notifications for milestone event
 
 Notifications are optional and advisory. They must never block orchestrator progress if delivery to Telegram fails.
 
-Enable them with:
+Enable them by setting both env vars in your repo's `.env` file (or your shell environment):
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
+```bash
+# .env — Telegram notifications for Son of Anton delivery milestones
+TELEGRAM_BOT_TOKEN=your-bot-token-here
+TELEGRAM_CHAT_ID=your-chat-id-here
+```
+
+The orchestrator reads these via `process.env` at startup. If either is absent or empty, the notifier returns `{ kind: 'noop', enabled: false }` and all notification calls are skipped — no errors, no warnings, no blocked progress.
+
+To get a bot token: create a bot via [@BotFather](https://t.me/BotFather) on Telegram. To get your chat ID: send a message to your bot and call `https://api.telegram.org/bot<TOKEN>/getUpdates` — the `chat.id` field in the response is your `TELEGRAM_CHAT_ID`.
 
 When those env vars are absent, the notifier stays disabled and the orchestrator behaves normally.
 
