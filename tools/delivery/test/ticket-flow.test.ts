@@ -760,7 +760,7 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
       },
       ensureBranchPushed: () => {},
       findOpenPullRequest: () => undefined,
-      readLatestCommitSubject: () => 'feat: example',
+      readFirstCommitSubject: () => 'feat: example',
       reportProgress: (message) => progress.push(message),
     });
 
@@ -816,7 +816,7 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
         state: 'OPEN',
         url: 'https://example.test/pull/23',
       }),
-      readLatestCommitSubject: () => 'feat: example',
+      readFirstCommitSubject: () => 'feat: example',
       reportProgress: (message) => progress.push(message),
     });
 
