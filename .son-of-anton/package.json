@@ -1,0 +1,17 @@
+{
+  "name": "son-of-anton",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deliver": "bun run ./scripts/deliver.ts",
+    "closeout-stack": "bun run ./scripts/closeout-stack.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

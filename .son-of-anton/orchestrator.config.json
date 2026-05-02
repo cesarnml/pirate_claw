@@ -1,0 +1,12 @@
+{
+  "defaultBranch": "main",
+  "planRoot": "../docs",
+  "runtime": "node",
+  "packageManager": "pnpm",
+  "ticketBoundaryMode": "gated",
+  "reviewPolicy": {
+    "selfAudit": "skip_doc_only",
+    "codexPreflight": "disabled",
+    "externalReview": "disabled"
+  }
+}
