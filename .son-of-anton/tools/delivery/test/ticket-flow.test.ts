@@ -688,7 +688,12 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
       },
     });
     await expect(
-      openPullRequest(basePostAuditState, '/tmp/test_project', context, 'P3.01'),
+      openPullRequest(
+        basePostAuditState,
+        '/tmp/test_project',
+        context,
+        'P3.01',
+      ),
     ).rejects.toThrow(/requires Codex preflight before opening a PR/);
   });
 
@@ -701,7 +706,12 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
       },
     });
     await expect(
-      openPullRequest(basePostAuditState, '/tmp/test_project', context, 'P3.01'),
+      openPullRequest(
+        basePostAuditState,
+        '/tmp/test_project',
+        context,
+        'P3.01',
+      ),
     ).rejects.toThrow(/requires Codex preflight before opening a PR/);
   });
 
@@ -714,10 +724,20 @@ describe('EE8.02 — codex preflight command, status, and gate', () => {
       },
     });
     await expect(
-      openPullRequest(basePostAuditState, '/tmp/test_project', context, 'P3.01'),
+      openPullRequest(
+        basePostAuditState,
+        '/tmp/test_project',
+        context,
+        'P3.01',
+      ),
     ).rejects.toThrow(/codex-plugin-cc/);
     await expect(
-      openPullRequest(basePostAuditState, '/tmp/test_project', context, 'P3.01'),
+      openPullRequest(
+        basePostAuditState,
+        '/tmp/test_project',
+        context,
+        'P3.01',
+      ),
     ).rejects.toThrow(/codexPreflight.*disabled.*orchestrator\.config\.json/);
   });
 

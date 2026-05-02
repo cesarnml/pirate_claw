@@ -194,7 +194,11 @@ export async function copyLocalBootstrapFilesIfPresent(
     const sourcePath = resolve(sourceWorktreePath, entry);
     const targetPath = resolve(targetWorktreePath, entry);
 
-    if (existsSync(targetPath) || lstatSync(sourcePath, { throwIfNoEntry: false })?.isSymbolicLink() !== true) {
+    if (
+      existsSync(targetPath) ||
+      lstatSync(sourcePath, { throwIfNoEntry: false })?.isSymbolicLink() !==
+        true
+    ) {
       continue;
     }
 

@@ -17,9 +17,11 @@
 ## Folder Structure
 
 ### `00-overview` — Entry-point docs
+
 - `start-here.md`: onboarding and immediate next action
 
 ### `01-delivery` — Delivery doctrine and command reference
+
 - `son-of-anton.md`: why this workflow exists
 - `delivery-orchestrator.md`: authoritative CLI command surface
 - `tdd-workflow.md`: red-green-refactor implementation contract
@@ -27,5 +29,6 @@
 - `phase-implementation-guidance.md`: implementation plan format contract
 
 ### `02-templates` — Starter files for new phases and tickets
+
 - `implementation-plan.template.md`
 - `ticket.template.md`

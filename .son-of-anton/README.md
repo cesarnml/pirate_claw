@@ -84,11 +84,11 @@ Then complete step 3 above manually.
 
 ## Ticket boundary modes
 
-| Mode | Behavior |
-|---|---|
-| `cook` | Orchestrator advances immediately to the next ticket after each merge |
+| Mode    | Behavior                                                                   |
+| ------- | -------------------------------------------------------------------------- |
+| `cook`  | Orchestrator advances immediately to the next ticket after each merge      |
 | `gated` | Orchestrator stops after each advance and prints a canonical resume prompt |
-| `glide` | Falls back to `gated` |
+| `glide` | Falls back to `gated`                                                      |
 
 Start with `gated` on a new project until you trust the agent's output.
 
@@ -113,14 +113,14 @@ bash .son-of-anton/scripts/sync-skills.sh
 
 ## Skills reference
 
-| Skill | Trigger |
-|---|---|
-| `son-of-anton-ethos` | "execute / implement / start / continue / deliver / resume" — drives the per-ticket loop |
-| `grill-me` | Plan pressure-testing before any implementation |
-| `ai-code-review` | Triage CodeRabbit, Qodo, Greptile, SonarQube review comments |
-| `enter-worktree` | Bootstrap a fresh git worktree with deps and `.env` |
-| `closeout-stack` | Squash-merge completed stacked PRs onto main |
-| `write-retrospective` | Write phase/epic retrospective to `notes/public/` |
+| Skill                 | Trigger                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `son-of-anton-ethos`  | "execute / implement / start / continue / deliver / resume" — drives the per-ticket loop |
+| `grill-me`            | Plan pressure-testing before any implementation                                          |
+| `ai-code-review`      | Triage CodeRabbit, Qodo, Greptile, SonarQube review comments                             |
+| `enter-worktree`      | Bootstrap a fresh git worktree with deps and `.env`                                      |
+| `closeout-stack`      | Squash-merge completed stacked PRs onto main                                             |
+| `write-retrospective` | Write phase/epic retrospective to `notes/public/`                                        |
 
 ## Requirements
 

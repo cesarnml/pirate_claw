@@ -70,9 +70,9 @@ Each ticket or PR should include a short rationale section with these prompts:
 
 Track active and closed epics here as your project evolves.
 
-| Epic | Status | Notes |
-|---|---|---|
-| _(none yet)_ | — | — |
+| Epic         | Status | Notes |
+| ------------ | ------ | ----- |
+| _(none yet)_ | —      | —     |
 
 ## Source Of Truth
 

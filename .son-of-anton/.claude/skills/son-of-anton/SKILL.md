@@ -11,6 +11,7 @@ Dispatch on the first word of `$ARGUMENTS`. Accept `soa` as an alias for `son-of
 ---
 
 ### `install`
+
 **Trigger:** `/son-of-anton install` or `/soa install`
 
 Add son-of-anton to the current repo for the first time:
@@ -24,6 +25,7 @@ If `.son-of-anton` already exists, tell the user to use `update` instead.
 ---
 
 ### `update`
+
 **Trigger:** `/son-of-anton update` or `/soa update`
 
 Pull the latest changes from son-of-anton:
@@ -37,6 +39,7 @@ Report what changed. If already up to date, say so.
 ---
 
 ### `ideate`
+
 **Trigger:** `/son-of-anton ideate [topic]` or `/soa ideate [topic]`
 
 Turn a developer feature ideation storm into one or more draft epic/phase plans.
@@ -49,6 +52,7 @@ Turn a developer feature ideation storm into one or more draft epic/phase plans.
 ---
 
 ### `plan`
+
 **Trigger:** `/son-of-anton plan [path-to-plan or inline description]` or `/soa plan`
 
 Take an existing rough plan or the content linked in the argument and run a grill-me session to sharpen it.
@@ -61,6 +65,7 @@ Take an existing rough plan or the content linked in the argument and run a gril
 ---
 
 ### `decompose` (alias: `decomp`, `tickets`)
+
 **Trigger:** `/son-of-anton decompose [path]` or `/soa decomp` or `/soa tickets`
 
 Take an approved phase/epic plan and produce a detailed `implementation-plan.md` with exact ticket decomposition.
@@ -73,17 +78,20 @@ Take an approved phase/epic plan and produce a detailed `implementation-plan.md`
 ---
 
 ### `execute`
+
 **Trigger:** `/son-of-anton execute <phase-XX|epic-XX>` or `/soa execute <phase-XX|epic-XX>`
 
 Begin orchestrated delivery of the named phase or epic.
 
 Read these files before doing anything else — they are gospel:
+
 - `.son-of-anton/docs/00-overview/start-here.md`
 - `.son-of-anton/docs/01-delivery/delivery-orchestrator.md`
 - `.son-of-anton/docs/01-delivery/son-of-anton.md`
 - `.son-of-anton/orchestrator.config.json`
 
 Then:
+
 1. Locate the `implementation-plan.md` for the named phase/epic.
 2. Identify the first unstarted ticket.
 3. Execute via the orchestrator path — **do not ad-hoc implement**.
@@ -93,6 +101,7 @@ Then:
 ---
 
 ### `resume`
+
 **Trigger:** `/son-of-anton resume <phase-XX|epic-XX>` or `/soa resume <phase-XX|epic-XX>`
 
 Resume delivery after a stopping point.
@@ -106,6 +115,7 @@ Resume delivery after a stopping point.
 ---
 
 ### `closeout` (alias: `closeout-stack`)
+
 **Trigger:** `/son-of-anton closeout <stack-name-or-number>` or `/soa closeout XX`
 
 Squash-merge a completed stacked PR set onto main.

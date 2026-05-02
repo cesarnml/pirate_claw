@@ -46,12 +46,12 @@ Self-audit is required. `codex-preflight` is optional but recommended for non-tr
 
 ## Key files
 
-| File | Purpose |
-|---|---|
-| `orchestrator.config.json` | Runtime config (boundary mode, review policy, package manager) |
-| `docs/01-delivery/delivery-orchestrator.md` | Full command reference — read before executing any orchestrator work |
-| `docs/01-delivery/son-of-anton.md` | Doctrine: why this workflow exists |
-| `docs/01-delivery/tdd-workflow.md` | Red-green-refactor contract for ticket implementation |
-| `docs/01-delivery/issue-tracking.md` | Issue sizing and Fibonacci point conventions |
-| `docs/01-delivery/phase-implementation-guidance.md` | Implementation plan format contract |
-| `.agents/skills/son-of-anton-ethos/SKILL.md` | Agent behavioral contract for orchestrated delivery |
+| File                                                | Purpose                                                              |
+| --------------------------------------------------- | -------------------------------------------------------------------- |
+| `orchestrator.config.json`                          | Runtime config (boundary mode, review policy, package manager)       |
+| `docs/01-delivery/delivery-orchestrator.md`         | Full command reference — read before executing any orchestrator work |
+| `docs/01-delivery/son-of-anton.md`                  | Doctrine: why this workflow exists                                   |
+| `docs/01-delivery/tdd-workflow.md`                  | Red-green-refactor contract for ticket implementation                |
+| `docs/01-delivery/issue-tracking.md`                | Issue sizing and Fibonacci point conventions                         |
+| `docs/01-delivery/phase-implementation-guidance.md` | Implementation plan format contract                                  |
+| `.agents/skills/son-of-anton-ethos/SKILL.md`        | Agent behavioral contract for orchestrated delivery                  |
